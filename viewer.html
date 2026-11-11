@@ -1,0 +1,1578 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Duo Model Compare</title>
+<style>
+:root{
+  color-scheme:light;
+  --surface:#f9f9f7;--panel:#fcfcfb;--line:#e1e0d9;--grid:#eeede9;--base:#c3c2b7;
+  --text:#0b0b0b;--text-2:#52514e;--muted:#898781;--hover:#f0efec;--neutral:#f0efec;
+  --codex:#2a78d6;--claude:#eb6834;--judge:#898781;
+  --good:#0ca30c;--good-text:#006300;--warn:#fab219;--critical:#d03b3b;
+  --ring:rgba(11,11,11,.10);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --surface:#0d0d0d;--panel:#1a1a19;--line:#2c2c2a;--grid:#242423;--base:#383835;
+    --text:#ffffff;--text-2:#c3c2b7;--muted:#898781;--hover:#262624;--neutral:#383835;
+    --codex:#3987e5;--claude:#d95926;--judge:#898781;--good-text:#0ca30c;--ring:rgba(255,255,255,.10);
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --surface:#0d0d0d;--panel:#1a1a19;--line:#2c2c2a;--grid:#242423;--base:#383835;
+  --text:#ffffff;--text-2:#c3c2b7;--muted:#898781;--hover:#262624;--neutral:#383835;
+  --codex:#3987e5;--claude:#d95926;--judge:#898781;--good-text:#0ca30c;--ring:rgba(255,255,255,.10);
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--surface);color:var(--text);font:14px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
+header{position:sticky;top:0;z-index:20;background:var(--surface);border-bottom:1px solid var(--line);padding:10px 24px;display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center}
+h1{font-size:17px;margin:0;display:flex;align-items:center;gap:8px}
+h2{font-size:14px;margin:0 0 8px;font-weight:600}
+h2 .info{color:var(--muted);font-weight:400;cursor:help;margin-left:6px;font-size:12px}
+.note{display:none}
+.note{color:var(--text-2);font-size:12.5px;margin:0 0 10px}
+.sub{color:var(--text-2);font-size:12.5px}
+.muted{color:var(--muted)}
+.grow{flex:1}
+.live{display:inline-flex;align-items:center;gap:6px;color:var(--text-2);font-size:12.5px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--muted)}
+.live.on .dot{background:var(--good)}
+.filters{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;padding:8px 24px;border-bottom:1px solid var(--line);font-size:12.5px;color:var(--text-2)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:7px;overflow:hidden}
+.seg button{border:0;border-radius:0;border-right:1px solid var(--line)}
+.seg button:last-child{border-right:0}
+button,select{font:inherit;font-size:12.5px;background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:7px;padding:4px 10px;cursor:pointer}
+button:hover{background:var(--hover)}
+button[aria-pressed="true"]{background:var(--text);color:var(--panel)}
+main{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:12px;padding:12px 20px 60px;max-width:1500px;margin:0 auto}
+section{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px;min-width:0}
+.c12{grid-column:span 12}.c7{grid-column:span 7}.c5{grid-column:span 5}.c6{grid-column:span 6}
+@media (max-width:1000px){.c7,.c5,.c6{grid-column:span 12}main{padding:12px 16px 80px}header,.filters{padding-left:16px;padding-right:16px}}
+.verdict{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:800px){.verdict{grid-template-columns:1fr}}
+.headline{font-size:18px;line-height:1.3;font-weight:600;margin:2px 0 6px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
+.stat{border-top:1px solid var(--line);padding-top:6px}
+.stat .v{font-size:19px;font-weight:600}
+.stat .l{font-size:12px;color:var(--text-2)}
+.pill{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:999px;padding:1px 8px;font-size:11.5px;color:var(--text-2);white-space:nowrap}
+.sw{width:10px;height:10px;border-radius:3px;display:inline-block;flex:none;vertical-align:-1px}
+.legend{display:flex;gap:14px;font-size:12px;color:var(--text-2);margin:2px 0 8px;flex-wrap:wrap;align-items:center}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+svg{display:block;overflow:visible}
+svg text{font-size:11.5px;fill:var(--text-2)}
+svg .ink{fill:var(--text)}
+svg .mut{fill:var(--muted)}
+svg .b{font-weight:600}
+.chart{width:100%;position:relative}
+.ok{color:var(--good-text)}.bad{color:var(--critical)}
+table{border-collapse:collapse;width:100%;font-size:12.5px}
+th,td{text-align:left;padding:5px 6px;border-bottom:1px solid var(--line);vertical-align:middle;white-space:nowrap}
+th{color:var(--text-2);font-weight:500;font-size:11.5px;position:sticky;top:0;background:var(--panel);z-index:1}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+tbody tr{cursor:pointer}
+tbody tr:hover td{background:var(--hover)}
+tr.sel td{background:var(--hover);box-shadow:inset 0 1px var(--text-2),inset 0 -1px var(--text-2)}
+.tablewrap{overflow:auto;max-height:340px}
+.empty{color:var(--muted);font-size:13px;padding:22px 0;text-align:center}
+.hot{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
+.hot button{display:inline-flex;gap:5px;align-items:center}
+.tip{position:absolute;pointer-events:none;background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:7px;padding:6px 9px;font-size:12px;box-shadow:0 4px 14px rgba(0,0,0,.14);display:none;z-index:50;max-width:340px;white-space:normal}
+.tip b{font-weight:600}
+#drawer{position:fixed;top:0;right:0;bottom:0;width:min(460px,100vw);background:var(--panel);border-left:1px solid var(--line);box-shadow:-8px 0 24px rgba(0,0,0,.12);z-index:40;transform:translateX(105%);transition:transform .18s ease;display:flex;flex-direction:column}
+#drawer.open{transform:none}
+#drawer .dh{display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid var(--line)}
+#drawer .db{overflow:auto;padding:12px 16px 40px;font-size:13px}
+#drawer h3{font-size:13px;margin:14px 0 6px;color:var(--text-2);font-weight:600;text-transform:uppercase;letter-spacing:.03em}
+pre{white-space:pre-wrap;word-break:break-word;font:12px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--hover);padding:8px 10px;border-radius:6px;margin:6px 0;max-height:320px;overflow:auto}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;font-size:12.5px}
+.kv div:nth-child(odd){color:var(--text-2)}
+.chips{display:flex;flex-wrap:wrap;gap:4px}
+.chip{font-size:11.5px;border:1px solid var(--line);border-radius:5px;padding:1px 6px;cursor:pointer;white-space:nowrap}
+.chip.f{border-color:var(--critical);color:var(--critical)}
+.link{color:inherit;text-decoration:underline;text-decoration-color:var(--muted);cursor:pointer;background:none;border:0;padding:0;font-size:inherit}
+@keyframes pulse{50%{opacity:.35}}
+.running{animation:pulse 1.4s ease-in-out infinite}
+@media (prefers-reduced-motion:reduce){.running{animation:none}#drawer{transition:none}}
+code{font:12px ui-monospace,Menlo,monospace;background:var(--hover);padding:1px 5px;border-radius:4px}
+.act{display:grid;grid-template-columns:22px minmax(0,1fr) auto;gap:4px 10px;padding:9px 0;border-bottom:1px solid var(--line);align-items:start}
+.act .n{color:var(--muted);font-variant-numeric:tabular-nums}
+.act .rule{font-weight:600;line-height:1.35}
+.act .meta{font-size:12px;color:var(--text-2);display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:3px}
+.chk{display:grid;grid-template-columns:18px minmax(0,1fr);gap:2px 8px;padding:5px 0;border-bottom:1px solid var(--line);font-size:12.5px}
+.chk .d{grid-column:2;color:var(--text-2);font-size:12px}
+.step{display:grid;grid-template-columns:20px minmax(0,1fr);gap:2px 8px;padding:5px 0;border-bottom:1px solid var(--line)}
+.step.root{background:color-mix(in srgb,var(--critical) 9%,transparent);border-left:3px solid var(--critical);padding-left:6px}
+.step .ann{grid-column:2;font-size:12px;margin-top:2px}
+.step .what{overflow-wrap:anywhere}
+.action{border:1px solid var(--line);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:4px;background:var(--panel)}
+.action .top{display:flex;gap:8px;align-items:center;font-size:12px;color:var(--text-2);flex-wrap:wrap}
+.action .title{font-weight:600}
+.action .ev{color:var(--text-2);font-size:12.5px}
+.action .do{font-size:12.5px}
+.tag{border:1px solid var(--line);border-radius:999px;padding:0 8px;font-size:11px}
+main{align-items:start}
+h2.fold{cursor:pointer;user-select:none;margin-bottom:0}
+h2.fold::before{content:'▸';display:inline-block;width:14px;color:var(--muted);transition:transform .15s}
+section.open h2.fold{margin-bottom:8px}
+section.open h2.fold::before{transform:rotate(90deg)}
+section:not(.open)>.fbody{display:none}
+section:not(.open){padding-top:9px;padding-bottom:9px}
+#plain .pl-row{display:grid;grid-template-columns:22px 92px minmax(0,1fr);gap:8px;padding:5px 0;border-bottom:1px solid var(--line);cursor:pointer;align-items:baseline}
+#plain .pl-row:hover{background:var(--hover)}
+#plain .k{color:var(--text-2);font-size:12px}
+@keyframes pop{0%{transform:scale(.2);opacity:0}60%{transform:scale(1.25)}100%{transform:scale(1);opacity:1}}
+@keyframes glow{50%{opacity:.45}}
+.newest{animation:pop .35s ease-out;transform-box:fill-box;transform-origin:center}
+.current{animation:glow 1.4s ease-in-out infinite}
+.stage-on{fill:var(--good)} .stage-run{fill:var(--warn)} .stage-off{fill:var(--grid)}
+@media (prefers-reduced-motion:reduce){.newest,.current{animation:none}}
+
+#evalTreeSec{padding:20px;border-color:color-mix(in srgb,var(--codex) 30%,var(--line));background:radial-gradient(ellipse at top left,color-mix(in srgb,var(--codex) 6%,transparent),transparent 65%),var(--panel)}
+#evalTreeSec h2{font-size:22px;letter-spacing:-.5px}
+.tree-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:14px 0}
+.tree-toolbar input{flex:1;min-width:100px;accent-color:var(--codex)}
+#evalTree{height:360px;overflow:auto;background-image:radial-gradient(var(--line) .8px,transparent .8px);background-size:20px 20px;border:1px solid var(--line);border-radius:12px}
+#evalTree svg{overflow:hidden} .tree-node{cursor:pointer;outline:none}.tree-node:hover rect,.tree-node:focus rect{stroke:var(--text);stroke-width:2}
+@keyframes treeAppear{from{opacity:0}to{opacity:1}}
+.tree-node.newest{animation:treeAppear .35s ease-out}
+@media(prefers-reduced-motion:reduce){.tree-node.newest{animation:none}}
+.tree-edge{fill:none;stroke-width:2;opacity:.5;transition:d .35s}
+.tree-caption{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:12px 0 0;color:var(--text-2);font-size:12px}
+@media(max-width:600px){#evalTreeSec{padding:14px}#evalTree{height:320px}}
+
+.lab-top{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}.lab-top h3{margin:0;font-size:24px;letter-spacing:-.7px}.lab-kicker{font-size:10px;letter-spacing:.16em;color:var(--muted);font-weight:700;margin-bottom:5px}
+.lab-controls{display:flex;gap:8px;flex-wrap:wrap}.lab-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:18px}.lab-card{border:1px solid var(--line);border-radius:14px;background:var(--panel);padding:16px;min-width:0}.lab-card.wide{grid-column:1/-1}.lab-card h3{margin:0;font-size:16px;letter-spacing:-.3px}.lab-card p{font-size:12px;color:var(--text-2);margin:5px 0 12px}.lab-chart{overflow:auto;min-height:240px}.lab-chart svg{overflow:hidden}.lab-readout{font-size:12px;color:var(--text-2);padding-top:10px;line-height:1.5;border-top:1px solid var(--line);margin-top:10px}.lab-metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:16px}.lab-metric{padding:12px;border:1px solid var(--line);border-radius:10px}.lab-metric b{display:block;font-size:22px;font-variant-numeric:tabular-nums}.lab-metric span{font-size:11px;color:var(--text-2)}.lab-click{cursor:pointer}.lab-click:focus{outline:2px solid var(--codex)}.lab-chart .domain{stroke:var(--line)}.lab-chart .tick line{stroke:var(--line)}
+#labSec{background:linear-gradient(140deg,color-mix(in srgb,var(--codex) 4%,var(--panel)),var(--panel));padding:20px}#labTitle{font-size:18px}.lab-sources{font-size:12px;color:var(--text-2);margin-top:18px}.lab-sources a{color:inherit}
+@media(max-width:760px){.lab-grid{grid-template-columns:1fr}.lab-metrics{grid-template-columns:repeat(2,1fr)}#labSec{padding:12px}.lab-card{padding:12px}}
+
+.focus-view main>section:not(#evalTreeSec){display:none}
+.focus-view main{max-width:1600px}
+.focus-view #evalTreeSec{min-height:calc(100vh - 150px)}
+.focus-view #evalTree{height:clamp(320px,55vh,640px)}
+.rail-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:16px}
+.rail-summary>div{border:1px solid var(--line);border-left:3px solid var(--model);padding:10px 14px;border-radius:10px;background:var(--panel)}
+.rail-summary b{color:var(--model);font-size:15px}.rail-summary .rail-values{display:flex;gap:8px 18px;flex-wrap:wrap;color:var(--text-2);font-size:12px;margin-top:6px}.rail-values strong{font-weight:600;color:var(--text)}
+@media(max-width:600px){.rail-summary{grid-template-columns:1fr}.focus-view #evalTreeSec{min-height:0}}
+</style>
+</head>
+<body class="focus-view">
+<header>
+  <h1>Duo <span class="muted" style="font-weight:400">·</span> <span><i class="sw" style="background:var(--codex)"></i> Codex</span> <span class="muted" style="font-weight:400">vs</span> <span><i class="sw" style="background:var(--claude)"></i> Claude</span></h1>
+  <span class="live" id="live"><span class="dot"></span><span id="liveText">connecting</span></span>
+  <span class="sub" id="summary"></span>
+  <span class="grow"></span>
+  <select id="session" aria-label="Session" title="Sessions stored in the trace DB"></select>
+  <button id="copyMd" title="Copy the comparison as Markdown">Copy report</button>
+  <button id="viewDepth" aria-pressed="false">Explore charts</button>
+  <button id="exitTracing" title="Disconnect this viewer from live tracing">Exit tracing</button>
+  <button id="theme" title="Toggle light/dark">◐</button>
+</header>
+<div class="filters">
+  <span>Tasks</span><span class="seg" id="fKind"><button data-v="all" aria-pressed="true">All</button><button data-v="respond" aria-pressed="false">Answer</button><button data-v="read" aria-pressed="false">Read/inspect</button><button data-v="write" aria-pressed="false">Write</button></span>
+  <span>Judge</span><span class="seg" id="fJudge"><button data-v="all" aria-pressed="true">Panel (all)</button><button data-v="codex" aria-pressed="false">Codex as judge</button><button data-v="claude" aria-pressed="false">Claude as judge</button></span>
+  <span class="grow"></span><span id="selChip"></span>
+</div>
+<div id="traceExitNotice" role="status" hidden style="padding:12px 24px;border-bottom:1px solid var(--line);background:var(--panel)">Tracing disconnected. Duo continues running. Your last trace remains available below. <button id="resumeTracing">Resume tracing</button></div>
+<main>
+  <section class="c12" id="evalTreeSec" data-open="1">
+    <h2>Duo · one task, two execution tracks</h2>
+    <p class="sub">Long runs stay on a shared timeline. Tool calls split off as railway tracks, with nearby calls clustered until you zoom in.</p>
+    <div id="railSummary" class="rail-summary"></div>
+    <div class="tree-toolbar">
+      <select id="treeTurn" aria-label="Execution timeline turn"></select>
+      <button id="treeFollow" aria-pressed="true">Follow latest</button>
+      <button id="treePlay">Replay growth</button>
+      <select id="railZoom" aria-label="Timeline zoom"><option value="1">Fit timeline</option><option value="2">Zoom 2×</option><option value="4">Zoom 4×</option><option value="8">Zoom 8×</option></select>
+      <input id="treeProgress" type="range" min="0" max="100" value="100" aria-label="Elapsed time replay">
+      <span id="treePosition" class="sub"></span>
+    </div>
+    <div id="evalTree" aria-label="Execution railway timeline"></div>
+    <div class="tree-caption"><span>━ Task bar</span><span style="color:var(--codex)">● Codex</span><span style="color:var(--claude)">● Claude</span><span>◆ Reasoning</span><span class="ok">✓ Passed</span><span class="bad">✗ Failed</span><span>Branches = tool calls · clustered calls expand with zoom · click for evidence</span></div>
+  </section>
+  <section class="c12" id="labSec" data-open="1"><h2 id="labTitle">Model observatory</h2>
+<div class="lab-top"><div><div class="lab-kicker">TRACES → PATTERNS → EVIDENCE</div><h3>Understand how the models work.</h3><p class="sub">Ten lenses on the same recorded runs. Click a mark to inspect its evidence.</p></div><div class="lab-controls"><select id="labScope" aria-label="Observatory scope"><option value="session">Filtered session</option><option value="turn">Timeline turn</option></select><select id="labProvider" aria-label="Observatory model"><option value="all">Both models</option><option value="codex">Codex</option><option value="claude">Claude</option></select><select id="labArea" aria-label="Tool terrain metric"><option value="duration">Terrain: duration</option><option value="calls">Terrain: calls</option></select></div></div>
+<div class="legend" id="labNav" style="margin-top:12px"><button data-lens="atlas">Speed &amp; quality</button><button data-lens="occupancy">Time &amp; workload</button><button data-lens="rubriclab">Quality &amp; failures</button><button data-lens="switchboard">Behavior &amp; loops</button><button data-lens="mosaic">Compare tasks</button></div>
+<div id="labMetrics" class="lab-metrics"></div><div class="lab-grid"><article class="lab-card"><div class="lab-kicker">01 · Behavioral atlas</div><h3>Where do speed and judged quality meet?</h3><p>Each dot is one scored model/turn. Horizontal position is total run time; vertical position is judge score. Size shows tool count.</p><div id="lab-atlas" class="lab-chart"></div><div id="lab-atlas-readout" class="lab-readout"></div></article><article class="lab-card"><div class="lab-kicker">02 · Decision braid</div><h3>How does each model move through work?</h3><p>Tool steps sampled at 12 positions through each run. Curves reveal repeated phase changes; this is execution order, not time.</p><div id="lab-braid" class="lab-chart"></div><div id="lab-braid-readout" class="lab-readout"></div></article><article class="lab-card wide"><div class="lab-kicker">03 · Activity weather</div><h3>When is the agent busy with tools?</h3><p>Each row is a run, divided into 32 equal time bins. Fill shows the fraction of each bin covered by tool calls; red borders flag failed calls.</p><div id="lab-occupancy" class="lab-chart"></div><div id="lab-occupancy-readout" class="lab-readout"></div></article><article class="lab-card"><div class="lab-kicker">04 · Tool terrain</div><h3>Which tools dominate the workload?</h3><p>Rectangle area is summed completed call duration. Overlapping calls count separately. Switch to call count to compare frequency.</p><div id="lab-terrain" class="lab-chart"></div><div id="lab-terrain-readout" class="lab-readout"></div></article><article class="lab-card"><div class="lab-kicker">05 · Latency constellation</div><h3>Are slow calls rare or routine?</h3><p>Every plotted dot is a completed tool call on a log duration scale. Vertical jitter separates nearby points; red marks failed calls.</p><div id="lab-latency" class="lab-chart"></div><div id="lab-latency-readout" class="lab-readout"></div></article><article class="lab-card"><div class="lab-kicker">06 · Quality contours</div><h3>Does a strong total hide a weak dimension?</h3><p>Each line is one scored model/turn across the five judge dimensions. Missing dimensions break the line; scores are judgments, not ground truth.</p><div id="lab-rubriclab" class="lab-chart"></div><div id="lab-rubriclab-readout" class="lab-readout"></div></article><article class="lab-card"><div class="lab-kicker">07 · After the error</div><h3>What action follows a failed tool call?</h3><p>Links connect a failed call’s phase to the next tool action. This describes the next action; it does not prove that the error was diagnosed or repaired.</p><div id="lab-recovery" class="lab-chart"></div><div id="lab-recovery-readout" class="lab-readout"></div></article><article class="lab-card"><div class="lab-kicker">08 · Tool switchboard</div><h3>Which tools keep pulling the model back?</h3><p>Chord ribbons count consecutive tool transitions within each run. Loops expose repeated use; direction is recorded order, not dependency.</p><div id="lab-switchboard" class="lab-chart"></div><div id="lab-switchboard-readout" class="lab-readout"></div></article><article class="lab-card"><div class="lab-kicker">09 · Execution pace</div><h3>Do tools arrive in bursts or steadily?</h3><p>Cumulative tool starts over normalized run time. Each curve is a run; steeper segments indicate a burst of observed tool calls.</p><div id="lab-pace" class="lab-chart"></div><div id="lab-pace-readout" class="lab-readout"></div></article><article class="lab-card wide"><div class="lab-kicker">10 · Outcome matrix</div><h3>Where do the two models disagree?</h3><p>One column per judged task; rows separate models and rubric dimensions. Color intensity shows score on the fixed 1–5 scale.</p><div id="lab-mosaic" class="lab-chart"></div><div id="lab-mosaic-readout" class="lab-readout"></div></article></div><details class="lab-sources"><summary>Current observability patterns &amp; reading</summary><p>Use both an overview of repeated work and a literal execution view, with evaluations linked to recorded evidence. These are useful design references, not a ranking of products:</p><a href="https://langfuse.com/docs/observability/features/agent-graphs" target="_blank" rel="noopener noreferrer">Langfuse · aggregated and expanded agent graphs</a> · <a href="https://arize.com/docs/phoenix/tracing/tutorial" target="_blank" rel="noopener noreferrer">Phoenix · traces, annotations, sessions</a> · <a href="https://www.langchain.com/langsmith/observability" target="_blank" rel="noopener noreferrer">LangSmith · agent trajectory observability</a></details></section>
+  <section class="c12" id="liveSec" data-open="1">
+    <h2 id="liveTitle">Live</h2>
+    <p class="note">Streams as it happens: each glyph is a step the agent just took (shape = action; ✗ failed; ◆ reasoning; the newest pulses). The pipeline below lights up as duo analyses the turn, the judges score it, the learning updates, and the next prompt is ready. The sparkline is events per second over the last minute.</p>
+    <div id="liveLanes" class="chart"></div>
+    <div id="livePipe" class="chart" style="margin-top:6px"></div>
+  </section>
+  <section class="c12" id="plainSec" data-open="1">
+    <h2>In plain words</h2>
+    <p class="note">What each agent is like, where they differ, what goes wrong, and what duo changes next, computed from the traces and judges on this page. Not a ranking. Click a line to jump to the chart behind it.</p>
+    <div id="plain"></div>
+  </section>
+  <section class="c12" id="verdictSec">
+    <h2>Head-to-head numbers</h2>
+    <p class="note">Only if you want a comparison: per-turn judge verdicts, win counts and whether the difference is statistically meaningful. The rest of the page describes each agent on its own.</p>
+    <div class="verdict">
+      <div>
+        <div class="headline" id="headline">Waiting for the first turn…</div>
+        <div id="h2hBar" class="chart"></div>
+        <div class="legend" id="h2hLegend"></div>
+      </div>
+      <div class="stats" id="stats"></div>
+    </div>
+  </section>
+
+  <section class="c7">
+    <h2 id="lcTitle">Getting better</h2>
+    <p class="note">Reward per turn (judge score, minus cheats and false claims, adjusted by your feedback), rolling mean with a 95% band. Pins mark when the agents were changed: a lesson adopted, an evolve run, a PR applied.</p>
+    <div id="curve" class="chart"></div>
+  </section>
+  <section class="c5">
+    <h2 id="polTitle">RL policy</h2>
+    <p class="note">The bandit learns how many playbook lessons help each agent per task type (posterior mean reward ± 2 sd, n uses), and which agent to route to. Picking an arm takes under a millisecond before the turn.</p>
+    <div id="bandit" class="chart"></div>
+    <div id="routes" class="chart" style="margin-top:10px"></div>
+  </section>
+
+  <section class="c7" data-open="1">
+    <h2 id="actTitle">What to change</h2>
+    <p class="note">Fixes the judges proposed after reading the traces, ranked by support across turns × how much that dimension matters to you, with repeats of one failure type down-weighted so different problems surface. Accepted fixes become lessons fed into that model’s prompts.</p>
+    <div id="actions"></div>
+    <div id="weights" style="margin-top:14px"></div>
+    <div id="lessonList" style="margin-top:12px"></div>
+  </section>
+  <section class="c5" data-open="1">
+    <h2>Checks</h2>
+    <p class="note">Is the comparison trustworthy, and is the self-learning behaving? ✓ fine · ⚠ act on it · · not enough data yet.</p>
+    <div id="checks"></div>
+  </section>
+
+  <section class="c12" id="nextSec" data-open="1">
+    <h2 id="nextTitle">Next prompt</h2>
+    <p class="note">How the loop reaches the agents. Your message is never edited. Guidance is appended <b>after</b> it, marked lower priority (“the user’s request always wins”), and any item that conflicts with your request is dropped. Below is exactly what each agent would get.</p>
+    <div class="legend" style="gap:10px">
+      <span>Guidance</span><span class="seg" id="gOn"><button data-v="1">On</button><button data-v="0">Off</button></span>
+      <span>Items per turn</span><span class="seg" id="gK"><button data-v="auto">Auto (RL)</button><button data-v="0">0</button><button data-v="2">2</button><button data-v="4">4</button></span>
+      <input id="gReq" placeholder="Preview for a draft request…" style="flex:1;min-width:220px;font:inherit;font-size:12.5px;padding:4px 8px;border:1px solid var(--line);border-radius:7px;background:var(--panel);color:var(--text)">
+      <button id="gPrev">Preview</button><span class="sub" id="gMsg"></span>
+    </div>
+    <div id="nextAgents" style="display:grid;grid-template-columns:1fr 1fr;gap:14px"></div>
+    <div class="tablewrap" style="max-height:260px;margin-top:10px"><table id="playbook"><thead><tr><th>Agent</th><th>Rule</th><th>Status</th><th></th></tr></thead><tbody></tbody></table></div>
+  </section>
+
+  <section class="c12">
+    <h2 id="prTitle">Agent PRs</h2>
+    <p class="note">What the traces taught, as reviewable changes to each agent’s own config (AGENTS.md for Codex, CLAUDE.md for Claude). Create one with <code>duo --propose REPO</code>; attach held-out evidence with <code>duo --evolve</code>; apply with <code>duo --apply ID</code> or open a draft PR with <code>duo --pr ID</code>.</p>
+    <div id="prBoard" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px"></div>
+  </section>
+
+  <section class="c7">
+    <h2 id="sbTitle">Side by side</h2>
+    <p class="note">Same tasks, both models. The stronger side of each row is drawn solid; the weaker side faded. Hover any bar for counts.</p>
+    <div id="scoreboard" class="chart"></div>
+  </section>
+  <section class="c5">
+    <h2 id="rubTitle">Judge rubric</h2>
+    <p class="note">Outcome (the answer) and process (how the agent worked, read step by step from the trace). Mean 1–5 from blind judges that see both runs in both orders.</p>
+    <div id="rubric" class="chart"></div>
+    <div id="selfPref" class="sub" style="margin-top:8px"></div>
+  </section>
+
+  <section class="c6">
+    <h2 id="claimTitle">Said vs did</h2>
+    <p class="note">Every checkable claim in an answer (“tests pass”, “I edited X”) matched against what the tools actually returned. ✓ backed by a tool step · ? no evidence · ✗ contradicted.</p>
+    <div id="claimBars" class="chart"></div>
+    <div class="tablewrap" style="max-height:260px;margin-top:8px"><table id="claimTable"><thead><tr><th>Turn</th><th>Agent</th><th></th><th>Claim</th></tr></thead><tbody></tbody></table></div>
+  </section>
+  <section class="c6">
+    <h2 id="fpTitle">Behaviour fingerprint</h2>
+    <p class="note">How each agent works, from the traces alone (no model calls). The shaded band is the healthy range; dots outside it are habits worth fixing.</p>
+    <div id="fingerprint" class="chart"></div>
+  </section>
+
+  <section class="c12">
+    <h2 id="duelTitle">Turn by turn</h2>
+    <p class="note">One row per task. Δ bars and cells lean <b style="color:var(--codex)">left/blue</b> where Codex scored higher and <b style="color:var(--claude)">right/orange</b> where Claude did. Click a row for its full trace, judge reasoning and model reasoning.</p>
+    <div class="legend"><span>Sort</span><span class="seg" id="fSort"><button data-v="turn" aria-pressed="true">Newest first</button><button data-v="gap" aria-pressed="false">Biggest gap first</button><button data-v="fail" aria-pressed="false">Most failures first</button></span></div>
+    <div class="tablewrap"><table id="duel"><thead></thead><tbody></tbody></table></div>
+  </section>
+
+  <section class="c12" data-open="1">
+    <h2 id="filmTitle">Agent film strip</h2>
+    <p class="note">One glyph per step, shape = what the agent did. Codex on top, Claude below, aligned so matching steps share a column (vertical link). The highlighted column is where the two runs first did something different. Click any glyph for its input/output.</p>
+    <div class="legend" id="glyphKey"></div>
+    <div class="legend"><button id="filmPrev">◀ Previous turn</button><button id="filmNext">Next turn ▶</button><span class="sub" id="filmWhich"></span></div>
+    <div id="film" class="chart" style="overflow-x:auto"></div>
+  </section>
+  <section class="c12">
+    <h2 id="tlTitle">Execution timeline</h2>
+    <p class="note">Drag on the overview strip to zoom, scroll or pinch on the lanes to zoom, drag to pan. Idle gaps are compressed (⋯). Zoomed out, repeated tool calls collapse into one block such as “Read×14”; zoom in to split them. ✗ = failed call, ◆ = reasoning step.</p>
+    <div class="hot" id="hotspots"></div>
+    <div id="overview" class="chart"></div>
+    <div id="lanes" class="chart" style="touch-action:none"></div>
+    <div class="legend"><span><i class="sw" style="background:var(--codex)"></i>Codex</span><span><i class="sw" style="background:var(--claude)"></i>Claude</span><span><i class="sw" style="background:var(--judge)"></i>Judge calls</span><span class="bad">✗ failed tool</span><span>◆ reasoning</span><span class="bad">◎ judge root cause</span><span>⋯ idle gap compressed</span><button id="resetZoom" style="margin-left:auto">Show all</button></div>
+  </section>
+
+  <section class="c6">
+    <h2 id="phaseTitle">How each agent moves between phases</h2>
+    <p class="note">Inspect → plan → edit → verify → run. Arrow width = how often one phase follows another; loops = repeating the same phase.</p>
+    <div id="phase" class="chart" style="display:grid;grid-template-columns:1fr 1fr;gap:8px"></div>
+  </section>
+
+  <section class="c6">
+    <h2 id="toolTitle">Tools each model reaches for</h2>
+    <p class="note">Calls per tool, Codex to the left, Claude to the right. The red segment is the share of calls that failed.</p>
+    <div id="tools" class="chart"></div>
+  </section>
+  <section class="c12">
+    <h2 id="failTitle">Failure cases</h2>
+    <p class="note">Runtime failures plus the judges’ root cause for each run (the first step where it went wrong). Click a row to list its cases; click a case to open that step.</p>
+    <div id="failChart" class="chart"></div>
+    <div class="tablewrap" style="max-height:300px;margin-top:10px"><table id="cases"><thead><tr><th></th><th>Turn</th><th>Model · role</th><th>What happened</th></tr></thead><tbody></tbody></table></div>
+  </section>
+
+  <section class="c12">
+    <details id="mapBox"><summary style="cursor:pointer"><b>How duo works</b> <span class="sub" id="mapSum">— the files behind this page</span></summary>
+    <div id="miniMap" class="chart" style="margin-top:8px"></div></details>
+  </section>
+</main>
+<aside id="drawer" aria-label="Details"><div class="dh"><b id="dTitle">Details</b><span class="grow"></span><button id="dClose" aria-label="Close details">✕</button></div><div class="db" id="dBody"></div></aside>
+<div class="tip" id="tip"></div>
+<script src="/d3.v7.min.js"></script>
+<script>
+'use strict';
+/* ================= model ================= */
+const P=['codex','claude'],NAME={codex:'Codex',claude:'Claude',duo:'Duo',judge:'Judge'};
+const DIMS=['correctness','completeness','groundedness','instruction_following','efficiency'];
+const DIML={correctness:'Correctness',completeness:'Completeness',groundedness:'Groundedness',instruction_following:'Instructions',efficiency:'Efficiency'};
+const KIND_L={respond:'Answer',read:'Read',write:'Write'};
+const qs=new URLSearchParams(location.search);
+let S;
+function reset(){S={events:[],maxId:0,started:null,session:'',spans:new Map(),order:[],J:{results:[],scores:[],verdicts:[],agree:[],errors:[],raw:[],steps:[],roots:[],actions:[]},feedback:[],byEvent:new Map(),A:{behaviour:[],flags:[],hacks:[],align:[],claims:[],hackFinal:[],override:[],rootAgree:[],conflicts:[],rewards:[],usage:[],evolve:[]},live:false,stored:false}}
+reset();
+const PROC=['planning','tool_selection','error_recovery','verification'];
+const PROCL={planning:'Planning',tool_selection:'Tool choice',error_recovery:'Error recovery',verification:'Verification'};
+const LABEL={critical_error:['✗','bad','Critical error'],wasted:['↺','muted','Wasted step'],good_move:['✓','ok','Good move']};
+const TGT={prompt:'Prompt rule',tools:'Tool setup',workflow:'Duo workflow',context:'Missing context'};
+let LEARN=null;
+const F={kind:'all',judge:'all',sort:'turn',turn:null,cat:null};
+function ingest(e){
+  if(e.id<=S.maxId)return;S.maxId=e.id;S.events.push(e);
+  if(S.started===null)S.started=e.timestamp;
+  if(e.type==='span.start'){
+    const s={id:e.span_id,parent:e.parent_id,kind:e.span_kind,provider:e.provider,role:e.role,mode:e.mode,turnId:e.turn_id,start:e.timestamp,end:null,status:'running',duration:null,children:[],tools:[],reasoning:[],evals:[],answerId:null,promptId:null};
+    S.spans.set(s.id,s);S.order.push(s.id);const p=s.parent&&S.spans.get(s.parent);if(p)p.children.push(s.id);return;
+  }
+  const J=S.J;
+  if(e.type==='judge.result'){J.results.push(e);return}
+  if(e.type==='judge.score'){J.scores.push(e);return}
+  if(e.type==='judge.verdict'){J.verdicts.push(e);return}
+  if(e.type==='judge.agreement'){J.agree.push(e);return}
+  if(e.type==='judge.error'){J.errors.push(e);return}
+  if(e.type==='judge.step'){J.steps.push(e);return}
+  if(e.type==='judge.root'){J.roots.push(e);return}
+  if(e.type==='judge.action'){J.actions.push(e);return}
+  if(e.type==='feedback'){S.feedback.push(e);return}
+  const AM={'analysis.behaviour':'behaviour','analysis.flag':'flags','analysis.hack':'hacks','analysis.align':'align','judge.claim':'claims','judge.hack_final':'hackFinal','judge.verdict_override':'override','judge.root_agreement':'rootAgree','judge.conflict':'conflicts','policy.reward':'rewards','usage':'usage','evolve.result':'evolve'};
+  if(AM[e.type]){S.A[AM[e.type]].push(e);if(e.type!=='usage')return}
+  const s=e.span_id&&S.spans.get(e.span_id);
+  if(e.type==='judge.raw'){if(s)s.answerId=e.id;return}
+  if(!s)return;
+  if(e.type==='span.end'){s.end=e.timestamp;s.status=e.status;s.duration=e.duration_ms;return}
+  if(e.type==='tool.started'){const l={tool:e.tool||'tool',item:e.item_id,t:e.timestamp,passed:null,dur:null,detail:e.detail||'',inId:e.chars?e.id:null,outId:null,eid:e.id};s.tools.push(l);S.byEvent.set(e.id,{span:s.id,tool:l})}
+  else if(e.type==='tool.completed'){
+    const l=s.tools.find(l=>l.passed===null&&(e.item_id?l.item===e.item_id:l.tool===(e.tool||'tool')));
+    if(l){l.passed=e.passed;l.dur=(e.timestamp-l.t)*1000;l.outId=e.chars?e.id:null}
+    else s.tools.push({tool:e.tool||'tool',t:e.timestamp,passed:e.passed,dur:0,detail:'',outId:e.chars?e.id:null});
+  }
+  else if(e.type==='reasoning'){s.reasoning.push({t:e.timestamp,id:e.id,chars:e.chars||0});S.byEvent.set(e.id,{span:s.id,reason:e.id})}
+  else if(e.type==='lessons.applied'){s.lessons=e.count;if(e.chars)s.guidanceId=e.id}
+  else if(e.type==='evaluation')s.evals.push(e);
+  else if(e.type==='approval.resolved'&&/declin/.test(e.status||''))s.tools.push({tool:'approval:'+(e.tool||e.method||''),t:e.timestamp,passed:false,dur:0,detail:'declined',declined:true});
+  else if(e.type==='answer'||(e.type==='agent.completed'&&e.chars))s.answerId=e.id;
+  else if(e.type==='prompt')s.promptId=e.id;
+}
+/* ================= stats ================= */
+const median=a=>{if(!a.length)return null;const b=[...a].sort((x,y)=>x-y),m=b.length>>1;return b.length%2?b[m]:(b[m-1]+b[m])/2};
+const mean=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:null;
+const sd=a=>{if(a.length<2)return 0;const m=mean(a);return Math.sqrt(a.reduce((s,x)=>s+(x-m)**2,0)/(a.length-1))};
+function wilson(k,n,z=1.96){if(!n)return[0,1];const p=k/n,d=1+z*z/n,c=p+z*z/(2*n),r=z*Math.sqrt(p*(1-p)/n+z*z/(4*n*n));return[(c-r)/d,(c+r)/d]}
+function signP(k,n){if(!n)return 1;const lc=i=>{let s=0;for(let j=1;j<=i;j++)s+=Math.log(j);return s};const m=Math.min(k,n-k);let p=0;for(let i=0;i<=m;i++)p+=Math.exp(lc(n)-lc(i)-lc(n-i)-n*Math.LN2);return Math.min(1,2*p)}
+const pct=x=>x==null?'–':Math.round(100*x)+'%';
+const f1=x=>x==null?'–':(+x).toFixed(1);
+const f2=x=>x==null?'–':(+x).toFixed(2);
+function dur(ms){if(ms==null||isNaN(ms))return'–';if(ms<1000)return Math.round(ms)+' ms';const s=ms/1000;if(s<60)return s.toFixed(s<10?1:0)+' s';const m=s/60;if(m<60)return m.toFixed(1)+' min';return (m/60).toFixed(1)+' h'}
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const sw=p=>`<i class='sw' style='background:var(--${P.includes(p)?p:'judge'})'></i>`;  // single quotes: safe inside data-tip="…"
+const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+/* ================= derive ================= */
+const kindOf=m=>!m?'respond':m.startsWith('respond')?'respond':m.includes('write')?'write':'read';
+function derive(){
+  const now=S.live?Date.now()/1000:(S.events.at(-1)?.timestamp||S.started||0);
+  const all=S.order.map(id=>S.spans.get(id)).filter(s=>s.kind==='turn');
+  const turnNo=new Map(all.map((t,i)=>[t.id,i+1]));
+  const judgeOk=j=>F.judge==='all'||String(j||'').startsWith(F.judge);
+  const runs=[],judges=[];
+  for(const s of S.spans.values()){
+    if(s.kind==='judge'){judges.push({...s,end:s.end||now,turnNo:turnNo.get(s.turnId)||0});continue}
+    if(s.kind!=='agent')continue;
+    const t=S.spans.get(s.parent);
+    const failedTools=s.tools.filter(l=>l.passed===false&&!l.declined);
+    const retries=[];for(let i=1;i<s.tools.length;i++){const a=s.tools[i-1],b=s.tools[i];if(a.passed===false&&b.tool===a.tool)retries.push(b)}
+    const failedEval=s.evals.some(e=>/backend_success|nonempty_successful_response/.test(e.name)&&e.passed===false);
+    runs.push({id:s.id,s,provider:s.provider,role:s.role||'run',turn:t?.id,turnNo:t?turnNo.get(t.id):0,kind:kindOf(t?.mode),start:s.start,end:s.end||now,running:s.status==='running',
+      dur:s.duration??(now-s.start)*1000,tools:s.tools.filter(l=>!l.declined),failedTools,declined:s.tools.filter(l=>l.declined),retries,
+      failed:s.status==='failed'||failedEval,reasoning:s.reasoning,evals:s.evals});
+  }
+  runs.sort((a,b)=>a.start-b.start);
+  const turns=all.map(t=>{
+    const rs=runs.filter(r=>r.turn===t.id);
+    const by={};for(const p of P)by[p]=rs.filter(r=>r.provider===p);
+    const jr=S.J.results.filter(e=>e.turn_id===t.id&&judgeOk(e.judge));
+    const js=S.J.scores.filter(e=>e.turn_id===t.id&&judgeOk(e.judge));
+    const jv=S.J.verdicts.filter(e=>e.turn_id===t.id&&judgeOk(e.judge));
+    const judge={};
+    for(const p of P){const r=jr.filter(e=>e.provider===p);if(!r.length)continue;
+      const dims={};for(const d of DIMS){const v=js.filter(e=>e.provider===p&&e.name===d).map(e=>+e.score);dims[d]=mean(v)}
+      judge[p]={overall:mean(r.map(e=>+e.score)),dims,tags:[...new Set(r.flatMap(e=>(e.tags||'').split(',').filter(Boolean)))],notes:r.map(e=>({judge:e.judge,text:e.rationale})),byJudge:Object.fromEntries(r.map(e=>[e.judge,+e.score]))}}
+    let winner=null;
+    if(jv.length){const w=[...new Set(jv.map(v=>v.verdict))];winner=w.length===1?w[0]:'split'}
+    const ov=S.A.override.find(o=>o.turn_id===t.id);if(ov)winner=ov.verdict;
+    const hacked=S.A.hackFinal.filter(h=>h.turn_id===t.id).map(h=>h.provider);
+    const ann={};for(const p of P){ann[p]={steps:S.J.steps.filter(e=>e.turn_id===t.id&&e.provider===p&&judgeOk(e.judge)),roots:S.J.roots.filter(e=>e.turn_id===t.id&&e.provider===p&&judgeOk(e.judge)),actions:S.J.actions.filter(e=>e.turn_id===t.id&&e.provider===p&&judgeOk(e.judge))};
+      const ps=js.filter(e=>e.provider===p&&PROC.includes(e.name));if(judge[p]){judge[p].proc={};for(const d of PROC){const v=ps.filter(e=>e.name===d).map(e=>+e.score);judge[p].proc[d]=mean(v)}}}
+    const fb=S.feedback.filter(f=>f.turn_id===t.id);
+    const review=t.evals.find(e=>e.name==='review_verdict');
+    const evals={};for(const p of P){const ev=by[p].flatMap(r=>r.evals.filter(e=>typeof e.passed==='boolean'));evals[p]={pass:ev.filter(e=>e.passed).length,n:ev.length}}
+    if(review){const w=by.codex.some(r=>r.role==='writer')?'codex':by.claude.some(r=>r.role==='writer')?'claude':null;
+      const reviewer=w==='codex'?'claude':'codex';
+      if(w){evals[w].n++;if(review.passed)evals[w].pass++}
+      // the verdict was emitted under the reviewer's name; it grades the writer
+      if(evals[reviewer]){const k=by[reviewer].flatMap(r=>r.evals).filter(e=>e.name==='review_verdict').length;evals[reviewer].n-=k;evals[reviewer].pass-=by[reviewer].flatMap(r=>r.evals).filter(e=>e.name==='review_verdict'&&e.passed).length}}
+    return {id:t.id,no:turnNo.get(t.id),mode:t.mode,kind:kindOf(t.mode),start:t.start,end:t.end||now,running:t.status==='running',status:t.status,promptId:t.promptId,
+      runs:rs,by,judge,ann,fb,verdicts:jv,winner,hacked,overridden:!!ov,consistent:jv.length?jv.every(v=>v.passed!==false):null,review,evals,judges:judges.filter(j=>j.turnId===t.id)};
+  });
+  const ft=turns.filter(t=>F.kind==='all'||t.kind===F.kind);
+  const fset=new Set(ft.map(t=>t.id));
+  return {turns:ft,allTurns:turns,runs:runs.filter(r=>fset.has(r.turn)),allRuns:runs,judges:judges.filter(j=>fset.has(j.turnId)),now};
+}
+function metrics(D){
+  const M={};
+  for(const p of P){
+    const rs=D.runs.filter(r=>r.provider===p&&!r.running);
+    const scored=D.turns.filter(t=>t.judge[p]).map(t=>t.judge[p].overall);
+    const tools=rs.flatMap(r=>r.tools).filter(l=>l.passed!==null);
+    const ev=D.turns.reduce((a,t)=>({pass:a.pass+t.evals[p].pass,n:a.n+t.evals[p].n}),{pass:0,n:0});
+    const primary=rs.filter(r=>r.role==='responder'||r.role==='reader');
+    M[p]={judge:mean(scored),judgeSd:sd(scored),judgeN:scored.length,
+      tools:tools.length,toolFail:tools.filter(l=>l.passed===false).length,toolOk:tools.length?1-tools.filter(l=>l.passed===false).length/tools.length:null,
+      evalPass:ev.n?ev.pass/ev.n:null,evalN:ev.n,runs:rs.length,failedRuns:rs.filter(r=>r.failed).length,failRate:rs.length?rs.filter(r=>r.failed).length/rs.length:null,
+      latency:median((primary.length?primary:rs.filter(r=>r.role!=='synthesis')).map(r=>r.dur)),latencyN:(primary.length?primary:rs).length,latencyBasis:primary.length?'answer/read runs':'all runs',
+      retries:rs.reduce((a,r)=>a+r.retries.length,0),toolsPerRun:median(rs.map(r=>r.tools.length))};
+  }
+  const decided=D.turns.filter(t=>t.winner&&t.by.codex.length&&t.by.claude.length);
+  const W={codex:decided.filter(t=>t.winner==='codex').length,claude:decided.filter(t=>t.winner==='claude').length};
+  W.tie=decided.length-W.codex-W.claude;W.n=decided.length;W.decisive=W.codex+W.claude;
+  W.p=signP(W.codex,W.decisive);
+  const jvs=D.turns.flatMap(t=>t.verdicts).filter(v=>v.passed!=null);W.consistency=jvs.length?jvs.filter(v=>v.passed).length/jvs.length:null;  // single-order verdicts excluded
+  const multi=D.turns.filter(t=>new Set(t.verdicts.map(v=>v.judge)).size>1);W.agree=multi.length?multi.filter(t=>new Set(t.verdicts.map(v=>v.verdict)).size===1).length/multi.length:null;W.agreeN=multi.length;
+  return {M,W};
+}
+/* ================= tooltip + drawer ================= */
+const tip=document.getElementById('tip');
+document.addEventListener('mousemove',ev=>{
+  const el=ev.target.closest&&ev.target.closest('[data-tip]');
+  if(!el){tip.style.display='none';return}
+  tip.innerHTML=el.getAttribute('data-tip');tip.style.display='block';
+  let x=ev.pageX+14,y=ev.pageY+12;const w=tip.offsetWidth,h=tip.offsetHeight;
+  if(x+w>scrollX+innerWidth-8)x=ev.pageX-w-14;if(y+h>scrollY+innerHeight-8)y=ev.pageY-h-12;
+  tip.style.left=x+'px';tip.style.top=y+'px';
+});
+const drawer=document.getElementById('drawer');
+document.getElementById('dClose').onclick=()=>drawer.classList.remove('open');
+document.addEventListener('keydown',e=>{if(e.key==='Escape')drawer.classList.remove('open')});
+function openDrawer(title,html){document.getElementById('dTitle').innerHTML=title;document.getElementById('dBody').innerHTML=html;drawer.classList.add('open');hydrate()}
+const sessQ=()=>S.session&&!S.live?'&session='+encodeURIComponent(S.session):'';
+async function fetchPayload(id){try{const r=await fetch('/payload?id='+id+sessQ());return r.ok?await r.json():null}catch(e){return null}}
+function payloadSlot(id,label){return id?`<div class="pl" data-pl="${id}"><button class="link">${esc(label)}</button></div>`:''}
+function hydrate(){
+  document.querySelectorAll('#dBody .pl').forEach(el=>{el.querySelector('button').onclick=async()=>{el.innerHTML='<span class="muted">loading…</span>';const p=await fetchPayload(el.dataset.pl);el.innerHTML=p&&p.text!=null?`<pre>${esc(p.text)}</pre>`:'<span class="muted">Not available. Payloads live in the trace DB (DUO_TRACE_DB) or a recent memory cache.</span>'}});
+  document.querySelectorAll('#dBody [data-reason-run]').forEach(el=>{el.onclick=async()=>{const box=el.parentElement;box.innerHTML='<span class="muted">loading…</span>';
+    try{const r=await fetch('/span_payloads?span='+el.dataset.reasonRun+sessQ());const rows=(await r.json()).filter(x=>x.kind==='reasoning');
+      box.innerHTML=rows.length?rows.map((x,i)=>`<div class="sub">Step ${i+1}</div><pre>${esc(x.text)}</pre>`).join(''):'<span class="muted">No reasoning text captured for this run.</span>'}catch(e){box.innerHTML='<span class="muted">Unavailable.</span>'}}});
+  document.querySelectorAll('#dBody [data-goto-ref]').forEach(el=>el.onclick=()=>openRef(+el.dataset.gotoRef));
+  document.querySelectorAll('#dBody [data-goto-turn]').forEach(el=>el.onclick=()=>showTurn(el.dataset.gotoTurn));
+  document.querySelectorAll('#dBody [data-goto-run]').forEach(el=>el.onclick=()=>showRun(el.dataset.gotoRun));
+  document.querySelectorAll('#dBody [data-goto-tool]').forEach(el=>{const[a,b]=el.dataset.gotoTool.split(':');el.onclick=()=>showTool(a,+b)});
+}
+function toolChips(r){
+  if(!r.tools.length)return '<span class="muted">no tool calls</span>';
+  return '<div class="chips">'+groupTools(r.tools).map(g=>`<span class="chip${g.fail?' f':''}" data-goto-tool="${r.id}:${g.i0}" data-tip="${esc(g.tool)}${g.n>1?' ×'+g.n:''}${g.fail?' · '+g.fail+' failed':''}">${esc(short(g.tool))}${g.n>1?'×'+g.n:''}${g.fail?' ✗':''}</span>`).join('')+'</div>';
+}
+function showTurn(id){
+  const D=derive();const t=D.allTurns.find(t=>t.id===id);if(!t)return;F.turn=id;schedule();
+  let h=`<div class="kv"><div>Task</div><div>${KIND_L[t.kind]} · <code>${esc(t.mode)}</code></div><div>Wall time</div><div>${dur((t.end-t.start)*1000)}</div><div>Status</div><div>${t.running?'running…':esc(t.status)}</div></div>`;
+  h+=payloadSlot(t.promptId,'Show the prompt');
+  h+='<h3>Judge</h3>';
+  if(!t.verdicts.length&&!Object.keys(t.judge).length)h+='<div class="muted">Not judged yet. In duo: <code>/judge panel</code>.</div>';
+  for(const v of t.verdicts)h+=`<div style="margin:6px 0"><b>${esc(v.judge)} judge</b> → ${v.verdict==='tie'?'tie':sw(v.verdict)+' '+NAME[v.verdict]} <span class="pill">confidence ${pct(v.confidence)}</span> ${v.passed===false?'<span class="pill bad">flipped when order swapped</span>':'<span class="pill ok">same in both orders</span>'}<div class="sub">${esc(v.rationale)}</div></div>`;
+  if(Object.keys(t.judge).length){
+    h+='<table><thead><tr><th>Dimension</th>'+P.filter(p=>t.judge[p]).map(p=>`<th class="num">${sw(p)} ${NAME[p]}</th>`).join('')+'</tr></thead><tbody>';
+    for(const d of [...DIMS,'overall'])h+=`<tr><td>${d==='overall'?'<b>Overall</b>':DIML[d]}</td>`+P.filter(p=>t.judge[p]).map(p=>`<td class="num">${f1(d==='overall'?t.judge[p].overall:t.judge[p].dims[d])}</td>`).join('')+'</tr>';
+    h+='</tbody></table>';
+    for(const p of P)if(t.judge[p]){const j=t.judge[p],an=t.ann[p];h+=`<div style="margin-top:8px">${sw(p)} <b>${NAME[p]}</b> ${j.tags.map(x=>`<span class="pill">${esc(x.replace(/_/g,' '))}</span>`).join(' ')}${an.roots.map(e=>`<div class="bad">◎ ${esc(String(e.name).replace(/_/g,' '))}: ${esc(e.rationale)} <span class="muted">(${esc(e.judge)})</span>${e.item_id&&S.byEvent.has(+e.item_id)?` <button class="link" data-goto-ref="${e.item_id}">open step</button>`:''}</div>`).join('')||(an.steps.length?'<div class="ok">✓ no root cause</div>':'')}${j.notes.filter(n=>n.text).map(n=>`<div class="sub">${esc(n.judge)}: ${esc(n.text)}</div>`).join('')}</div>`}
+  }
+  if(t.judges.length)h+='<div class="sub" style="margin-top:6px">Raw judge output: '+t.judges.map(j=>j.answerId?`<span class="pl" data-pl="${j.answerId}"><button class="link">${esc(j.mode||j.provider)}</button></span>`:'').join(' · ')+'</div>';
+  h+='<h3>Agent runs</h3>';
+  for(const r of t.runs)h+=`<div style="margin:8px 0;padding-top:6px;border-top:1px solid var(--line)"><button class="link" data-goto-run="${r.id}">${sw(r.provider)} <b>${NAME[r.provider]}</b> · ${esc(r.role)}</button> · ${dur(r.dur)} · ${r.tools.length} tools${r.failedTools.length?` · <span class="bad">${r.failedTools.length} ✗</span>`:''}${r.failed?' · <span class="bad">run failed</span>':''}<div style="margin-top:4px">${toolChips(r)}</div></div>`;
+  openDrawer(`Turn ${t.no}`,h);
+}
+function trajectoryHtml(r,focus){
+  const ann=new Map(),roots=new Map();
+  for(const e of S.J.steps)if(e.turn_id===r.turn&&e.provider===r.provider){const k=+e.item_id;if(!ann.has(k))ann.set(k,[]);ann.get(k).push(e)}
+  for(const e of S.J.roots)if(e.turn_id===r.turn&&e.provider===r.provider&&e.item_id){const k=+e.item_id;if(!roots.has(k))roots.set(k,[]);roots.get(k).push(e)}
+  const items=[...r.tools.map((l,i)=>({k:'tool',t:l.t,l,i,eid:l.eid})),...r.reasoning.map(q=>({k:'think',t:q.t,q,eid:q.id}))].sort((a,b)=>a.t-b.t);
+  const rows=[];
+  for(const it of items){const last=rows.at(-1);const plain=it.k==='tool'&&it.l.passed!==false&&!ann.has(it.eid)&&!roots.has(it.eid)&&it.eid!==focus;
+    if(plain&&last&&last.fold&&last.tool===it.l.tool){last.n++;last.targets.push(it.l.detail);continue}
+    rows.push(plain?{...it,fold:true,tool:it.l.tool,n:1,targets:[it.l.detail]}:it)}
+  const t0=r.start;
+  return rows.map(x=>{
+    const at=`<span class="muted" style="font-variant-numeric:tabular-nums">+${dur((x.t-t0)*1000)}</span>`;
+    const a=(ann.get(x.eid)||[]).map(e=>`<div class="ann"><span class="${LABEL[e.verdict]?.[1]||''}">${LABEL[e.verdict]?.[0]||''} ${LABEL[e.verdict]?.[2]||esc(e.verdict)}</span> · ${esc(e.rationale)} <span class="muted">(${esc(e.judge)} judge)</span></div>`).join('');
+    const rt=(roots.get(x.eid)||[]).map(e=>`<div class="ann bad"><b>◎ Root cause: ${esc(String(e.name).replace(/_/g,' '))}</b> · ${esc(e.rationale)} <span class="muted">(${esc(e.judge)} judge)</span></div>`).join('');
+    const cls=`step${roots.has(x.eid)?' root':''}`;const foc=x.eid===focus?' id="focusStep" style="outline:2px solid var(--text)"':'';
+    if(x.k==='think')return `<div class="${cls}"${foc}><span>◆</span><div class="what">Reasoning ${at} <span class="pl" data-pl="${x.eid}"><button class="link">read (${x.q.chars.toLocaleString()} chars)</button></span></div>${a}${rt}</div>`;
+    if(x.fold&&x.n>1)return `<div class="${cls}"><span class="ok">✓</span><div class="what"><b>${esc(short(x.tool))}</b> ×${x.n} ${at} <span class="muted" data-tip="${esc(x.targets.slice(0,12).join('<br>'))}">${esc(x.targets.slice(0,3).join(', '))}${x.n>3?'…':''}</span></div></div>`;
+    const l=x.l;return `<div class="${cls}"${foc}><span class="${l.passed===false?'bad':'ok'}">${l.passed===false?'✗':l.passed?'✓':'…'}</span><div class="what"><button class="link" data-goto-tool="${r.id}:${x.i}"><b>${esc(short(l.tool))}</b></button> ${esc(l.detail)} ${at} <span class="muted">${dur(l.dur)}</span></div>${a}${rt}</div>`;
+  }).join('')||'<div class="muted">No steps recorded.</div>';
+}
+function showRun(id,focus){
+  const D=derive();const r=D.allRuns.find(r=>r.id===id);if(!r)return;
+  const t=D.allTurns.find(t=>t.id===r.turn);const acts=t?t.ann[r.provider].actions:[];const roots=t?t.ann[r.provider].roots:[];
+  let h=`<div class="kv"><div>Model</div><div>${sw(r.provider)} ${NAME[r.provider]} · ${esc(r.role)}</div><div>Turn</div><div><button class="link" data-goto-turn="${r.turn}">Turn ${r.turnNo}</button></div><div>Duration</div><div>${dur(r.dur)}${r.running?' (running)':''}</div><div>Steps</div><div>${r.tools.length} tool calls (${r.failedTools.length} failed, ${r.retries.length} blind retries) · ${r.reasoning.length} reasoning</div>${r.s.lessons?`<div>Lessons</div><div>${r.s.lessons} applied to this run</div>`:''}<div>Evals</div><div>${r.evals.map(e=>`${e.passed?'<span class="ok">✓</span>':'<span class="bad">✗</span>'} ${esc(e.name)}`).join(', ')||'–'}</div></div>`;
+  if(roots.length)h+=`<h3>Judges’ diagnosis</h3>`+roots.map(e=>`<div class="bad" style="margin:3px 0">◎ <b>${esc(String(e.name).replace(/_/g,' '))}</b> · ${esc(e.rationale)} <span class="muted">(${esc(e.judge)})</span></div>`).join('');
+  else if(t&&Object.keys(t.judge).length)h+=`<h3>Judges’ diagnosis</h3><div class="ok">✓ No root cause found in this run.</div>`;
+  if(acts.length)h+=`<h3>Fixes proposed from this trace</h3>`+acts.map(e=>`<div style="margin:4px 0"><span class="pill">${TGT[e.role]||esc(e.role)}</span> ${esc(e.rationale)} <span class="muted">(${esc(e.judge)})</span></div>`).join('');
+  h+=`<h3>Trajectory, annotated</h3><div class="sub" style="margin-bottom:4px">Every step in order. Judge labels sit under the step they refer to; the root cause is highlighted. Consecutive successful calls of one tool are folded.</div>`+trajectoryHtml(r,focus);
+  if(r.s.guidanceId)h+='<h3>Guidance this run received</h3><div class="sub">Appended after the user\'s request, marked lower priority.</div>'+payloadSlot(r.s.guidanceId,'Show the exact text');
+  h+='<h3>Answer</h3>'+(payloadSlot(r.s.answerId,'Show answer / error')||'<div class="muted">Not stored.</div>');
+  openDrawer(`${NAME[r.provider]} · ${esc(r.role)}`,h);
+  if(focus)setTimeout(()=>document.getElementById('focusStep')?.scrollIntoView({block:'center'}),30);
+}
+function showTool(runId,i){
+  const D=derive();const r=D.allRuns.find(r=>r.id===runId);if(!r)return;const l=r.tools[i];if(!l)return;
+  const prev=r.tools[i-1];
+  let h=`<div class="kv"><div>Tool</div><div><b>${esc(l.tool)}</b></div><div>Target</div><div>${esc(l.detail)||'–'}</div><div>Result</div><div>${l.passed===false?'<span class="bad">✗ failed</span>':l.passed?'<span class="ok">✓ ok</span>':'running…'}</div><div>Duration</div><div>${dur(l.dur)}</div><div>Call</div><div>${i+1} of ${r.tools.length} in <button class="link" data-goto-run="${r.id}">${NAME[r.provider]} · ${esc(r.role)}</button></div>${prev&&prev.passed===false&&prev.tool===l.tool?'<div>Pattern</div><div class="bad">blind retry after a failure</div>':''}</div>`;
+  h+='<h3>Input</h3>'+(payloadSlot(l.inId,'Show input')||'<div class="muted">Not stored.</div>');
+  h+='<h3>Output</h3>'+(payloadSlot(l.outId,'Show output')||'<div class="muted">Not stored.</div>');
+  const near=r.tools.slice(Math.max(0,i-4),i+5);
+  h+='<h3>Around this call</h3><div class="chips">'+near.map((x,k)=>{const j=Math.max(0,i-4)+k;return `<span class="chip${x.passed===false?' f':''}" data-goto-tool="${r.id}:${j}" style="${j===i?'outline:2px solid var(--text)':''}">${esc(short(x.tool))}${x.passed===false?' ✗':''}</span>`}).join('')+'</div>';
+  openDrawer(`${sw(r.provider)} ${esc(l.tool)}`,h);
+}
+/* ================= helpers ================= */
+const short=t=>String(t).replace(/^approval:/,'⊘ ').replace('commandExecution','shell').replace('fileChange','edit').replace('mcpToolCall','mcp').replace('webSearch','search');
+function groupTools(tools){const g=[];tools.forEach((l,i)=>{const last=g.at(-1);if(last&&last.tool===l.tool){last.n++;last.i1=i;last.t1=l.t+(l.dur||0)/1000;if(l.passed===false)last.fail++}else g.push({tool:l.tool,n:1,i0:i,i1:i,t0:l.t,t1:l.t+(l.dur||0)/1000,fail:l.passed===false?1:0})});return g}
+function width(id){return Math.max(280,document.getElementById(id).clientWidth)}
+const better=(a,b,lower)=>a==null||b==null||a===b?null:(lower?a<b:a>b)?'codex':'claude';
+
+/* ================= verdict ================= */
+function renderVerdict(D,K){
+  const {M,W}=K,c=M.codex,l=M.claude;
+  const sum=document.getElementById('summary');
+  sum.textContent=`${D.allTurns.length} turns · ${D.allRuns.length} agent runs · ${S.events.length.toLocaleString()} events${S.stored?' · from trace DB':''}`;
+  let head='Waiting for the first judged turn…';
+  if(W.n||c.judgeN||l.judgeN){
+    const lead=c.judge!=null&&l.judge!=null?(Math.abs(c.judge-l.judge)<.1?null:c.judge>l.judge?'codex':'claude'):null;
+    const parts=[];
+    if(lead)parts.push(`<span style="color:var(--${lead})">${NAME[lead]}</span> leads on quality: judge ${f2(M[lead].judge)} vs ${f2(M[lead==='codex'?'claude':'codex'].judge)}`);
+    else if(c.judge!=null&&l.judge!=null)parts.push(`Quality is even: judge ${f2(c.judge)} vs ${f2(l.judge)}`);
+    if(W.decisive)parts.push(`wins ${Math.max(W.codex,W.claude)} of ${W.decisive} decisive turns`);
+    const fast=better(c.latency,l.latency,true);
+    if(fast&&M.codex.latency&&M.claude.latency){const r=Math.max(c.latency,l.latency)/Math.min(c.latency,l.latency);if(r>=1.25)parts.push(`${NAME[fast]} is ${r.toFixed(1)}× faster`)}
+    const rel=better(c.toolOk,l.toolOk,false);if(rel&&Math.abs(c.toolOk-l.toolOk)>=.03)parts.push(`${NAME[rel]} has fewer tool failures (${pct(1-M[rel].toolOk)} vs ${pct(1-M[rel==='codex'?'claude':'codex'].toolOk)})`);
+    head=parts.join(' · ')||'Not enough data to compare yet.';
+  }
+  document.getElementById('headline').innerHTML=head;
+  // head-to-head bar
+  const w=width('h2hBar'),h=30,n=W.n||1;const x=v=>v/n*w;
+  let svg=`<svg width="${w}" height="${h+18}" role="img" aria-label="Head-to-head wins">`;
+  if(!W.n)svg+=`<rect x="0" y="0" width="${w}" height="${h}" rx="4" fill="var(--neutral)"/><text x="${w/2}" y="${h/2+4}" text-anchor="middle">No head-to-head verdicts yet</text>`;
+  else{let x0=0;const seg=(k,v,fill,label)=>{if(!v)return'';const ww=Math.max(0,x(v)-2);const s=`<g data-tip="${label}: <b>${v}</b> of ${W.n} turns"><rect x="${x0}" y="0" width="${ww}" height="${h}" rx="4" fill="${fill}"/>${ww>70?`<text x="${x0+8}" y="${h/2+4}" style="fill:#fff" class="b">${label} ${v}</text>`:''}</g>`;x0+=x(v);return s};
+    svg+=seg('c',W.codex,'var(--codex)','Codex wins')+seg('t',W.tie,'var(--base)','Ties / split')+seg('l',W.claude,'var(--claude)','Claude wins');
+    svg+=`<text x="0" y="${h+14}">Codex ${W.codex}</text><text x="${w}" y="${h+14}" text-anchor="end">Claude ${W.claude}</text><text x="${w/2}" y="${h+14}" text-anchor="middle" class="mut">ties ${W.tie}</text>`}
+  document.getElementById('h2hBar').innerHTML=svg+'</svg>';
+  document.getElementById('h2hLegend').innerHTML=`<span><i class="sw" style="background:var(--codex)"></i>Codex wins</span><span><i class="sw" style="background:var(--base)"></i>Tie or judges split</span><span><i class="sw" style="background:var(--claude)"></i>Claude wins</span>`;
+  const lead=W.claude>W.codex?'claude':'codex',k=Math.max(W.codex,W.claude);const ci=wilson(k,W.decisive);
+  const conclusive=W.decisive>=20&&W.p<.05;
+  const stat=(v,l,t)=>`<div class="stat" ${t?`data-tip="${esc(t)}"`:''}><div class="v">${v}</div><div class="l">${l}</div></div>`;
+  document.getElementById('stats').innerHTML=
+    stat(W.decisive?`${pct(k/W.decisive)} <span class="sub">${NAME[lead]}</span>`:'–','Win rate, decisive turns','95% Wilson interval '+pct(ci[0])+'–'+pct(ci[1]))+
+    stat(W.decisive?(W.p<.001?'<0.001':W.p.toFixed(2)):'–','Sign-test p-value','Two-sided exact binomial test on decisive turns. Below 0.05 with ≥20 turns = a real difference.')+
+    stat(conclusive?'<span class="ok">✓ Significant</span>':`<span class="muted">Inconclusive</span>`,W.decisive<20?`Need ≥20 decisive turns (have ${W.decisive})`:'At p < 0.05')+
+    stat(W.agree!=null?pct(W.agree):'–','Judges agree on winner',`Codex-judge vs Claude-judge, ${W.agreeN} turns`)+
+    stat(W.consistency!=null?pct(W.consistency):'–','Same verdict in both orders','Each judge sees A/B then B/A; a flip counts as a tie (position bias)')+
+    stat(S.J.errors.length?`<span class="bad">${S.J.errors.length}</span>`:'0','Unparseable judge calls','Judge calls that failed or returned invalid JSON');
+}
+/* ================= scoreboard (butterfly) ================= */
+function renderScoreboard(D,K){
+  const {M,W}=K;const w=width('scoreboard');
+  const rows=[
+    {l:'Judge score',u:'/5',c:M.codex.judge,k:M.claude.judge,max:5,fmt:f2,ci:true,t:p=>`mean of ${M[p].judgeN} judged turns, sd ${f2(M[p].judgeSd)}`},
+    {l:'Runtime evals passed',c:M.codex.evalPass,k:M.claude.evalPass,max:1,fmt:pct,t:p=>`${M[p].evalN} evals: backend success, tool reliability, review verdict`},
+    {l:'Tool calls succeeded',c:M.codex.toolOk,k:M.claude.toolOk,max:1,fmt:pct,t:p=>`${M[p].tools-M[p].toolFail} of ${M[p].tools} calls`},
+    {l:'Median time',c:M.codex.latency,k:M.claude.latency,fmt:dur,lower:true,t:p=>`median over ${M[p].latencyN} ${M[p].latencyBasis}`},
+    {l:'Runs failed',c:M.codex.failRate,k:M.claude.failRate,max:1,fmt:pct,lower:true,t:p=>`${M[p].failedRuns} of ${M[p].runs} runs`},
+    {l:'Blind retries',c:M.codex.retries,k:M.claude.retries,fmt:v=>v,lower:true,t:p=>'same tool re-run right after it failed'},
+  ];
+  const lab=Math.min(170,w*.3),half=(w-lab)/2,rh=28,pad=60;
+  let svg=`<svg width="${w}" height="${rows.length*rh+22}" role="img" aria-label="Scoreboard">`;
+  svg+=`<text x="${half-4}" y="12" text-anchor="end" class="ink b">◀ Codex</text><text x="${half+lab+4}" y="12" class="ink b">Claude ▶</text>`;
+  rows.forEach((r,i)=>{
+    const y=22+i*rh,bh=14,cy=y+(rh-bh)/2;
+    const mx=r.max||Math.max(r.c||0,r.k||0,1e-9);const s=v=>v==null?0:Math.max(2,(v/mx)*(half-pad));
+    const win=r.neutral?null:better(r.c,r.k,r.lower);
+    const op=p=>win&&win!==p?.38:1;
+    svg+=`<line x1="0" x2="${w}" y1="${y+rh}" y2="${y+rh}" stroke="var(--grid)"/>`;
+    svg+=`<text x="${half+lab/2}" y="${cy+11}" text-anchor="middle" class="ink">${r.l}</text>`;
+    const cw=s(r.c),kw=s(r.k);
+    svg+=`<g data-tip="${sw('codex')}<b>Codex</b> · ${esc(r.l)}: <b>${esc(String(r.fmt(r.c)))}</b><br>${esc(r.t('codex'))}"><rect x="${half-cw}" y="${cy}" width="${cw}" height="${bh}" rx="3" fill="var(--codex)" opacity="${op('codex')}"/><rect x="0" y="${y}" width="${half}" height="${rh}" fill="transparent"/><text x="${half-cw-6}" y="${cy+11}" text-anchor="end" class="${win==='codex'?'ink b':''}">${esc(String(r.fmt(r.c)))}</text></g>`;
+    svg+=`<g data-tip="${sw('claude')}<b>Claude</b> · ${esc(r.l)}: <b>${esc(String(r.fmt(r.k)))}</b><br>${esc(r.t('claude'))}"><rect x="${half+lab}" y="${cy}" width="${kw}" height="${bh}" rx="3" fill="var(--claude)" opacity="${op('claude')}"/><rect x="${half+lab}" y="${y}" width="${half}" height="${rh}" fill="transparent"/><text x="${half+lab+kw+6}" y="${cy+11}" class="${win==='claude'?'ink b':''}">${esc(String(r.fmt(r.k)))}</text></g>`;
+    if(r.ci){for(const [p,v,x0,dir] of [['codex',r.c,half,-1],['claude',r.k,half+lab,1]]){if(v==null||M[p].judgeN<2)continue;const e=1.96*M[p].judgeSd/Math.sqrt(M[p].judgeN);const a=x0+dir*s(Math.max(0,v-e)),b=x0+dir*s(Math.min(5,v+e));svg+=`<line x1="${a}" x2="${b}" y1="${cy+bh/2}" y2="${cy+bh/2}" stroke="var(--text)" stroke-width="1.5"/>`}}
+    if(r.lower)svg+=`<text x="${half+lab/2}" y="${cy+24}" text-anchor="middle" class="mut" style="font-size:10px">lower is better</text>`;
+  });
+  document.getElementById('scoreboard').innerHTML=svg+'</svg>';
+  const lead=M.codex.judge!=null&&M.claude.judge!=null&&Math.abs(M.codex.judge-M.claude.judge)>=.1?better(M.codex.judge,M.claude.judge,false):null;
+  document.getElementById('sbTitle').textContent=M.codex.judge!=null||M.claude.judge!=null?`Side by side: judge score Codex ${f2(M.codex.judge)} · Claude ${f2(M.claude.judge)}; median time ${dur(M.codex.latency)} · ${dur(M.claude.latency)}`:'Side by side';
+}
+/* ================= rubric dumbbell ================= */
+function renderRubric(D){
+  const w=width('rubric');const both=D.turns.filter(t=>t.judge.codex&&t.judge.claude);
+  const host=document.getElementById('rubric');
+  const val=(t,p,d)=>d==='overall'?t.judge[p].overall:PROC.includes(d)?t.judge[p].proc?.[d]:t.judge[p].dims[d];
+  const rows=[...DIMS,'overall',...PROC].map(d=>{const g=p=>mean(both.map(t=>val(t,p,d)).filter(v=>v!=null));return {d,c:g('codex'),k:g('claude')}}).filter(r=>!PROC.includes(r.d)||r.c!=null);
+  if(!both.length){host.innerHTML='<div class="empty">No turn has judge scores for both models yet.</div>';document.getElementById('selfPref').textContent='';return}
+  const L=110,R=96,rh=24,x=d3.scaleLinear([1,5],[L,w-R]);
+  const procAt=rows.findIndex(r=>PROC.includes(r.d));
+  let svg=`<svg width="${w}" height="${rows.length*rh+32}" role="img" aria-label="Rubric">`;
+  if(procAt>0)svg+=`<line x1="0" x2="${w}" y1="${8+procAt*rh-2}" y2="${8+procAt*rh-2}" stroke="var(--line)"/><text x="0" y="${8+procAt*rh+8}" class="mut" style="font-size:10px">PROCESS (read from the trace)</text>`;
+  for(const v of [1,2,3,4,5])svg+=`<line x1="${x(v)}" x2="${x(v)}" y1="4" y2="${rows.length*rh+10}" stroke="var(--grid)"/><text x="${x(v)}" y="${rows.length*rh+26}" text-anchor="middle" class="mut">${v}</text>`;
+  rows.forEach((r,i)=>{const y0=8+i*rh+rh/2;const y=PROC.includes(r.d)?y0+6:y0;const big=r.d==='overall';
+    const nm=big?'Overall':DIML[r.d]||PROCL[r.d];const yy=y;
+    svg+=`<text x="0" y="${yy+4}" class="${big?'ink b':'ink'}">${nm}</text>`;
+    if(r.c==null||r.k==null)return;
+    svg+=`<line x1="${x(r.c)}" x2="${x(r.k)}" y1="${y}" y2="${y}" stroke="var(--base)" stroke-width="3" stroke-linecap="round"/>`;
+    for(const [p,v] of [['codex',r.c],['claude',r.k]])svg+=`<circle cx="${x(v)}" cy="${y}" r="${big?7:6}" fill="var(--${p})" stroke="var(--panel)" stroke-width="2" data-tip="${sw(p)}<b>${NAME[p]}</b> · ${nm}: <b>${f2(v)}</b> / 5<br>${both.length} turns judged for both"/>`;
+    const dlt=r.k-r.c,who=Math.abs(dlt)<.05?null:dlt>0?'claude':'codex';
+    svg+=`<text x="${w-R+10}" y="${y+4}" class="${who?'ink':''}">${who?`${NAME[who]} +${Math.abs(dlt).toFixed(2)}`:'even'}</text>`});
+  host.innerHTML=svg+'</svg>';
+  const big=rows.filter(r=>r.c!=null&&r.k!=null&&r.d!=='overall').sort((a,b)=>Math.abs(b.k-b.c)-Math.abs(a.k-a.c))[0];
+  document.getElementById('rubTitle').textContent=big&&Math.abs(big.k-big.c)>=.1?`Judge rubric: the agents differ most on ${(DIML[big.d]||PROCL[big.d]).toLowerCase()}`:'Judge rubric: similar profiles';
+  // self-preference: each judge's margin for its own model
+  const margin=j=>{const ts=D.turns.filter(t=>t.judge.codex&&t.judge.claude);const v=ts.map(t=>{const a=S.J.results.filter(e=>e.turn_id===t.id&&String(e.judge).startsWith(j));const own=a.find(e=>e.provider===j),oth=a.find(e=>e.provider!==j);return own&&oth?own.score-oth.score:null}).filter(v=>v!=null);return v.length?{m:mean(v),n:v.length}:null};
+  const mc=margin('codex'),ml=margin('claude');
+  document.getElementById('selfPref').innerHTML=mc&&ml?`<b>Self-preference check.</b> Codex-as-judge rates Codex ${mc.m>=0?'+':''}${f2(mc.m)} above Claude; Claude-as-judge rates Claude ${ml.m>=0?'+':''}${f2(ml.m)} above Codex.${mc.m>0&&ml.m>0?' <span class="bad">Both judges favor themselves, so trust the panel average, not either judge alone.</span>':' No mutual self-preference.'}`:'Run <code>/judge panel</code> to check judge self-preference.';
+}
+/* ================= duel table ================= */
+function divColor(v,max=2){const t=Math.min(1,Math.abs(v)/max);return d3.interpolateLab(css('--neutral'),css(v<0?'--codex':'--claude'))(t)}
+function renderDuel(D){
+  const th=`<tr><th>Turn</th><th>Task</th><th>Winner</th><th class="num">Codex</th><th style="text-align:center">Judge Δ</th><th class="num">Claude</th>${DIMS.map(d=>`<th title="${DIML[d]}" style="text-align:center">${DIML[d].slice(0,5)}.</th>`).join('')}<th style="text-align:center">Time (Codex ● Claude ●)</th><th class="num">Tools Codex</th><th class="num">Tools Claude</th><th>Where it went wrong (judge root cause)</th></tr>`;
+  document.querySelector('#duel thead').innerHTML=th;
+  let ts=[...D.turns];
+  const gap=t=>t.judge.codex&&t.judge.claude?Math.abs(t.judge.claude.overall-t.judge.codex.overall):-1;
+  const fails=t=>t.runs.reduce((a,r)=>a+r.failedTools.length+(r.failed?3:0),0)+P.reduce((a,p)=>a+(t.judge[p]?.tags.length||0),0);
+  ts.sort(F.sort==='gap'?(a,b)=>gap(b)-gap(a):F.sort==='fail'?(a,b)=>fails(b)-fails(a):(a,b)=>b.no-a.no);
+  const durs=D.runs.map(r=>r.dur).filter(v=>v>0);const lo=Math.max(100,d3.min(durs)||100),hi=Math.max(lo*10,d3.max(durs)||1000);
+  const lx=d3.scaleLog([lo,hi],[6,134]).clamp(true);
+  const rows=ts.map(t=>{
+    const c=t.judge.codex,l=t.judge.claude;const dl=c&&l?l.overall-c.overall:null;
+    const win=t.winner==null?'<span class="muted">–</span>':t.winner==='split'?'<span class="pill" title="judges disagreed">split</span>':t.winner==='tie'?'<span class="pill">tie</span>':`${sw(t.winner)} ${NAME[t.winner]}`;
+    const cons=t.consistent===false?' <span class="bad" title="a judge flipped when the answer order was swapped">⇄</span>':'';
+    let bar='<svg width="120" height="16">'+`<line x1="60" x2="60" y1="0" y2="16" stroke="var(--base)"/>`;
+    if(dl!=null){const wv=Math.min(58,Math.abs(dl)/2*58);bar+=`<rect x="${dl<0?60-wv:60}" y="3" width="${Math.max(1.5,wv)}" height="10" rx="2" fill="var(--${dl<0?'codex':'claude'})"/>`}
+    bar+='</svg>';
+    const cells=DIMS.map(d=>{const v=c&&l&&c.dims[d]!=null&&l.dims[d]!=null?l.dims[d]-c.dims[d]:null;return `<td style="text-align:center;padding:2px"><span data-tip="${DIML[d]}: Codex ${f1(c?.dims[d])} · Claude ${f1(l?.dims[d])}" style="display:inline-block;width:30px;height:18px;border-radius:3px;background:${v==null?'transparent':divColor(v)};font-size:10.5px;line-height:18px;color:${v!=null&&Math.abs(v)>1.2?'#fff':'var(--text-2)'}">${v==null?'':v===0?'0':(v>0?'+':'')+v.toFixed(1)}</span></td>`}).join('');
+    const dd=p=>t.by[p].filter(r=>r.role!=='synthesis').reduce((a,r)=>a+r.dur,0)||null;
+    const cd=dd('codex'),kd=dd('claude');
+    let tm='<svg width="140" height="16">';if(cd&&kd)tm+=`<line x1="${lx(cd)}" x2="${lx(kd)}" y1="8" y2="8" stroke="var(--base)" stroke-width="2"/>`;
+    for(const [p,v,yy] of [['codex',cd,8],['claude',kd,8]])if(v)tm+=`<circle cx="${lx(v)}" cy="${yy}" r="4.5" fill="var(--${p})" stroke="var(--panel)" stroke-width="1.5"/>`;tm+='</svg>';
+    const tl=p=>{const tt=t.by[p].flatMap(r=>r.tools),f=tt.filter(x=>x.passed===false).length;return tt.length?`${tt.length}${f?` <span class="bad">${f}✗</span>`:''}`:'<span class="muted">–</span>'};
+    const tags=P.map(p=>{const r=[...new Set(t.ann[p].roots.map(x=>x.name))];return r.length?`${sw(p)} `+r.map(x=>`<span class="pill" data-tip="${esc(t.ann[p].roots.find(y=>y.name===x).rationale||'')}">${esc(x.replace(/_/g,' '))}</span>`).join(' '):''}).filter(Boolean).join(' &nbsp; ')||(Object.keys(t.judge).length?'<span class="ok">✓ none found</span>':'');
+    const fbm=t.fb.length?` <span title="your feedback">${t.fb.map(f=>f.verdict==='negative'?'👎':f.verdict==='positive'?'👍':'★'+NAME[f.verdict]).join('')}</span>`:'';
+    const rf=P.filter(p=>t.by[p].some(r=>r.failed)).map(p=>`<span class="pill bad">${NAME[p]} run failed</span>`).join(' ');
+    return `<tr data-turn="${t.id}" class="${F.turn===t.id?'sel':''}"><td class="num">${t.running?'<span class="running">●</span> ':''}${t.no}${fbm}</td><td>${KIND_L[t.kind]}</td><td>${win}${cons}</td><td class="num">${f1(c?.overall)}</td><td>${bar}</td><td class="num">${f1(l?.overall)}</td>${cells}<td data-tip="Codex ${dur(cd)} · Claude ${dur(kd)}">${tm}</td><td class="num">${tl('codex')}</td><td class="num">${tl('claude')}</td><td>${rf} ${tags}</td></tr>`});
+  document.querySelector('#duel tbody').innerHTML=rows.join('')||`<tr><td colspan="${11+DIMS.length}" class="empty">No turns match these filters.</td></tr>`;
+  const decided=D.turns.filter(t=>t.judge.codex&&t.judge.claude);
+  document.getElementById('duelTitle').textContent=decided.length?`Turn by turn: Claude scored higher on ${decided.filter(t=>t.judge.claude.overall>t.judge.codex.overall).length} of ${decided.length} judged turns, Codex on ${decided.filter(t=>t.judge.codex.overall>t.judge.claude.overall).length}`:'Turn by turn';
+}
+document.querySelector('#duel tbody').addEventListener('click',e=>{const tr=e.target.closest('tr[data-turn]');if(tr){showTurn(tr.dataset.turn);focusTurn(tr.dataset.turn)}});
+
+/* ================= timeline: focus + context ================= */
+const TL={zoom:null,domain:null,user:false,warp:null,hot:[]};
+function buildWarp(D){
+  // compress idle gaps: union of active intervals; gaps > G shrink to a fixed small width
+  const iv=[...D.runs,...D.judges].map(r=>[r.start,Math.max(r.end,r.start+.05)]).sort((a,b)=>a[0]-b[0]);
+  if(!iv.length)return null;
+  const merged=[];for(const [a,b] of iv){const m=merged.at(-1);if(m&&a<=m[1])m[1]=Math.max(m[1],b);else merged.push([a,b])}
+  const t0=merged[0][0],t1=merged.at(-1)[1],total=Math.max(1,t1-t0);
+  const G=Math.max(15,total*.03),C=Math.max(2,total*.012);
+  const segs=[];let disp=0;let prev=t0;
+  for(const [a,b] of merged){if(a>prev){const g=a-prev;const dl=g>G?C:g;segs.push({r0:prev,r1:a,d0:disp,d1:disp+dl,gap:g>G});disp+=dl}segs.push({r0:a,r1:b,d0:disp,d1:disp+(b-a)});disp+=b-a;prev=b}
+  const fwd=t=>{if(t<=t0)return 0;for(const s of segs)if(t<=s.r1)return s.d0+(s.r1===s.r0?0:(t-s.r0)/(s.r1-s.r0)*(s.d1-s.d0));return disp};
+  return {fwd,t0,t1,disp,gaps:segs.filter(s=>s.gap)};
+}
+function hotspots(D,warp){
+  const H=[];const all=D.runs.flatMap(r=>r.tools.map(l=>({r,l})));
+  const durs=all.map(x=>x.l.dur).filter(v=>v>0);const p95=durs.length>=10?d3.quantile([...durs].sort((a,b)=>a-b),.95):Infinity;
+  for(const r of D.runs){
+    if(r.failed)H.push({k:'fail',t0:r.start,t1:r.end,r,label:`${NAME[r.provider]} ${r.role} run failed`});
+    // retry loops: consecutive failures/retries of one tool
+    let i=0;while(i<r.tools.length){let j=i;while(j+1<r.tools.length&&r.tools[j+1].tool===r.tools[i].tool&&(r.tools[j].passed===false))j++;
+      if(j-i>=1){H.push({k:'loop',t0:r.tools[i].t,t1:r.tools[j].t+(r.tools[j].dur||0)/1000,r,i,label:`${NAME[r.provider]} retried ${short(r.tools[i].tool)} ${j-i+1}× after failures`})}i=j+1}
+    r.tools.forEach((l,i)=>{if(l.passed===false)H.push({k:'tool',t0:l.t,t1:l.t+(l.dur||0)/1000,r,i,label:`${NAME[r.provider]} ${short(l.tool)} failed`});if(l.dur>p95&&l.dur>2000)H.push({k:'slow',t0:l.t,t1:l.t+l.dur/1000,r,i,label:`${NAME[r.provider]} ${short(l.tool)} took ${dur(l.dur)}`})});
+  }
+  for(const e of S.J.roots){const x=S.byEvent.get(+e.item_id);if(!x)continue;const r=D.runs.find(q=>q.id===x.span);if(!r)continue;const l=x.tool;H.push({k:'root',t0:l?l.t:r.start,t1:l?l.t+(l.dur||0)/1000:r.start+1,r,i:l?r.tools.indexOf(l):null,eid:+e.item_id,label:`${NAME[r.provider]} root cause: ${String(e.name).replace(/_/g,' ')}`})}
+  const runDur=D.runs.filter(r=>!r.running).map(r=>r.dur);const md=median(runDur)||0;
+  for(const r of D.runs)if(md&&r.dur>4*md&&r.dur>60000)H.push({k:'long',t0:r.start,t1:r.end,r,label:`${NAME[r.provider]} ${r.role} ran ${dur(r.dur)} (${(r.dur/md).toFixed(0)}× median)`});
+  return H;
+}
+function renderTimeline(D){
+  const warp=buildWarp(D);TL.warp=warp;const ov=document.getElementById('overview'),ln=document.getElementById('lanes');
+  if(!warp){ov.innerHTML='';ln.innerHTML='<div class="empty">No agent runs yet.</div>';document.getElementById('hotspots').innerHTML='';return}
+  const H=hotspots(D,warp);TL.hot=H;
+  const kinds=[['root','◎','root causes'],['fail','✗','runs failed'],['tool','✗','failed tool calls'],['loop','↻','retry loops'],['slow','⏱','slow calls (>p95)'],['long','⧗','long-running agents']];
+  const gapTotal=d3.sum(warp.gaps,g=>g.r1-g.r0);
+  document.getElementById('hotspots').innerHTML='<span class="sub" style="align-self:center">Jump to:</span>'+kinds.map(([k,ic,l])=>{const n=H.filter(h=>h.k===k).length;return n?`<button data-hot="${k}" data-tip="Click repeatedly to step through each one">${ic} ${n} ${l}</button>`:''}).join('')+(warp.gaps.length?`<span class="pill" data-tip="Idle stretches (nothing running) longer than 3% of the session are drawn narrow">⋯ ${warp.gaps.length} idle gaps compressed (${dur(gapTotal*1000)})</span>`:'')+`<span class="pill">real span ${dur((warp.t1-warp.t0)*1000)}</span>`;
+  const w=width('lanes'),L=78;
+  const x0=d3.scaleLinear([0,warp.disp],[L,w-8]);
+  if(!TL.domain||!TL.user)TL.domain=[0,warp.disp];
+  const x=d3.scaleLinear(TL.domain,[L,w-8]);
+  /* lanes with row packing */
+  const lanes=[['codex',D.runs.filter(r=>r.provider==='codex')],['claude',D.runs.filter(r=>r.provider==='claude')],['judge',D.judges]];
+  const RH=24;let y=22;const placed=[];const laneY=[];
+  for(const [name,list] of lanes){const ends=[];const rows=[];for(const r of [...list].sort((a,b)=>a.start-b.start)){let k=ends.findIndex(e=>e<=r.start);if(k<0){k=ends.length;ends.push(0)}ends[k]=r.end;placed.push({r,lane:name,y:y+k*RH})}
+    const n=Math.max(1,ends.length);laneY.push({name,y,h:n*RH});y+=n*RH+10}
+  const H2=y+4;
+  let svg=`<svg width="${w}" height="${H2}" id="laneSvg" role="img" aria-label="Execution timeline"><defs><clipPath id="clipL"><rect x="${L}" y="0" width="${w-L-8}" height="${H2}"/></clipPath></defs>`;
+  // turn bands
+  const vis=v=>v>=TL.domain[0]-1e-9&&v<=TL.domain[1]+1e-9;
+  svg+='<g clip-path="url(#clipL)">';
+  D.turns.forEach((t,i)=>{const a=x(warp.fwd(t.start)),b=x(warp.fwd(t.end));if(b<L||a>w)return;svg+=`<rect x="${a}" y="16" width="${Math.max(1,b-a)}" height="${H2-16}" fill="${F.turn===t.id?'var(--hover)':i%2?'var(--surface)':'transparent'}" opacity="${F.turn===t.id?1:.6}" data-turnband="${t.id}"/>`;if(b-a>22)svg+=`<text x="${Math.max(a,L)+3}" y="12" class="mut">T${t.no}</text>`});
+  // gaps
+  for(const g of warp.gaps){const a=x(g.d0),b=x(g.d1);if(b<L||a>w)continue;svg+=`<g data-tip="Idle ${dur((g.r1-g.r0)*1000)} compressed"><rect x="${a}" y="16" width="${Math.max(2,b-a)}" height="${H2-16}" fill="var(--grid)"/><text x="${(a+b)/2}" y="${H2-2}" text-anchor="middle" class="mut">⋯</text></g>`}
+  svg+='</g>';
+  for(const l of laneY)svg+=`<text x="0" y="${l.y+14}" class="ink b">${NAME[l.name]}</text><line x1="${L}" x2="${w-8}" y1="${l.y+l.h+4}" y2="${l.y+l.h+4}" stroke="var(--grid)"/>`;
+  svg+='<g clip-path="url(#clipL)">';
+  const x2=t=>x(warp.fwd(t));
+  for(const {r,lane,y:ry} of placed){
+    const a=x(warp.fwd(r.start)),b=x(warp.fwd(r.end));if(b<L-2||a>w)continue;
+    const col=lane==='judge'?'var(--judge)':`var(--${lane})`;const bw=Math.max(2,b-a);
+    const isJ=lane==='judge';
+    const tipTxt=isJ?`<b>Judge</b> ${esc(r.mode||r.provider)} · turn ${r.turnNo}<br>${dur((r.end-r.start)*1000)}`:`${sw(r.provider)}<b>${NAME[r.provider]} · ${esc(r.role)}</b> · turn ${r.turnNo}<br>${dur(r.dur)} · ${r.tools.length} tools${r.failedTools.length?` · <span class='bad'>${r.failedTools.length} failed</span>`:''} · ${r.reasoning.length} reasoning steps${r.failed?"<br><span class='bad'>run failed</span>":''}`;
+    svg+=`<rect x="${a}" y="${ry}" width="${bw}" height="${RH-6}" rx="3" fill="${col}" opacity="${isJ?.55:.22}" ${r.failed?'stroke="var(--critical)" stroke-width="1.5"':''} class="${r.running?'running':''}" data-tip="${esc(tipTxt)}" ${isJ?`data-turnclick="${r.turnId}"`:`data-run="${r.id}"`} style="cursor:pointer"/>`;
+    if(bw>60&&!isJ)svg+=`<text x="${Math.max(a,L)+4}" y="${ry+10}" class="ink" style="font-size:10px;pointer-events:none">${esc(r.role)}</text>`;
+    if(isJ)continue;
+    // semantic zoom: collapse repeated tools when they are too dense to read
+    const groups=groupTools(r.tools);
+    for(const g of groups){
+      const ga=x(warp.fwd(g.t0)),gb=x(warp.fwd(Math.max(g.t1,g.t0+.01)));if(gb<L||ga>w)continue;
+      const split=g.n===1||(gb-ga)/g.n>=7;
+      if(split){for(let i=g.i0;i<=g.i1;i++){const l=r.tools[i];const ta=x(warp.fwd(l.t)),tb=x(warp.fwd(l.t+(l.dur||0)/1000));if(tb<L||ta>w)continue;const tw=Math.max(2,tb-ta);
+          svg+=`<rect x="${ta}" y="${ry+3}" width="${tw}" height="${RH-12}" rx="1.5" fill="${l.passed===false?'var(--critical)':col}" data-tool="${r.id}:${i}" style="cursor:pointer" data-tip="${esc(`${sw(r.provider)}<b>${esc(l.tool)}</b> ${esc(l.detail)}<br>${l.passed===false?"<span class='bad'>✗ failed</span>":l.passed?'✓ ok':'running'} · ${dur(l.dur)}`)}"/>`;
+          if(l.passed===false)svg+=`<text x="${ta+tw/2}" y="${ry-1}" text-anchor="middle" style="fill:var(--critical);font-size:10px;pointer-events:none">✗</text>`;
+          if(tw>46)svg+=`<text x="${ta+3}" y="${ry+11}" style="fill:#fff;font-size:9.5px;pointer-events:none">${esc(short(l.tool))}</text>`}}
+      else{const gw=Math.max(3,gb-ga);
+        svg+=`<rect x="${ga}" y="${ry+3}" width="${gw}" height="${RH-12}" rx="1.5" fill="${col}" data-tool="${r.id}:${g.i0}" style="cursor:zoom-in" data-zoomto="${warp.fwd(g.t0)}:${warp.fwd(g.t1)}" data-tip="${esc(`${sw(r.provider)}<b>${esc(g.tool)} ×${g.n}</b>${g.fail?` · <span class='bad'>${g.fail} failed</span>`:''}<br>${dur((g.t1-g.t0)*1000)} · click to zoom in`)}"/>`;
+        if(g.fail)svg+=`<rect x="${ga}" y="${ry+RH-9}" width="${Math.max(2,gw*g.fail/g.n)}" height="3" fill="var(--critical)" style="pointer-events:none"/><text x="${ga+gw/2}" y="${ry-1}" text-anchor="middle" style="fill:var(--critical);font-size:10px;pointer-events:none">✗${g.fail>1?g.fail:''}</text>`;
+        if(gw>40)svg+=`<text x="${ga+3}" y="${ry+11}" style="fill:#fff;font-size:9.5px;pointer-events:none">${esc(short(g.tool))}×${g.n}</text>`}
+    }
+    for(const e of S.J.roots){if(e.provider!==r.provider||e.turn_id!==r.turn)continue;const x=S.byEvent.get(+e.item_id);if(!x||x.span!==r.id)continue;const tt=x.tool?x.tool.t:r.start;const rx=x2(tt);if(rx<L||rx>w)continue;svg+=`<circle cx="${rx}" cy="${ry+(RH-6)/2}" r="7" fill="none" stroke="var(--critical)" stroke-width="2" data-reason="${r.id}" data-eid="${e.item_id}" style="cursor:pointer" data-tip="◎ Root cause: ${esc(String(e.name).replace(/_/g,' '))}<br>${esc(e.rationale||'')}"/>`}
+    // reasoning diamonds (only when zoomed in enough to be meaningful)
+    if(r.reasoning.length&&(b-a)/r.reasoning.length>5)for(const q of r.reasoning){const qx=x(warp.fwd(q.t));if(qx<L||qx>w)continue;svg+=`<path d="M${qx},${ry+RH-8} l3,3 l-3,3 l-3,-3z" fill="var(--text)" data-reason="${r.id}" data-eid="${q.id}" style="cursor:pointer" data-tip="◆ reasoning step · ${q.chars.toLocaleString()} chars<br>click to read"/>`}
+  }
+  svg+='</g>';
+  // axis in real elapsed time
+  const ticks=x.ticks(Math.max(2,Math.floor(w/120)));
+  svg+=`<line x1="${L}" x2="${w-8}" y1="16" y2="16" stroke="var(--base)"/>`;
+  svg+='</svg>';
+  ln.innerHTML=svg;
+  /* overview strip with brush */
+  const oh=46;let os=`<svg width="${w}" height="${oh}" id="ovSvg"><text x="0" y="16" class="mut">Overview</text><text x="0" y="30" class="mut" style="font-size:10px">drag to zoom</text>`;
+  for(const g of warp.gaps)os+=`<rect x="${x0(g.d0)}" y="4" width="${Math.max(1,x0(g.d1)-x0(g.d0))}" height="${oh-12}" fill="var(--grid)"/>`;
+  const oy={codex:6,claude:18,judge:30};
+  for(const r of [...D.runs,...D.judges]){const lane=r.kind==='judge'?'judge':r.provider;const a=x0(warp.fwd(r.start)),b=x0(warp.fwd(r.end));os+=`<rect x="${a}" y="${oy[lane]}" width="${Math.max(1,b-a)}" height="8" rx="2" fill="var(--${lane==='judge'?'judge':lane})" opacity="${lane==='judge'?.5:.75}"/>`}
+  for(const h of H)if(h.k==='tool'||h.k==='fail')os+=`<line x1="${x0(warp.fwd(h.t0))}" x2="${x0(warp.fwd(h.t0))}" y1="2" y2="${oh-6}" stroke="var(--critical)" stroke-width="1"/>`;
+  os+='<g id="brush"></g></svg>';
+  ov.innerHTML=os;
+  // brush + zoom wiring (focus+context)
+  const brush=d3.brushX().extent([[L,0],[w-8,oh-4]]).on('brush end',ev=>{if(!ev.sourceEvent)return;if(!ev.selection){TL.user=false;TL.domain=[0,warp.disp]}else{TL.user=true;TL.domain=ev.selection.map(x0.invert)}renderTimelineOnly()});
+  const bg=d3.select('#brush').call(brush);
+  if(TL.user)bg.call(brush.move,TL.domain.map(x0));
+  const zoom=d3.zoom().scaleExtent([1,5000]).translateExtent([[L,0],[w-8,H2]]).extent([[L,0],[w-8,H2]])
+    .filter(ev=>!ev.target.closest('[data-tool],[data-run],[data-reason],[data-turnclick]')||ev.type==='wheel')
+    .on('zoom',ev=>{if(!ev.sourceEvent)return;const nx=ev.transform.rescaleX(x0);TL.domain=nx.domain();TL.user=TL.domain[1]-TL.domain[0]<warp.disp*.999;renderTimelineOnly()});
+  const ls=d3.select('#laneSvg').call(zoom).on('dblclick.zoom',null);
+  const k=warp.disp/(TL.domain[1]-TL.domain[0]);ls.call(zoom.transform,d3.zoomIdentity.translate(L-k*x0(TL.domain[0]),0).scale(k));  // x' = tx + k·x so pixel L maps to domain[0]
+  document.getElementById('tlTitle').textContent=`Execution timeline: ${D.runs.length} agent runs, ${d3.sum(D.runs,r=>r.tools.length)} tool calls${H.filter(h=>h.k==='long').length?`, ${H.filter(h=>h.k==='long').length} long-running`:''}`;
+}
+let tlPending=false;function renderTimelineOnly(){if(tlPending)return;tlPending=true;requestAnimationFrame(()=>{tlPending=false;renderTimeline(derive())})}
+function zoomTo(a,b){const warp=TL.warp;if(!warp)return;const pad=Math.max((b-a)*.6,warp.disp*.004);TL.domain=[Math.max(0,a-pad),Math.min(warp.disp,b+pad)];TL.user=true;renderTimelineOnly()}
+function focusTurn(id){const t=derive().allTurns.find(t=>t.id===id);if(t&&TL.warp)zoomTo(TL.warp.fwd(t.start),TL.warp.fwd(t.end))}
+const hotIdx={};
+document.getElementById('hotspots').addEventListener('click',e=>{const b=e.target.closest('[data-hot]');if(!b)return;const k=b.dataset.hot;const list=TL.hot.filter(h=>h.k===k).sort((a,b)=>a.t0-b.t0);if(!list.length)return;hotIdx[k]=((hotIdx[k]??-1)+1)%list.length;const h=list[hotIdx[k]];
+  zoomTo(TL.warp.fwd(h.t0),TL.warp.fwd(Math.max(h.t1,h.t0+.5)));b.setAttribute('data-tip',`${hotIdx[k]+1} of ${list.length}: ${esc(h.label)}<br>click for next`);
+  if(h.k==='root')showRun(h.r.id,h.eid);else if(h.i!=null)showTool(h.r.id,h.i);else showRun(h.r.id)});
+document.getElementById('lanes').addEventListener('click',e=>{
+  const z=e.target.closest('[data-zoomto]');if(z){const[a,b]=z.dataset.zoomto.split(':').map(Number);zoomTo(a,b);return}
+  const t=e.target.closest('[data-tool]');if(t){const[a,b]=t.dataset.tool.split(':');showTool(a,+b);return}
+  const r=e.target.closest('[data-run]');if(r){showRun(r.dataset.run);return}
+  const q=e.target.closest('[data-reason]');if(q){showRun(q.dataset.reason,+q.dataset.eid);return}
+  const j=e.target.closest('[data-turnclick]');if(j){showTurn(j.dataset.turnclick)}});
+document.getElementById('resetZoom').onclick=()=>{TL.user=false;TL.domain=null;renderTimelineOnly()};
+
+/* ================= butterfly (tools, failures) ================= */
+function butterfly(host,rows,opts={}){
+  const w=width(host);const lab=Math.min(150,w*.32),half=(w-lab)/2,rh=24,pad=54;
+  if(!rows.length){document.getElementById(host).innerHTML=`<div class="empty">${opts.empty||'Nothing yet.'}</div>`;return}
+  const mx=Math.max(1,...rows.flatMap(r=>[r.codex.n,r.claude.n]));const s=v=>v/mx*(half-pad);
+  let svg=`<svg width="${w}" height="${rows.length*rh+20}" role="img"><text x="${half-4}" y="11" text-anchor="end" class="ink b">◀ Codex</text><text x="${half+lab+4}" y="11" class="ink b">Claude ▶</text>`;
+  rows.forEach((r,i)=>{const y=18+i*rh,bh=13,cy=y+(rh-bh)/2;const sel=F.cat===r.key;
+    svg+=`<g data-cat="${esc(r.key)}" style="cursor:pointer"><rect x="0" y="${y}" width="${w}" height="${rh}" fill="${sel?'var(--hover)':'transparent'}"/>`;
+    svg+=`<text x="${half+lab/2}" y="${cy+10}" text-anchor="middle" class="${sel?'ink b':'ink'}">${esc(r.label)}</text>`;
+    for(const p of P){const v=r[p],bw=s(v.n),fw=v.f?Math.max(2,s(v.f)):0;const left=p==='codex';
+      const x1=left?half-bw:half+lab;
+      svg+=`<g data-tip="${esc(`${sw(p)}<b>${NAME[p]}</b> · ${esc(r.label)}<br>${opts.tip?opts.tip(r,p):v.n}`)}">`;
+      if(bw>0)svg+=`<rect x="${x1}" y="${cy}" width="${Math.max(2,bw)}" height="${bh}" rx="3" fill="var(--${p})"/>`;
+      if(fw)svg+=`<rect x="${left?half-bw:half+lab+bw-fw}" y="${cy}" width="${fw}" height="${bh}" rx="2" fill="var(--critical)"/>`;
+      svg+=`<text x="${left?half-bw-5:half+lab+bw+5}" y="${cy+10}" text-anchor="${left?'end':'start'}">${v.n||''}${v.f?` · <tspan style="fill:var(--critical)">${v.f}✗</tspan>`:''}</text></g>`}
+    svg+='</g>'});
+  document.getElementById(host).innerHTML=svg+'</svg>';
+}
+function renderTools(D){
+  const m=new Map();for(const r of D.runs)for(const l of r.tools){const k=l.tool;if(!m.has(k))m.set(k,{codex:{n:0,f:0,d:[]},claude:{n:0,f:0,d:[]}});const e=m.get(k)[r.provider];if(!e)continue;e.n++;if(l.passed===false)e.f++;if(l.dur)e.d.push(l.dur)}
+  const rows=[...m].map(([k,v])=>({key:'tool:'+k,label:short(k),...v})).sort((a,b)=>(b.codex.n+b.claude.n)-(a.codex.n+a.claude.n)).slice(0,14);
+  butterfly('tools',rows,{empty:'No tool calls yet. Tools run in read/write turns.',tip:(r,p)=>{const v=r[p];return `${v.n} calls · ${v.f} failed (${v.n?pct(v.f/v.n):'–'})<br>median ${dur(median(v.d))}`}});
+  const top=P.map(p=>{const best=rows.filter(r=>r[p].n).sort((a,b)=>b[p].n-a[p].n)[0];return best?`${NAME[p]} leans on ${best.label}`:null}).filter(Boolean);
+  document.getElementById('toolTitle').textContent=top.length?'Tools: '+top.join(', '):'Tools each model reaches for';
+}
+function failureCases(D){
+  const C=[];
+  for(const r of D.runs){
+    if(r.failed)C.push({cat:'Run failed',p:r.provider,r,turn:r.turn,no:r.turnNo,text:`${r.role} run did not finish`});
+    r.tools.forEach((l,i)=>{if(l.passed===false)C.push({cat:'Tool call failed',p:r.provider,r,i,turn:r.turn,no:r.turnNo,text:`${short(l.tool)} ${l.detail||''}`})});
+    for(const l of r.retries){const i=r.tools.indexOf(l);C.push({cat:'Blind retry',p:r.provider,r,i,turn:r.turn,no:r.turnNo,text:`re-ran ${short(l.tool)} right after it failed`})}
+    for(const l of r.declined)C.push({cat:'Approval declined',p:r.provider,r,turn:r.turn,no:r.turnNo,text:l.tool})}
+  for(const t of D.turns){
+    if(t.review&&t.review.passed===false){const w=t.by.codex.some(r=>r.role==='writer')?'codex':'claude';C.push({cat:'Review: changes required',p:w,turn:t.id,no:t.no,text:`${t.review.findings||0} blocking findings`})}
+    for(const p of P)for(const r of t.ann[p].roots){const x=S.byEvent.get(+r.item_id);const run=x&&D.allRuns.find(q=>q.id===x.span);C.push({cat:'◎ '+String(r.name).replace(/_/g,' '),p,turn:t.id,no:t.no,r:run,i:run&&x.tool?run.tools.indexOf(x.tool):null,ref:+r.item_id,text:`${r.judge} judge: ${r.rationale||''}`})}}
+  return C;
+}
+function renderFailures(D){
+  const C=failureCases(D);
+  const cats=[...new Set(C.map(c=>c.cat))];
+  const rows=cats.map(k=>({key:k,label:k,codex:{n:C.filter(c=>c.cat===k&&c.p==='codex').length,f:0},claude:{n:C.filter(c=>c.cat===k&&c.p==='claude').length,f:0}})).sort((a,b)=>(b.codex.n+b.claude.n)-(a.codex.n+a.claude.n));
+  butterfly('failChart',rows,{empty:'No failures recorded. ✓',tip:(r,p)=>`${r[p].n} cases · click to list them`});
+  const list=C.filter(c=>!F.cat||c.cat===F.cat).sort((a,b)=>b.no-a.no).slice(0,300);
+  document.querySelector('#cases tbody').innerHTML=list.map((c,i)=>`<tr data-case="${i}"><td class="bad">✗</td><td class="num">${c.no}</td><td>${sw(c.p)} ${NAME[c.p]}${c.r?' · '+esc(c.r.role):''}</td><td style="white-space:normal"><b>${esc(c.cat)}</b> · ${esc(c.text)}</td></tr>`).join('')||'<tr><td colspan="4" class="empty">No cases.</td></tr>';
+  document.querySelector('#cases tbody').onclick=e=>{const tr=e.target.closest('tr[data-case]');if(!tr)return;const c=list[+tr.dataset.case];if(c.i!=null)showTool(c.r.id,c.i);else if(c.r)showRun(c.r.id);else showTurn(c.turn)};
+  const n=p=>C.filter(c=>c.p===p).length;
+  document.getElementById('failTitle').textContent=C.length?`Failure cases: Codex ${n('codex')}, Claude ${n('claude')}${rows[0]?` (most common: ${rows[0].label.toLowerCase()})`:''}`:'Failure cases';
+  document.getElementById('selChip').innerHTML=F.cat?`<span class="pill">${esc(F.cat)} <button class="link" id="clrCat">✕</button></span>`:'';
+  const clr=document.getElementById('clrCat');if(clr)clr.onclick=()=>{F.cat=null;schedule()};
+}
+document.getElementById('failChart').addEventListener('click',e=>{const g=e.target.closest('[data-cat]');if(g){F.cat=F.cat===g.dataset.cat?null:g.dataset.cat;schedule()}});
+/* ================= learning: actions + checks ================= */
+async function fetchLearning(){try{const r=await fetch('/learning');if(r.ok){LEARN=await r.json();schedule()}}catch(e){}}
+function localSuggestions(D){
+  const g=new Map();for(const e of D.turns.flatMap(t=>P.flatMap(p=>t.ann[p].actions))){const k=e.provider+'|'+e.role+'|'+e.name;if(!g.has(k))g.set(k,{provider:e.provider,target:e.role,category:e.name,rules:new Map(),turns:new Set(),judges:new Set(),refs:new Set()});const x=g.get(k);x.turns.add(e.turn_id);x.judges.add(e.judge);x.rules.set(e.rationale,(x.rules.get(e.rationale)||0)+1);(e.tags||'').split(',').filter(Boolean).forEach(r=>x.refs.add(r))}
+  return [...g.values()].map(x=>({provider:x.provider,target:x.target,category:x.category,rule:[...x.rules].sort((a,b)=>b[1]-a[1])[0][0],turns:x.turns.size,judges:[...x.judges],refs:[...x.refs]})).sort((a,b)=>b.turns-a.turns||b.judges.length-a.judges.length);
+}
+function sessionRefs(s){return S.J.actions.filter(e=>e.provider===s.provider&&e.role===s.target&&e.name===s.category).flatMap(e=>(e.tags||'').split(',').filter(Boolean))}
+function renderActions(D){
+  const host=document.getElementById('actions');
+  const items=(LEARN&&LEARN.suggestions&&LEARN.suggestions.length?LEARN.suggestions:localSuggestions(D)).slice(0,6);
+  if(!items.length){host.innerHTML='<div class="empty">No fixes proposed yet. They appear after judged turns (the judges read each trace and suggest rules backed by specific steps).</div>';document.getElementById('actTitle').textContent='What to change';return}
+  host.innerHTML=items.map((s,i)=>{const refs=[...new Set([...(s.refs||[]),...sessionRefs(s)])].filter(r=>S.byEvent.has(+r));
+    const status=s.accepted?'<span class="pill ok">✓ lesson active</span>':(s.turns>=3&&s.judges.length>=2&&s.target!=='workflow')?'<span class="pill">will auto-learn</span>':`<span class="pill">needs ${s.judges.length<2?'both judges':Math.max(0,3-s.turns)+' more turn'+(3-s.turns===1?'':'s')}</span>`;
+    return `<div class="act"><div class="n">${i+1}</div><div><div class="rule">${esc(s.rule)}</div><div class="meta">${sw(s.provider)} ${NAME[s.provider]||esc(s.provider)} · <span class="pill">${TGT[s.target]||esc(s.target)}</span> fixes <b>${esc(String(s.category).replace(/_/g,' '))}</b> · seen in ${s.turns} turn${s.turns===1?'':'s'} · judged by ${esc((s.judges||[]).join(' + ')||'–')} ${status}</div></div><div>${refs.length?`<button data-evid="${refs[0]}" data-tip="Open the step that proves it">Evidence (${refs.length})</button>`:''}</div></div>`}).join('');
+  const top=items[0];document.getElementById('actTitle').textContent=`What to change: ${NAME[top.provider]||top.provider} should fix ${String(top.category).replace(/_/g,' ')} first`;
+}
+document.getElementById('actions').addEventListener('click',e=>{const b=e.target.closest('[data-evid]');if(b)openRef(+b.dataset.evid)});
+function openRef(id){const x=S.byEvent.get(id);if(!x)return;const r=derive().allRuns.find(r=>r.id===x.span);if(!r)return;if(x.tool){showTool(r.id,r.tools.indexOf(x.tool))}else showRun(r.id,id);if(TL.warp)zoomTo(TL.warp.fwd(r.start),TL.warp.fwd(r.end))}
+function renderChecks(D,K){
+  const host=document.getElementById('checks');
+  let C=LEARN?.checks;
+  if(!C){const {W}=K;C=[{ok:W.decisive>=20,label:'Enough head-to-head turns',detail:`${W.decisive} decisive turns; 20+ needed`},{ok:W.consistency==null||W.consistency>=.8,label:'Verdicts survive order swap',detail:W.consistency==null?'no data':pct(W.consistency)+' consistent'},{ok:null,label:'Self-learning',detail:'connect to a live duo session to see learned weights and lessons'}]}
+  host.innerHTML='<div style="display:grid;grid-template-columns:1fr 1fr;gap:0 12px">'+C.map(c=>`<div class="chk" data-tip="${esc(c.detail)}"><span class="${c.ok===true?'ok':c.ok===false?'bad':'muted'}">${c.ok===true?'✓':c.ok===false?'⚠':'·'}</span><span>${esc(c.label)}</span></div>`).join('')+'</div>';
+  const w=LEARN?.weights;const wh=document.getElementById('weights');
+  if(w&&!w.signals){wh.innerHTML='<div class="sub" data-tip="Duo learns which dimensions you care about from your corrections, thanks and labels (duo --label). Until then all dimensions weigh the same.">What matters to you: neutral until you give feedback ⓘ</div>'}
+  else if(w){const dims=Object.entries(w.weights).sort((a,b)=>b[1]-a[1]);const mx=Math.max(...dims.map(d=>d[1]),1.5);
+    wh.innerHTML=`<div class="sub" style="margin-bottom:4px" data-tip="Learned from ${w.signals} feedback signal${w.signals===1?'':'s'} (your corrections, thanks, labels). 1.0 = neutral; weights start neutral and move only with evidence."><b>What matters to you</b> ⓘ</div>`+dims.map(([d,v])=>`<div style="display:grid;grid-template-columns:110px 1fr 36px;gap:8px;align-items:center;font-size:12px"><span>${DIML[d]||PROCL[d]||d}</span><svg height="10" width="100%"><rect x="0" y="1" width="${Math.max(2,v/mx*100)}%" height="8" rx="2" fill="var(--text-2)" opacity="${v>1.05?1:.35}"/></svg><span class="num">${v.toFixed(2)}</span></div>`).join('')}
+  else wh.innerHTML='';
+  const ls=LEARN?.lessons||[];const lh=document.getElementById('lessonList');
+  lh.innerHTML=ls.length?`<div class="sub" style="margin-bottom:4px"><b>Active lessons</b> (${ls.length}; cap ${LEARN.cap} per model) — measured before vs after adoption</div>`+ls.map(l=>`<div class="chk"><span class="${l.status==='helping'?'ok':l.status==='hurting'?'bad':'muted'}">${l.status==='helping'?'✓':l.status==='hurting'?'⚠':'·'}</span><span>${sw(l.provider)} ${esc(l.rule)}</span><span class="d">${esc(l.status)} · score ${f2(l.before.score)} → ${f2(l.after.score)} (${l.after.n} turns after) · ${esc(String(l.category).replace(/_/g,' '))} rate ${pct(l.before.rate)} → ${pct(l.after.rate)}</span></div>`).join(''):'';
+}
+/* ================= SOTA views: film strip, phase flow, learning curve, bandit, claims, fingerprint, PR board ================= */
+let POL=null,PROPS=null;
+async function fetchExtras(){for(const [u,set] of [['/policy',v=>POL=v],['/proposals',v=>PROPS=v]]){try{const r=await fetch(u);if(r.ok){set(await r.json())}}catch(e){}}schedule()}
+const TEST_RE=/\b(pytest|py\.test|unittest|tox|npm (run )?test|yarn test|pnpm test|jest|vitest|mocha|go test|cargo test|make (test|check)|tsc|mypy|ruff|eslint|-m pytest)\b/i;
+function unwrapCmd(c){c=String(c||'').trim();const m=c.match(/^(\/bin\/)?(ba|z)?sh -l?c ['"]([\s\S]*)['"]$/);return m?m[3]:c}
+function atype(l){const t=String(l.tool||'').toLowerCase(),d=unwrapCmd(l.detail);
+  if(['read','notebookread'].includes(t))return'FILE_READ';if(['edit','write','multiedit','notebookedit','filechange'].includes(t))return'FILE_WRITE';
+  if(['grep','glob','ls'].includes(t))return'SEARCH';if(['webfetch','websearch','mcptoolcall'].includes(t))return'FETCH';if(['agent','task'].includes(t))return'AGENT_SPAWN';if(['todowrite','exitplanmode'].includes(t))return'PLAN';
+  if(/^(sed -i|perl -pi|tee|mv|cp|rm|mkdir|touch|apply_patch|git (apply|checkout|restore|commit|add|mv|rm)|patch)\b|>\s*\S/i.test(d))return'FILE_WRITE';
+  if(/^(rg|grep|egrep|find|fd|ls|tree|git (grep|log|show|diff|status|blame)|ag)\b/i.test(d))return'SEARCH';
+  if(/^(cat|sed -n|nl|head|tail|less|bat|wc)\b/i.test(d))return'FILE_READ';return'COMMAND'}
+function phaseOf(l){const a=atype(l);return a==='FILE_READ'||a==='SEARCH'||a==='FETCH'?'inspect':a==='PLAN'||a==='AGENT_SPAWN'?'plan':a==='FILE_WRITE'?'edit':TEST_RE.test(unwrapCmd(l.detail))?'verify':'run'}
+const TYPE_L={FILE_READ:'read',FILE_WRITE:'edit',SEARCH:'search',COMMAND:'run',FETCH:'fetch',AGENT_SPAWN:'sub-agent',PLAN:'plan',NAVIGATE:'other'};
+function glyph(type,x,y,r,fill,extra=''){
+  const st=`fill="${fill}" stroke="var(--panel)" stroke-width="1.5" ${extra}`;
+  switch(type){
+    case'FILE_READ':return `<circle cx="${x}" cy="${y}" r="${r}" ${st}/>`;
+    case'FILE_WRITE':return `<rect x="${x-r}" y="${y-r}" width="${2*r}" height="${2*r}" rx="2" ${st}/>`;
+    case'SEARCH':return `<g ${extra}><circle cx="${x-r*.2}" cy="${y-r*.2}" r="${r*.62}" fill="none" stroke="${fill}" stroke-width="2.4"/><line x1="${x+r*.25}" y1="${y+r*.25}" x2="${x+r}" y2="${y+r}" stroke="${fill}" stroke-width="2.6" stroke-linecap="round"/></g>`;
+    case'COMMAND':return `<path d="M${x-r*.8},${y-r} L${x+r},${y} L${x-r*.8},${y+r}Z" ${st}/>`;
+    case'FETCH':return `<path d="M${x-r},${y-r*.7} L${x+r},${y-r*.7} L${x},${y+r}Z" ${st}/>`;
+    case'AGENT_SPAWN':return `<path d="M${x},${y-r} L${x+r},${y} L${x},${y+r} L${x-r},${y}Z" ${st}/>`;
+    case'PLAN':return `<path d="M${x-r},${y} L${x-r/2},${y-r} L${x+r/2},${y-r} L${x+r},${y} L${x+r/2},${y+r} L${x-r/2},${y+r}Z" ${st}/>`;
+    default:return `<circle cx="${x}" cy="${y}" r="${r*.6}" ${st}/>`}
+}
+function glyphKey(){const t=['FILE_READ','SEARCH','FILE_WRITE','COMMAND','FETCH','PLAN','AGENT_SPAWN'];
+  return t.map(k=>`<span><svg width="16" height="16">${glyph(k,8,8,5.5,'var(--text-2)')}</svg>${TYPE_L[k]}</span>`).join('')+'<span class="bad">✗ failed</span><span>⚠ cheat signal</span><span class="bad">◎ root cause</span>'}
+/* ---- film strip ---- */
+function filmTurns(D){return D.turns.filter(t=>S.A.align.some(a=>a.turn_id===t.id&&a.data&&(a.data.pairs||[]).length))}
+let filmIdx=null;
+function renderFilm(D){
+  const host=document.getElementById('film');document.getElementById('glyphKey').innerHTML=glyphKey();
+  const ts=filmTurns(D);
+  if(!ts.length){host.innerHTML='<div class="empty">No aligned runs yet. The film strip appears for turns where both agents used tools (read/inspect tasks).</div>';document.getElementById('filmWhich').textContent='';document.getElementById('filmTitle').textContent='Agent film strip';return}
+  const simOf=x=>{const a=S.A.align.filter(e=>e.turn_id===x.id).at(-1).data;return a.divergence==null?2:a.similarity};
+  if(filmIdx==null){let bi=ts.length-1;ts.forEach((x,i)=>{if(simOf(x)<simOf(ts[bi]))bi=i});filmIdx=bi}  // open on the most divergent turn
+  let t=F.turn&&ts.find(x=>x.id===F.turn);if(!t){filmIdx=Math.max(0,Math.min(ts.length-1,filmIdx));t=ts[filmIdx]}else filmIdx=ts.indexOf(t);
+  document.getElementById('filmWhich').textContent=`Turn ${t.no} (${filmIdx+1} of ${ts.length} aligned turns)`;
+  const al=S.A.align.filter(a=>a.turn_id===t.id).at(-1).data;const pairs=al.pairs||[];
+  const hackRefs=new Set(S.A.hacks.filter(h=>h.turn_id===t.id).map(h=>+h.item_id));
+  const rootRefs=new Set(S.J.roots.filter(r=>r.turn_id===t.id&&r.item_id).map(r=>+r.item_id));
+  const cols=[];let i=0;const big=pairs.length>60;
+  while(i<pairs.length){let j=i;while(j<pairs.length&&pairs[j][2]===0&&j!==al.divergence)j++;
+    const run=j-i;if(big&&run>6){cols.push(...pairs.slice(i,i+2).map((p,k)=>({p,k:i+k})));cols.push({fold:run-4,k:i+2});cols.push(...pairs.slice(j-2,j).map((p,k)=>({p,k:j-2+k})));i=j;continue}
+    if(j>i){cols.push(...pairs.slice(i,j).map((p,k)=>({p,k:i+k})));i=j;continue}
+    cols.push({p:pairs[i],k:i});i++}
+  const L=60,cw=Math.max(16,Math.min(26,(width('film')-L-10)/Math.max(1,cols.length))),W=L+cols.length*cw+10,yc=32,yl=82,r=6,H=104;
+  let svg=`<svg width="${W}" height="${H}" role="img" aria-label="Aligned steps">`;
+  svg+=`<text x="0" y="${yc+4}" class="ink b">Codex</text><text x="0" y="${yl+4}" class="ink b">Claude</text>`;
+  const look=ref=>{const x=ref!=null&&S.byEvent.get(+ref);return x&&x.tool?{l:x.tool,span:x.span}:null};
+  cols.forEach((c,ci)=>{const x=L+ci*cw+cw/2;
+    if(c.fold){svg+=`<g data-tip="${c.fold} matching steps folded (same action on the same target)"><rect x="${x-cw/2+2}" y="${yc-10}" width="${cw-4}" height="${yl-yc+20}" rx="4" fill="var(--grid)"/><text x="${x}" y="${(yc+yl)/2+4}" text-anchor="middle" class="mut" style="font-size:10px">×${c.fold}</text></g>`;return}
+    const [ra,rb,cost]=c.p;const A=look(ra),B=look(rb);
+    if(c.k===al.divergence)svg+=`<rect x="${x-cw/2}" y="8" width="${cw}" height="${H-12}" fill="var(--warn)" opacity=".18"/><text x="${x}" y="14" text-anchor="middle" class="ink b" style="font-size:10px">diverged</text>`;
+    if(A&&B)svg+=`<line x1="${x}" x2="${x}" y1="${yc+r+2}" y2="${yl-r-2}" stroke="var(--base)" stroke-width="${cost===0?2.5:1}" opacity="${cost===0?1:.6}"/>`;
+    for(const [side,ref,o,y,col] of [['codex',ra,A,yc,'var(--codex)'],['claude',rb,B,yl,'var(--claude)']]){
+      if(!o){svg+=`<circle cx="${x}" cy="${y}" r="1.6" fill="var(--muted)"/>`;continue}
+      const l=o.l,ty=atype(l),fail=l.passed===false;const run=D.allRuns.find(q=>q.id===o.span);const idx=run?run.tools.indexOf(l):-1;
+      const tip=`${sw(side)}<b>${esc(TYPE_L[ty])}</b> · ${esc(l.tool)} ${esc(l.detail||'')}<br>${fail?"<span class='bad'>✗ failed</span>":'✓ ok'} · ${dur(l.dur)}${cost===0&&A&&B?'<br>same action as the other agent':''}${hackRefs.has(+ref)?"<br><span class='bad'>⚠ cheat signal</span>":''}${rootRefs.has(+ref)?"<br><span class='bad'>◎ judge root cause</span>":''}`;
+      svg+=`<g data-tool="${o.span}:${idx}" data-tip="${esc(tip)}" style="cursor:pointer">${glyph(ty,x,y,r,col)}<rect x="${x-cw/2}" y="${y-12}" width="${cw}" height="24" fill="transparent"/></g>`;
+      if(fail)svg+=`<text x="${x}" y="${side==='codex'?y-11:y+19}" text-anchor="middle" style="fill:var(--critical);font-size:11px">✗</text>`;
+      if(hackRefs.has(+ref))svg+=`<text x="${x+r+1}" y="${y-r}" style="font-size:11px">⚠</text>`;
+      if(rootRefs.has(+ref))svg+=`<circle cx="${x}" cy="${y}" r="${r+4}" fill="none" stroke="var(--critical)" stroke-width="2"/>`}
+  });
+  host.innerHTML=svg+'</svg>';
+  const d=al.divergence!=null?pairs[al.divergence]:null;
+  const desc=ref=>{const o=look(ref);return o?`${TYPE_L[atype(o.l)]} ${short(o.l.tool)} ${String(o.l.detail||'').slice(0,40)}`:'nothing'};
+  document.getElementById('filmTitle').textContent=`Agent film strip, turn ${t.no}: ${Math.round(100*(al.similarity||0))}% step-for-step similar`+(d?`; diverged at step ${al.divergence+1} (Codex: ${desc(d[0])} · Claude: ${desc(d[1])})`:'; no divergence');
+}
+document.getElementById('film').addEventListener('click',e=>{const t=e.target.closest('[data-tool]');if(t){const[a,b]=t.dataset.tool.split(':');if(+b>=0)showTool(a,+b)}});
+document.getElementById('filmPrev').onclick=()=>{F.turn=null;filmIdx=Math.max(0,(filmIdx??1)-1);schedule()};
+document.getElementById('filmNext').onclick=()=>{F.turn=null;filmIdx=(filmIdx??-1)+1;schedule()};
+/* ---- phase flow ---- */
+const PH=['inspect','plan','edit','verify','run'];
+function renderPhase(D){
+  const host=document.getElementById('phase');const out=[];let takeaway=[];
+  for(const p of P){
+    const T={},V={};let edits=0,editVerify=0;
+    for(const r of D.runs.filter(r=>r.provider===p)){const seq=r.tools.map(phaseOf);
+      seq.forEach((a,i)=>{V[a]=(V[a]||0)+1;if(i){const k=seq[i-1]+'>'+a;T[k]=(T[k]||0)+1}});
+      seq.forEach((a,i)=>{if(a==='edit'){const nxt=seq.slice(i+1).find(x=>x!=='edit');if(nxt){edits++;if(nxt==='verify')editVerify++}}})}
+    const tot=Object.values(T).reduce((a,b)=>a+b,0);
+    if(!tot){out.push(`<div class="empty">${NAME[p]}: no tool steps yet.</div>`);continue}
+    const w=Math.max(180,(width('phase')-8)/2),h=160,cx=w/2,cy=h/2+6,R=Math.min(w,h)/2-30;
+    const pos={};PH.forEach((ph,i)=>{const ang=-Math.PI/2+i*2*Math.PI/5;pos[ph]=[cx+R*Math.cos(ang),cy+R*Math.sin(ang)]});
+    let svg=`<svg width="${w}" height="${h}" role="img" aria-label="${NAME[p]} phase flow"><defs><marker id="ar-${p}" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="5" markerHeight="5" orient="auto"><path d="M0,0 L8,4 L0,8Z" fill="var(--${p})"/></marker></defs>`;
+    svg+=`<text x="4" y="14" class="ink b">${NAME[p]}</text>`;
+    for(const [k,n] of Object.entries(T)){const [a,b]=k.split('>');const share=n/tot;const sw_=1+share*14;
+      if(a===b){const [x,y]=pos[a];svg+=`<g data-tip="${NAME[p]}: ${a} → ${a} ${n}× (${pct(share)})"><circle cx="${x}" cy="${y-20}" r="9" fill="none" stroke="var(--${p})" stroke-width="${Math.min(6,sw_)}" opacity=".5"/></g>`;continue}
+      const [x1,y1]=pos[a],[x2,y2]=pos[b];const mx=(x1+x2)/2+(y2-y1)*.18,my=(y1+y2)/2-(x2-x1)*.18;
+      const ux=x2-(x2-mx)*.2,uy=y2-(y2-my)*.2,dx=x2-ux,dy=y2-uy,dl=Math.hypot(dx,dy)||1,ex=x2-dx/dl*16,ey=y2-dy/dl*16;
+      svg+=`<path d="M${x1},${y1} Q${mx},${my} ${ex},${ey}" fill="none" stroke="var(--${p})" stroke-width="${sw_}" opacity="${.25+share*1.6}" marker-end="url(#ar-${p})" data-tip="${NAME[p]}: ${a} → ${b} ${n}× (${pct(share)} of transitions)"/>`}
+    const mxv=Math.max(...Object.values(V));
+    for(const ph of PH){const [x,y]=pos[ph];const n=V[ph]||0;const rr=6+10*Math.sqrt(n/mxv);
+      svg+=`<g data-tip="${NAME[p]}: ${ph} ${n} steps"><circle cx="${x}" cy="${y}" r="${rr}" fill="var(--panel)" stroke="var(--${p})" stroke-width="2" opacity="${n?1:.35}"/><text x="${x}" y="${y+rr+12}" text-anchor="middle" class="ink" style="font-size:11px">${ph}</text></g>`}
+    out.push(svg+'</svg>');
+    if(edits)takeaway.push({p,v:editVerify/edits,n:edits});
+  }
+  host.innerHTML=out.join('');
+  document.getElementById('phaseTitle').textContent=takeaway.length?'After editing, '+takeaway.map(x=>`${NAME[x.p]} verifies next ${pct(x.v)} of the time`).join(' vs '):'How each agent moves between phases';
+}
+/* ---- learning curve ---- */
+function rewardSeries(D){
+  const rows=[];
+  for(const t of D.turns){for(const p of P){const pr=S.A.rewards.filter(e=>e.turn_id===t.id&&e.provider===p);
+    let v=pr.length?+pr.at(-1).score:t.judge[p]?(t.judge[p].overall-1)/4:null;if(v==null)continue;
+    if(!pr.length&&t.hacked.includes(p))v=Math.max(0,v-.5);rows.push({p,turn:t,t:t.start,v})}}
+  return rows;
+}
+function rolling(vals,win=5){return vals.map((d,i)=>{const w=vals.slice(Math.max(0,i-win+1),i+1).map(x=>x.v);const m=mean(w),e=w.length>1?1.96*sd(w)/Math.sqrt(w.length):0;return {...d,m,lo:Math.max(0,m-e),hi:Math.min(1,m+e)}})}
+function renderCurve(D){
+  const host=document.getElementById('curve');const rows=rewardSeries(D);
+  if(rows.length<2){host.innerHTML='<div class="empty">The learning curve appears after a few judged turns.</div>';document.getElementById('lcTitle').textContent='Getting better';return}
+  const w=width('curve'),h=190,pad={l:36,r:70,t:18,b:22};const t0=Math.min(...rows.map(r=>r.t)),t1=Math.max(...rows.map(r=>r.t));
+  const turnsSorted=[...new Set(rows.map(r=>r.turn.no))].sort((a,b)=>a-b);const xi=new Map(turnsSorted.map((n,i)=>[n,i]));
+  const x=d3.scaleLinear([0,Math.max(1,turnsSorted.length-1)],[pad.l,w-pad.r]),y=d3.scaleLinear([0,1],[h-pad.b,pad.t]);
+  let svg=`<svg width="${w}" height="${h}" role="img" aria-label="Reward over time">`;
+  for(const v of [0,.25,.5,.75,1])svg+=`<line x1="${pad.l}" x2="${w-pad.r}" y1="${y(v)}" y2="${y(v)}" stroke="var(--grid)"/><text x="${pad.l-6}" y="${y(v)+4}" text-anchor="end" class="mut">${v.toFixed(2)}</text>`;
+  svg+=`<text x="${pad.l}" y="${h-6}" class="mut">turns (oldest → newest)</text>`;
+  // pins: lessons adopted, evolve runs, proposals applied / PRs
+  const pins=[];
+  for(const l of (LEARN?.lessons||[])){const at=Date.parse(String(l.added||'').replace(' ','T'))/1000;if(!isNaN(at))pins.push({at,label:`Lesson adopted for ${l.provider}: ${l.rule}`,k:'L'})}
+  for(const e of S.A.evolve)pins.push({at:e.timestamp,label:'Evolve: held-out A/B of the playbook',k:'E'});
+  for(const pr of (PROPS||[])){if(pr&&pr.status&&pr.status!=='proposed'){const m=String(pr.id).match(/^(\d{4})(\d\d)(\d\d)-(\d\d)(\d\d)(\d\d)/);if(m)pins.push({at:Date.UTC(+m[1],m[2]-1,+m[3],+m[4],+m[5],+m[6])/1000+new Date().getTimezoneOffset()*60,label:`PR ${pr.status}: ${pr.repo}`,k:'P'})}}
+  const turnAt=at=>{const t=rows.filter(r=>r.t>=at).sort((a,b)=>a.t-b.t)[0];return t?xi.get(t.turn.no):null};
+  pins.forEach((pn,i)=>{const xi_=turnAt(pn.at);if(xi_==null)return;const px=x(xi_);svg+=`<g data-tip="${esc(pn.label)}"><line x1="${px}" x2="${px}" y1="${pad.t}" y2="${h-pad.b}" stroke="var(--text-2)" stroke-width="1"/><circle cx="${px}" cy="${pad.t-6}" r="7" fill="var(--panel)" stroke="var(--text-2)"/><text x="${px}" y="${pad.t-2.5}" text-anchor="middle" class="ink" style="font-size:9px">${pn.k}</text></g>`});
+  const takeaway=[];
+  for(const p of P){const pts=rolling(rows.filter(r=>r.p===p).sort((a,b)=>a.t-b.t));if(!pts.length)continue;
+    const X=d=>x(xi.get(d.turn.no));
+    svg+=`<path d="${d3.area().x(X).y0(d=>y(d.lo)).y1(d=>y(d.hi))(pts)}" fill="var(--${p})" opacity=".14"/>`;
+    svg+=`<path d="${d3.line().x(X).y(d=>y(d.m))(pts)}" fill="none" stroke="var(--${p})" stroke-width="2"/>`;
+    for(const d of pts)svg+=`<circle cx="${X(d)}" cy="${y(d.v)}" r="3" fill="var(--${p})" opacity=".55" data-tip="${sw(p)}<b>${NAME[p]}</b> · turn ${d.turn.no}<br>reward ${d.v.toFixed(2)} · rolling ${d.m.toFixed(2)}" data-turnpick="${d.turn.id}" style="cursor:pointer"/>`;
+    const last=pts.at(-1);svg+=`<text x="${X(last)+8}" y="${y(last.m)+4}" class="ink b">${NAME[p]} ${last.m.toFixed(2)}</text>`;
+    const firstPin=Math.min(...pins.map(pn=>pn.at).filter(a=>isFinite(a)),Infinity);
+    const before=rows.filter(r=>r.p===p&&r.t<firstPin).map(r=>r.v),after=rows.filter(r=>r.p===p&&r.t>=firstPin).map(r=>r.v);
+    if(before.length>=2&&after.length>=2)takeaway.push(`${NAME[p]} ${after.length&&mean(after)>=mean(before)?'+':''}${(mean(after)-mean(before)).toFixed(2)} since the first change`);
+    else{const half=Math.floor(pts.length/2);if(half>=2){const a=mean(pts.slice(0,half).map(d=>d.v)),b=mean(pts.slice(half).map(d=>d.v));takeaway.push(`${NAME[p]} ${b>=a?'+':''}${(b-a).toFixed(2)} (recent half vs early half)`)}}}
+  host.innerHTML=svg+'</svg>';
+  document.getElementById('lcTitle').textContent='Getting better'+(takeaway.length?': '+takeaway.join(' · '):'');
+}
+document.getElementById('curve').addEventListener('click',e=>{const c=e.target.closest('[data-turnpick]');if(c)showTurn(c.dataset.turnpick)});
+/* ---- bandit + routes ---- */
+function renderBandit(){
+  const host=document.getElementById('bandit'),rh=document.getElementById('routes');
+  const arms=POL?.arms||[];
+  if(!arms.length){host.innerHTML='<div class="empty">No policy data yet. The bandit starts learning once lessons exist and turns are judged.</div>';rh.innerHTML='';document.getElementById('polTitle').textContent='RL policy';return}
+  const groups=d3.groups(arms,a=>a.provider+'|'+a.kind);const w=width('bandit'),L=120,rowH=16,x=d3.scaleLinear([0,1],[L,w-60]);
+  let y=16,svg='';const best=[];
+  svg+=`<text x="${L}" y="10" class="mut" style="font-size:10px">0</text><text x="${w-60}" y="10" text-anchor="end" class="mut" style="font-size:10px">1 (reward)</text>`;
+  for(const [key,list] of groups){const [p,kind]=key.split('|');const top=[...list].sort((a,b)=>b.mean-a.mean)[0];best.push(`${NAME[p]} ${kind}: k=${top.k}`);
+    svg+=`<text x="0" y="${y+11}" class="ink b">${sw(p).replace(/<[^>]+>/g,'')}${NAME[p]} · ${kind}</text>`;y+=rowH;
+    for(const a of list.sort((a,b)=>a.k-b.k)){const lo=Math.max(0,a.mean-2*a.sd),hi=Math.min(1,a.mean+2*a.sd);const isTop=a===top;
+      svg+=`<g data-tip="${sw(p)}<b>${NAME[p]} · ${kind} · ${a.k} lessons</b><br>posterior mean ${a.mean.toFixed(2)} ± ${(2*a.sd).toFixed(2)} · ${a.n} uses"><text x="14" y="${y+10}" class="${isTop?'ink b':''}">${a.k} lessons</text><line x1="${x(lo)}" x2="${x(hi)}" y1="${y+6}" y2="${y+6}" stroke="var(--${p})" stroke-width="${isTop?4:2.5}" stroke-linecap="round" opacity="${isTop?1:.5}"/><circle cx="${x(a.mean)}" cy="${y+6}" r="${isTop?5:4}" fill="var(--${p})" stroke="var(--panel)" stroke-width="1.5"/><text x="${w-56}" y="${y+10}" class="mut">n=${a.n}</text></g>`;y+=rowH}
+    y+=6}
+  host.innerHTML=`<svg width="${w}" height="${y}" role="img" aria-label="Bandit arms">${svg}</svg>`;
+  const routes=POL.routes||[];
+  rh.innerHTML=routes.length?`<div class="sub" style="margin-bottom:4px"><b>Routing</b>: probability Codex beats Claude per task type (needs ≥10 decisive turns and 90% confidence to route to one agent${POL.auto_route?'; applied automatically':'; recommendation only, set DUO_ROUTE=auto to apply'})</div>`+routes.map(r=>{const W=width('routes')-150;return `<div style="display:grid;grid-template-columns:70px 1fr 80px;gap:8px;align-items:center;font-size:12px" data-tip="${r.n} decisive turns · P(codex better)=${r.p_codex}"><span>${r.kind}</span><svg height="16" width="100%" viewBox="0 0 ${W} 16" preserveAspectRatio="none"><rect x="0" y="5" width="${W}" height="6" rx="3" fill="var(--grid)"/><line x1="${W*.1}" x2="${W*.1}" y1="1" y2="15" stroke="var(--muted)"/><line x1="${W*.9}" x2="${W*.9}" y1="1" y2="15" stroke="var(--muted)"/><circle cx="${W*r.p_codex}" cy="8" r="5" fill="var(--${r.p_codex>=.5?'codex':'claude'})"/></svg><span class="ink">${r.route==='both'?'run both':'→ '+NAME[r.route]}</span></div>`}).join(''):'';
+  let top=null;for(const [key,list] of groups){const [p,kind]=key.split('|');const b=[...list].sort((a,b)=>b.mean-a.mean)[0];const z=list.find(a=>a.k===0);
+    if(b.n>=3&&z&&b!==z){const d=b.mean-z.mean;if(!top||d>top.d)top={d,p,kind,k:b.k,m:b.mean,z:z.mean}}}
+  document.getElementById('polTitle').textContent=top?`RL policy: ${top.k} lessons work best for ${NAME[top.p]} on ${top.kind} tasks (${top.m.toFixed(2)} vs ${top.z.toFixed(2)} with none)`:'RL policy: still exploring';
+}
+/* ---- said vs did ---- */
+function renderClaims(D){
+  const ids=new Set(D.turns.map(t=>t.id));const seen=new Map();
+  for(const c of S.A.claims){if(!ids.has(c.turn_id))continue;seen.set(c.provider+'|'+c.turn_id+'|'+String(c.rationale).toLowerCase(),c)}
+  const cl=[...seen.values()];const bars=document.getElementById('claimBars');
+  if(!cl.length){bars.innerHTML='<div class="empty">No claims checked yet. Judges extract claims from each answer and duo matches them to tool steps.</div>';document.querySelector('#claimTable tbody').innerHTML='';document.getElementById('claimTitle').textContent='Said vs did';return}
+  const ST=[['supported','var(--good)','✓'],['unsupported','var(--warn)','?'],['contradicted','var(--critical)','✗']];
+  const w=width('claimBars'),L=70;let svg=`<svg width="${w}" height="${P.length*28+4}" role="img" aria-label="Claims by status">`;const tk=[];
+  P.forEach((p,i)=>{const mine=cl.filter(c=>c.provider===p);const y=4+i*28;svg+=`<text x="0" y="${y+14}" class="ink b">${NAME[p]}</text>`;if(!mine.length)return;let x0=L;
+    for(const [k,col,ic] of ST){const n=mine.filter(c=>c.verdict===k).length;if(!n)continue;const ww=(w-L-4)*n/mine.length;
+      svg+=`<g data-tip="${NAME[p]}: ${n} ${k} of ${mine.length} claims"><rect x="${x0}" y="${y}" width="${Math.max(2,ww-2)}" height="18" rx="3" fill="${col}"/>${ww>34?`<text x="${x0+6}" y="${y+13}" style="fill:#fff;font-size:11px" class="b">${ic} ${n}</text>`:''}</g>`;x0+=ww}
+    tk.push(`${NAME[p]} ${pct(mine.filter(c=>c.verdict==='supported').length/mine.length)} backed`)});
+  bars.innerHTML=svg+'</svg>';
+  const rank={contradicted:0,unsupported:1,supported:2};const tn=new Map(D.turns.map(t=>[t.id,t.no]));
+  const rows=cl.sort((a,b)=>rank[a.verdict]-rank[b.verdict]||(tn.get(b.turn_id)-tn.get(a.turn_id))).slice(0,40);
+  document.querySelector('#claimTable tbody').innerHTML=rows.map(c=>`<tr data-ref="${c.item_id||''}" data-turn="${c.turn_id}"><td class="num">${tn.get(c.turn_id)}</td><td>${sw(c.provider)} ${NAME[c.provider]}</td><td class="${c.verdict==='supported'?'ok':c.verdict==='contradicted'?'bad':''}">${c.verdict==='supported'?'✓':c.verdict==='contradicted'?'✗':'?'}</td><td style="white-space:normal">${esc(c.rationale)} <span class="muted">(${esc(c.name.replace('_',' '))})</span></td></tr>`).join('');
+  document.getElementById('claimTitle').textContent='Said vs did: '+tk.join(' · ');
+}
+document.getElementById('claimTable').addEventListener('click',e=>{const tr=e.target.closest('tr[data-turn]');if(!tr)return;if(tr.dataset.ref&&S.byEvent.has(+tr.dataset.ref))openRef(+tr.dataset.ref);else showTurn(tr.dataset.turn)});
+/* ---- behaviour fingerprint ---- */
+function renderFingerprint(D){
+  const host=document.getElementById('fingerprint');const ids=new Set(D.turns.map(t=>t.id));
+  const B=S.A.behaviour.filter(b=>ids.has(b.turn_id)&&b.data);
+  if(!B.length){host.innerHTML='<div class="empty">Appears after turns where the agents used tools.</div>';document.getElementById('fpTitle').textContent='Behaviour fingerprint';return}
+  const F_=[
+    {k:'Finishes without verifying',f:m=>m.writes?(m.verified_after_last_write===false?1:0):null,band:[0,.1],fmt:pct},
+    {k:'Search loops (10+ reads, no edit)',f:m=>(m.flags||[]).includes('search_loop')?1:0,band:[0,.1],fmt:pct},
+    {k:'Re-reads the same file',f:m=>m.reread_files>0?1:0,band:[0,.15],fmt:pct},
+    {k:'Acts on errors without diagnosing',f:m=>m.rogue_after_error>0?1:0,band:[0,.1],fmt:pct},
+    {k:'Tool oscillation',f:m=>m.oscillations>=3?1:0,band:[0,.1],fmt:pct},
+    {k:'Exploration share',f:m=>m.explore_share,band:[.3,.7],fmt:pct},
+  ];
+  const w=width('fingerprint'),L=200,R=110,rh=24,x=d3.scaleLinear([0,1],[L,w-R]);let svg=`<svg width="${w}" height="${F_.length*rh+24}" role="img" aria-label="Behaviour fingerprint">`;
+  let worst=null;
+  F_.forEach((m,i)=>{const y=10+i*rh+rh/2;svg+=`<text x="0" y="${y+4}" class="ink">${m.k}</text>`;
+    svg+=`<rect x="${x(m.band[0])}" y="${y-8}" width="${x(m.band[1])-x(m.band[0])}" height="16" rx="3" fill="var(--good)" opacity=".13"/><line x1="${L}" x2="${w-R}" y1="${y}" y2="${y}" stroke="var(--grid)"/>`;
+    const vals={};for(const p of P){const v=B.filter(b=>b.provider===p).map(b=>m.f(b.data)).filter(v=>v!=null);vals[p]=v.length?mean(v):null}
+    for(const p of P){if(vals[p]==null)continue;const out=vals[p]<m.band[0]||vals[p]>m.band[1];
+      svg+=`<circle cx="${x(vals[p])}" cy="${y+(p==='codex'?-3:3)}" r="6" fill="var(--${p})" stroke="var(--panel)" stroke-width="2" data-tip="${sw(p)}<b>${NAME[p]}</b> · ${esc(m.k)}: <b>${m.fmt(vals[p])}</b><br>healthy ${m.fmt(m.band[0])}–${m.fmt(m.band[1])}${out?"<br><span class='bad'>outside the healthy range</span>":''}"/>`;
+      if(out){const gap=vals[p]>m.band[1]?vals[p]-m.band[1]:m.band[0]-vals[p];if(!worst||gap>worst.gap)worst={gap,p,k:m.k,v:m.fmt(vals[p])}}}
+    let tx=w-R+8;for(const p of P){if(vals[p]==null)continue;svg+=`<text x="${tx}" y="${y+4}" style="fill:var(--${p})" class="b">${m.fmt(vals[p])}</text>`;tx+=52}});
+  svg+=`<text x="${L}" y="${F_.length*rh+22}" class="mut">0%</text><text x="${w-R}" y="${F_.length*rh+22}" text-anchor="end" class="mut">100% of runs</text>`;
+  host.innerHTML=svg+'</svg>';
+  document.getElementById('fpTitle').textContent=worst?`Behaviour fingerprint: biggest habit to fix is ${NAME[worst.p]} — ${worst.k.toLowerCase()} (${worst.v})`:'Behaviour fingerprint: both agents within healthy ranges';
+}
+/* ---- PR board ---- */
+function renderPRs(){
+  const host=document.getElementById('prBoard');const items=(PROPS||[]).filter(Boolean);
+  const cols=[['proposed','Proposed'],['tested','A/B tested'],['applied','Applied locally'],['pr_opened','Draft PR open']];
+  if(!items.length){host.innerHTML=`<div class="empty" style="grid-column:1/-1">No proposals yet. Once lessons exist: <code>duo --propose /path/to/repo</code>.</div>`;document.getElementById('prTitle').textContent='Agent PRs';return}
+  const col=p=>p.status==='pr_opened'?'pr_opened':p.status==='applied'?'applied':p.evolve?'tested':'proposed';
+  host.innerHTML=cols.map(([k,l])=>`<div><div class="sub" style="margin-bottom:6px"><b>${l}</b> (${items.filter(p=>col(p)===k).length})</div>`+items.filter(p=>col(p)===k).map(p=>{
+    const ev=p.evolve?.compare?.models;const ab=ev?P.map(m=>ev[m]&&ev[m].delta!=null?`${NAME[m]} ${ev[m].delta>=0?'+':''}${ev[m].delta}${ev[m].improved?' ✓':''}`:'').filter(Boolean).join(' · '):'no held-out A/B yet';
+    return `<div class="action" style="margin-bottom:8px"><div class="top"><span class="tag">${esc(p.id)}</span>${p.url?`<a href="${esc(p.url)}" target="_blank" rel="noopener">PR ↗</a>`:''}</div><div class="title">${esc(String(p.repo||'').split('/').slice(-1)[0])}</div><div class="ev">${(p.files||[]).map(f=>`${esc(f.name)} · ${f.rules} rules`).join('<br>')}</div><div class="do">${esc(ab)}</div></div>`}).join('')+'</div>').join('');
+  document.getElementById('prTitle').textContent=`Agent PRs: ${items.length} proposal${items.length===1?'':'s'}, ${items.filter(p=>p.status==='pr_opened').length} draft PR${items.filter(p=>p.status==='pr_opened').length===1?'':'s'} open`;
+}
+/* ================= next prompt (loop control) + mini file map ================= */
+let NEXT=null,FMAP=null;
+async function fetchNext(req){try{const r=await fetch('/next'+(req?'?request='+encodeURIComponent(req):''));if(r.ok){NEXT=await r.json();renderNext()}}catch(e){}}
+async function postLessons(body){
+  const msg=document.getElementById('gMsg');
+  try{const r=await fetch('/lessons',{method:'POST',headers:{'Content-Type':'application/json','X-Duo':'1'},body:JSON.stringify(body)});
+    if(!r.ok){msg.textContent=r.status===403||r.status===404?'Controls need a live duo session or tools/serve_viewer.py.':'Could not save.';return}
+    NEXT=await r.json();msg.textContent='Saved ✓';setTimeout(()=>msg.textContent='',1500);renderNext();fetchNext(document.getElementById('gReq').value.trim());fetchLearning()}catch(e){msg.textContent='Could not reach duo.'}}
+function renderNext(){
+  const host=document.getElementById('nextAgents');if(!NEXT){host.innerHTML='<div class="empty">Next-prompt preview needs a live duo session (or tools/serve_viewer.py).</div>';return}
+  const st=NEXT.settings;
+  document.querySelectorAll('#gOn button').forEach(b=>b.setAttribute('aria-pressed',String((b.dataset.v==='1')===st.enabled)));
+  document.querySelectorAll('#gK button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.v===(st.k==null?'auto':String(st.k)))));
+  host.innerHTML=P.map(p=>{const a=NEXT.agents[p];const sk=a.skipped.filter(x=>x.id!=='*');
+    return `<div><div class="sub" style="margin-bottom:4px">${sw(p)} <b>${NAME[p]}</b> · ${st.enabled?(st.k==null?`RL picks ${a.k}`:`${a.k}`)+' item'+(a.k===1?'':'s'):'off'}</div>`+
+      (a.block?`<pre style="max-height:180px"><span class="muted">[your message, unchanged]</span>\n${esc(a.block)}</pre>`:`<div class="muted" style="padding:6px 0">Nothing will be added: the agent gets your message exactly as typed.</div>`)+
+      (sk.length?`<div class="sub" style="margin-top:4px">Left out:</div>`+sk.slice(0,6).map(x=>`<div class="sub">· ${esc(x.rule.slice(0,90))} <span class="muted">— ${esc(x.reason)}</span></div>`).join(''):'')+'</div>'}).join('');
+  const tb=document.querySelector('#playbook tbody');
+  tb.innerHTML=NEXT.items.map(l=>`<tr><td>${sw(l.provider==='both'?'judge':l.provider)} ${esc(NAME[l.provider]||l.provider)}</td><td style="white-space:normal">${esc(l.rule)}</td><td>${l.pinned?'<span class="pill">📌 pinned</span>':l.muted?'<span class="pill">🔇 muted</span>':`<span class="pill">${esc(l.status||'active')}</span>`}</td>
+    <td style="white-space:nowrap"><button data-act="${l.pinned?'unpin':'pin'}" data-id="${l.id}">${l.pinned?'Unpin':'Pin'}</button> <button data-act="${l.muted?'unmute':'mute'}" data-id="${l.id}">${l.muted?'Unmute':'Mute'}</button> <button data-act="remove" data-id="${l.id}">Remove</button></td></tr>`).join('')||'<tr><td colspan="4" class="empty">No lessons yet. They are learned from judged turns (or /improve accept N).</td></tr>';
+  const n=P.reduce((a,p)=>a+NEXT.agents[p].chosen.length,0);
+  document.getElementById('nextTitle').textContent=st.enabled?`Next prompt: ${n} guidance item${n===1?'':'s'} would be appended (Codex ${NEXT.agents.codex.chosen.length}, Claude ${NEXT.agents.claude.chosen.length}); your message stays unchanged`:'Next prompt: guidance is off, so agents get your message exactly as typed';
+}
+document.getElementById('playbook').addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b)return;if(b.dataset.act==='remove'&&!confirm('Remove this lesson from the playbook?'))return;postLessons({action:b.dataset.act,id:b.dataset.id})});
+document.getElementById('gOn').addEventListener('click',e=>{const b=e.target.closest('button');if(b&&NEXT)postLessons({action:'settings',enabled:b.dataset.v==='1',k:NEXT.settings.k})});
+document.getElementById('gK').addEventListener('click',e=>{const b=e.target.closest('button');if(b&&NEXT)postLessons({action:'settings',enabled:NEXT.settings.enabled,k:b.dataset.v==='auto'?null:+b.dataset.v})});
+document.getElementById('gPrev').onclick=()=>fetchNext(document.getElementById('gReq').value.trim());
+document.getElementById('gReq').addEventListener('keydown',e=>{if(e.key==='Enter')fetchNext(e.target.value.trim())});
+async function fetchMap(){try{const r=await fetch('/filemap');if(r.ok){FMAP=await r.json();renderMiniMap()}}catch(e){}}
+function renderMiniMap(){
+  const host=document.getElementById('miniMap');if(!FMAP)return;
+  const st=FMAP.stages,w=width('miniMap'),cw=(w-(st.length-1)*14)/st.length,ch=20,mx=Math.max(...FMAP.files.map(f=>f.lines));
+  const rows=Math.max(...st.map(s=>FMAP.files.filter(f=>f.stage===s).length));const H=26+rows*(ch+4)+4;
+  let svg=`<svg width="${w}" height="${H}" role="img" aria-label="duo file map">`;
+  st.forEach((s,i)=>{const x=i*(cw+14);svg+=`<text x="${x}" y="12" class="ink b" style="font-size:11px">${i+1}. ${s}</text>`;
+    if(i<st.length-1)svg+=`<text x="${x+cw+2}" y="12" class="mut" style="font-size:11px">→</text>`;
+    FMAP.files.filter(f=>f.stage===s).forEach((f,j)=>{const y=20+j*(ch+4);const col=f.status==='new'?'var(--good)':f.status==='changed'?'var(--codex)':'var(--muted)';
+      svg+=`<g data-tip="<b>${esc(f.file)}</b> · ${f.lines} lines · ${f.status}<br>${esc(f.role)}<br>• ${f.keys.map(esc).join('<br>• ')}"><rect x="${x}" y="${y}" width="${cw}" height="${ch}" rx="4" fill="var(--panel)" stroke="var(--line)"/><rect x="${x}" y="${y+ch-3}" width="${Math.max(2,cw*f.lines/mx)}" height="3" rx="1.5" fill="var(--base)"/><circle cx="${x+8}" cy="${y+ch/2-1}" r="3" fill="${col}"/><text x="${x+15}" y="${y+ch/2+3}" style="font:11px ui-monospace,Menlo,monospace" class="ink">${esc(f.file)}</text></g>`})});
+  host.innerHTML=svg+'</svg>';
+  const n=FMAP.files.filter(f=>f.status==='new').length,c=FMAP.files.filter(f=>f.status==='changed').length;
+  document.getElementById('mapSum').textContent=`— ${FMAP.files.length} files (${n} new, ${c} changed): run → record → understand → learn → act → see. Hover a file for what it does; full map in FILE_MAP.html.`;
+}
+document.getElementById('mapBox').addEventListener('toggle',renderMiniMap);
+/* ================= streaming: panels refresh when relevant events arrive ================= */
+const REFRESH_ON=/^(judge\.(verdict|result|hack_final|root|action|claim)|lessons\.(applied|control)|policy\.(reward|arm)|analysis\.done|evolve\.result|feedback|span\.end)$/;
+let refreshTimer=null;
+function onStream(e){
+  if(!REFRESH_ON.test(e.type))return;
+  if(e.type==='span.end'&&e.span_kind!=='turn')return;
+  clearTimeout(refreshTimer);refreshTimer=setTimeout(()=>{fetchLearning();fetchExtras();fetchNext(document.getElementById('gReq').value.trim())},300);
+}
+let typeTimer=null;
+document.getElementById('gReq').addEventListener('input',e=>{clearTimeout(typeTimer);typeTimer=setTimeout(()=>fetchNext(e.target.value.trim()),250)});
+/* ================= compact: explanations live on hover ================= */
+function notesToTips(){document.querySelectorAll('section').forEach(sec=>{const h=sec.querySelector('h2');if(!h)return;
+  const notes=[...sec.querySelectorAll(':scope > p.note, :scope > div > p.note')];if(!notes.length||h.dataset.info)return;
+  const txt=notes.map(n=>n.innerHTML).join('<br><br>');h.dataset.info='1';
+  const keep=()=>{if(!h.querySelector('.info')){const i=document.createElement('span');i.className='info';i.textContent='ⓘ';i.setAttribute('data-tip',txt);i.setAttribute('aria-label','About this chart');h.appendChild(i)}};
+  keep();new MutationObserver(keep).observe(h,{childList:true,characterData:true,subtree:true})})}
+notesToTips();
+/* ================= streaming viz: live lanes + post-turn pipeline + event-rate sparkline ================= */
+const LAST_NEWEST={};  // pop a glyph in once when it first appears; afterwards only a gentle pulse (no flicker on the 1 s redraw)
+function renderLive(D){
+  const lanes=document.getElementById('liveLanes'),pipe=document.getElementById('livePipe');if(!lanes)return;
+  const t=D.allTurns.at(-1);
+  if(!t){lanes.innerHTML='<div class="empty">Waiting for the first turn… this strip fills in as the agents work.</div>';pipe.innerHTML='';return}
+  const now=S.live?Date.now()/1000:(S.events.at(-1)?.timestamp||t.end);
+  const w=width('liveLanes'),L=150,R=120,cell=17,maxCells=Math.max(8,Math.floor((w-L-R)/cell)),lh=30;
+  let svg=`<svg width="${w}" height="${P.length*lh+6}" role="img" aria-label="Live agent steps">`;
+  const status=[];
+  P.forEach((p,i)=>{const y=6+i*lh+lh/2;const runs=t.by[p];
+    const steps=runs.flatMap(r=>[...r.tools.map(l=>({k:'tool',t:l.t,l,r})),...r.reasoning.map(q=>({k:'think',t:q.t,q,r}))]).sort((a,b)=>a.t-b.t);
+    const running=runs.some(r=>r.running);const start=runs.length?Math.min(...runs.map(r=>r.start)):null;const end=runs.length?Math.max(...runs.map(r=>r.end)):null;
+    const lastStep=steps.at(-1);
+    const st=!runs.length?'idle':running?(lastStep&&lastStep.k==='tool'&&lastStep.l.passed===null?`running ${short(lastStep.l.tool)}`:'thinking'):runs.some(r=>r.failed)?'failed':'done';
+    status.push(st);
+    svg+=`<text x="0" y="${y+4}" class="ink b">${sw(p).replace(/<[^>]+>/g,'')}${NAME[p]}</text><text x="62" y="${y+4}" class="${running?'ink':'mut'}" style="font-size:11px">${esc(st)}</text>`;
+    const shown=steps.slice(-maxCells),off=steps.length-shown.length;
+    if(off>0)svg+=`<text x="${L-6}" y="${y+4}" text-anchor="end" class="mut" style="font-size:10px">+${off}</text>`;
+    const newestKey=lastStep?(lastStep.k==='tool'?lastStep.l.eid:lastStep.q.id):null;const fresh=newestKey!=null&&LAST_NEWEST[p]!==newestKey;if(running)LAST_NEWEST[p]=newestKey;
+    shown.forEach((x,j)=>{const cx=L+j*cell+cell/2,isNew=j===shown.length-1&&running;
+      const tip=x.k==='think'?`◆ reasoning · ${x.q.chars.toLocaleString()} chars`:`${esc(x.l.tool)} ${esc(x.l.detail||'')}<br>${x.l.passed===false?"<span class='bad'>✗ failed</span>":x.l.passed?'✓ ok':'running…'}${x.l.dur?' · '+dur(x.l.dur):''}`;
+      const g=x.k==='think'?`<path d="M${cx},${y-5} l5,5 l-5,5 l-5,-5z" fill="var(--text-2)"/>`:glyph(atype(x.l),cx,y,6,x.l.passed===false?'var(--critical)':`var(--${p})`);
+      svg+=`<g class="${isNew?(fresh?'newest':'current'):''}" data-tip="${esc(tip)}" ${x.k==='tool'?`data-tool="${x.r.id}:${x.r.tools.indexOf(x.l)}"`:''} style="cursor:pointer">${g}</g>`});
+    if(!steps.length&&runs.length)svg+=`<text x="${L}" y="${y+4}" class="mut" style="font-size:11px">${running?'writing the answer…':'answered without tools'}</text>`;
+    if(start!=null)svg+=`<text x="${w-4}" y="${y+4}" text-anchor="end" class="${running?'ink b':'mut'}" style="font-variant-numeric:tabular-nums">${dur(((running?now:end)-start)*1000)}</text>`;
+  });
+  lanes.innerHTML=svg+'</svg>';
+  // post-turn pipeline
+  const tid=t.id,has=type=>S.events.some(e=>e.type===type&&e.turn_id===tid);
+  const judgeCalls=S.events.filter(e=>e.type==='judge.raw'&&e.turn_id===tid).length;
+  const expected=Math.max(1,S.events.filter(e=>e.type==='span.start'&&e.span_kind==='judge'&&e.turn_id===tid).length);
+  const agentsDone=!t.running&&t.runs.length>0;
+  const stages=[
+    ['Agents',agentsDone?'on':t.runs.length?'run':'off',agentsDone?`${t.runs.length} runs`:'working'],
+    ['Analysis',has('analysis.done')?'on':agentsDone?'run':'off','diverge · habits · cheats'],
+    ['Judges',t.verdicts.length||S.A.claims.some(c=>c.turn_id===tid)?'on':judgeCalls||S.events.some(e=>e.type==='span.start'&&e.span_kind==='judge'&&e.turn_id===tid)?'run':'off',`${judgeCalls}/${expected} calls`],
+    ['Learning',S.A.rewards.some(r=>r.turn_id===tid)||has('lessons.control')?'on':t.verdicts.length?'run':'off','reward · lessons'],
+    ['Next prompt',S.A.rewards.some(r=>r.turn_id===tid)||(t.verdicts.length&&!S.A.rewards.length)?'on':'off','guidance ready']];
+  const pw=w-140,sw_=pw/stages.length;let ps=`<svg width="${w}" height="40" role="img" aria-label="Post-turn pipeline">`;
+  stages.forEach(([name,state,sub],i)=>{const x=i*sw_;ps+=`<g data-tip="${name}: ${state==='on'?'done':state==='run'?'in progress':'waiting'} · ${esc(sub)}"><circle cx="${x+9}" cy="13" r="6" class="stage-${state}${state==='run'?' current':''}"/><text x="${x+20}" y="17" class="${state==='off'?'mut':'ink'}" style="font-size:12px">${name}</text><text x="${x+20}" y="32" class="mut" style="font-size:10.5px">${esc(sub)}</text></g>`;
+    if(i<stages.length-1)ps+=`<line x1="${x+sw_-26}" x2="${x+sw_-8}" y1="13" y2="13" stroke="var(--base)" stroke-width="1.5"/>`});
+  // sparkline: events per second, last 60 s
+  const end2=S.live?Date.now()/1000:(S.events.at(-1)?.timestamp||0),bins=new Array(60).fill(0);
+  for(let k=S.events.length-1;k>=0;k--){const e=S.events[k];const a=Math.floor(end2-e.timestamp);if(a>=60)break;if(a>=0)bins[59-a]++}
+  const mx=Math.max(1,...bins),sx=w-128;ps+=`<g data-tip="Events per second, last 60 s (peak ${mx}/s)">`+`<path d="${bins.map((v,k)=>`${k?'L':'M'}${sx+k*2},${32-24*v/mx}`).join(' ')}" fill="none" stroke="var(--text-2)" stroke-width="1.5"/><text x="${w-4}" y="10" text-anchor="end" class="mut" style="font-size:10px">events/s</text></g>`;
+  pipe.innerHTML=ps+'</svg>';
+  const anyRun=status.some(x=>x!=='done'&&x!=='idle'&&x!=='failed');
+  document.getElementById('liveTitle').textContent=anyRun?`Live: turn ${t.no} in progress — `+P.map((p,i)=>`${NAME[p]} ${status[i]}`).join(' · '):`Live: idle — last turn ${t.no} finished`+(t.verdicts.length?', judged':'');
+}
+document.getElementById('liveLanes').addEventListener('click',e=>{const g=e.target.closest('[data-tool]');if(g){const[a,b]=g.dataset.tool.split(':');if(+b>=0)showTool(a,+b)}});
+/* ================= clarity: plain-words summary + foldable detail sections ================= */
+function foldSetup(){
+  let saved={};try{saved=JSON.parse(localStorage.getItem('duo-open')||'{}')}catch(e){}
+  document.querySelectorAll('main > section').forEach((sec,i)=>{const h=sec.querySelector(':scope > h2, :scope > div h2');if(!h||sec.dataset.folded)return;
+    sec.dataset.folded='1';const key=h.id||sec.id||('s'+i);sec.dataset.key=key;
+    const body=document.createElement('div');body.className='fbody';[...sec.childNodes].filter(n=>n!==h).forEach(n=>body.appendChild(n));sec.appendChild(body);
+    h.classList.add('fold');h.setAttribute('role','button');h.tabIndex=0;
+    const open=key in saved?saved[key]:sec.dataset.open==='1';sec.classList.toggle('open',open);
+    const toggle=e=>{if(e.target.closest('.info'))return;sec.classList.toggle('open');saved[key]=sec.classList.contains('open');try{localStorage.setItem('duo-open',JSON.stringify(saved))}catch(_){}schedule()};
+    h.addEventListener('click',toggle);h.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();toggle(e)}})});
+}
+function jumpTo(id){const el=document.getElementById(id);if(!el)return;const sec=el.closest('section');if(sec&&!sec.classList.contains('open')){sec.classList.add('open');schedule()}setTimeout(()=>sec.scrollIntoView({behavior:'smooth',block:'start'}),60)}
+function renderPlain(D,K){
+  const host=document.getElementById('plain');if(!host)return;const {M,W}=K;const rows=[];
+  const add=(icon,k,html,target)=>rows.push(`<div class="pl-row" data-jump="${target}"><span>${icon}</span><span class="k">${k}</span><span>${html}</span></div>`);
+  if(!D.allTurns.length){host.innerHTML='<div class="empty">No turns yet. Ask duo something; this page fills in live.</div>';return}
+  // 1-2 one profile line per agent: attributes, not a ranking
+  const ids=new Set(D.turns.map(t=>t.id));
+  for(const p of P){
+    const judged=D.turns.filter(t=>t.judge[p]);const parts=[];
+    if(judged.length){const dims=[...DIMS,...PROC].map(d=>[d,mean(judged.map(t=>DIMS.includes(d)?t.judge[p].dims[d]:t.judge[p].proc?.[d]).filter(v=>v!=null))]).filter(x=>x[1]!=null).sort((a,b)=>b[1]-a[1]);
+      if(dims.length>1)parts.push(`strongest at <b>${(DIML[dims[0][0]]||PROCL[dims[0][0]]).toLowerCase()}</b> (${f1(dims[0][1])}), weakest at <b>${(DIML[dims.at(-1)[0]]||PROCL[dims.at(-1)[0]]).toLowerCase()}</b> (${f1(dims.at(-1)[1])})`)}
+    const tools=d3.rollups(D.runs.filter(r=>r.provider===p).flatMap(r=>r.tools),v=>v.length,l=>short(l.tool)).sort((a,b)=>b[1]-a[1]);
+    if(tools.length)parts.push(`mostly uses ${tools.slice(0,2).map(t=>`${esc(t[0])} (${t[1]})`).join(', ')}`);
+    const B=S.A.behaviour.filter(b=>b.provider===p&&ids.has(b.turn_id)&&b.data).map(b=>b.data);
+    const wr=B.filter(m=>m.writes);if(wr.length)parts.push(`verifies after editing in ${pct(wr.filter(m=>m.verified_after_last_write).length/wr.length)} of runs`);
+    if(B.length)parts.push(`spends ${pct(mean(B.map(m=>m.explore_share||0)))} of steps exploring`);
+    const cl=S.A.claims.filter(c=>c.provider===p&&ids.has(c.turn_id));if(cl.length)parts.push(`${pct(cl.filter(c=>c.verdict==='supported').length/cl.length)} of claims backed by tool output`);
+    if(M[p].latency)parts.push(`typical time ${dur(M[p].latency)}`);
+    if(parts.length)add(`<i class="sw" style="background:var(--${p})"></i>`,NAME[p],parts.join(' · ')+'.','fpTitle');
+  }
+  // 2 where they differ
+  const ft=filmTurns(D).at(-1);
+  if(ft){const al=S.A.align.filter(a=>a.turn_id===ft.id).at(-1).data;const d=al.divergence!=null?al.pairs[al.divergence]:null;
+    const what=ref=>{const x=ref!=null&&S.byEvent.get(+ref);if(!x||!x.tool)return'nothing';const d=unwrapCmd(x.tool.detail).replace(/^.*\//,'');return `${TYPE_L[atype(x.tool)]} <code>${esc(d.slice(0,40))}</code>`};
+    add('🔀','Where they differ',d?`On turn ${ft.no} they took the same path ${Math.round(100*al.similarity)}% of the way, then split: Codex → ${what(d[0])}; Claude → ${what(d[1])}.`:`On turn ${ft.no} both agents took the same steps.`,'filmTitle')}
+  // 3 biggest problem per agent
+  const prob=P.map(p=>{const r=d3.rollups(D.turns.flatMap(t=>t.ann[p].roots),v=>v.length,x=>x.name).sort((a,b)=>b[1]-a[1])[0];return r?`${NAME[p]}: <b>${esc(r[0].replace(/_/g,' '))}</b> (${r[1]}×)`:null}).filter(Boolean);
+  const hacks=D.turns.reduce((a,t)=>a+t.hacked.length,0);
+  if(prob.length||hacks)add('⚠️','Typical failure',prob.join(' · ')+(hacks?` · <span class="bad">${hacks} confirmed cheat${hacks>1?'s':''}</span>`:''),'failTitle');
+  else if(Object.keys(D.turns.at(-1)?.judge||{}).length)add('✅','Typical failure','The judges found no root cause in these turns.','failTitle');
+  // 4 what duo changes next
+  const top=(LEARN&&LEARN.suggestions||[])[0];
+  if(top){const st=top.accepted?'already active — it is added to '+NAME[top.provider]+'\'s next prompts':top.turns>=3&&top.judges.length>=2&&top.target!=='workflow'?'will be learned automatically':'waiting for more evidence';
+    add('🛠️','What changes next',`“${esc(top.rule)}” for ${NAME[top.provider]||top.provider} — ${st}.`,'actTitle')}
+  if(NEXT){const n=P.reduce((a,p)=>a+NEXT.agents[p].chosen.length,0);add('➡️','Next prompt',NEXT.settings.enabled?(n?`${n} guidance item${n>1?'s':''} will be added after your message (never changing it).`:'Nothing will be added: agents get your message exactly as typed.'):'Guidance is off.','nextTitle')}
+  // 5 can I trust it
+  const warn=(LEARN?.checks||[]).filter(x=>x.ok===false);
+  add(warn.length?'🔎':'✅','Can I trust it',warn.length?`Treat as early signals: ${warn.slice(0,2).map(x=>esc(x.label.toLowerCase())+' ('+esc(x.detail.split(';')[0])+')').join('; ')}.`:'Yes: all checks pass.','checks');
+  host.innerHTML=rows.join('');
+}
+document.getElementById('plain').addEventListener('click',e=>{const r=e.target.closest('[data-jump]');if(r)jumpTo(r.dataset.jump)});
+foldSetup();
+/* ================= report export ================= */
+function report(){
+  const D=derive(),{M,W}=metrics(D);const row=(l,a,b)=>`| ${l} | ${a} | ${b} |`;
+  const C=failureCases(D);const cats=[...new Set(C.map(c=>c.cat))];
+  return [`# Duo: Codex vs Claude`,``,`${D.turns.length} turns (filter: ${F.kind}, judge: ${F.judge}).`,``,`| Metric | Codex | Claude |`,`|---|---|---|`,
+    row('Judge score /5',f2(M.codex.judge),f2(M.claude.judge)),row('Head-to-head wins',W.codex,W.claude),row('Ties / split','',W.tie),
+    row('Runtime evals passed',pct(M.codex.evalPass),pct(M.claude.evalPass)),row('Tool calls succeeded',pct(M.codex.toolOk),pct(M.claude.toolOk)),
+    row('Median time',dur(M.codex.latency),dur(M.claude.latency)),row('Runs failed',pct(M.codex.failRate),pct(M.claude.failRate)),row('Blind retries',M.codex.retries,M.claude.retries),``,
+    `Sign test p = ${W.decisive?W.p.toFixed(3):'–'} over ${W.decisive} decisive turns${W.decisive<20?' (inconclusive: <20)':''}. Judge agreement ${pct(W.agree)}; same verdict in both orders ${pct(W.consistency)}.`,``,
+    `## Failure cases`,``,`| Category | Codex | Claude |`,`|---|---|---|`,...cats.map(k=>row(k,C.filter(c=>c.cat===k&&c.p==='codex').length,C.filter(c=>c.cat===k&&c.p==='claude').length))].join('\n');
+}
+document.getElementById('copyMd').onclick=async e=>{try{await navigator.clipboard.writeText(report());e.target.textContent='Copied ✓'}catch(_){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([report()],{type:'text/markdown'}));a.download='duo-compare.md';a.click();e.target.textContent='Downloaded ✓'}setTimeout(()=>e.target.textContent='Copy report',1600)};
+
+/* ================= growing evaluation tree ================= */
+const TREE={turn:null,follow:true,progress:100,timer:null,seen:new Set(),session:null};
+
+function railClusters(tools,x,cutoff){
+  const clusters=[];
+  tools.forEach((l,i)=>{if(l.t>cutoff)return;const end=Math.min(cutoff,l.dur==null?cutoff:l.t+l.dur/1000),last=clusters.at(-1);
+    if(last&&last.tool===l.tool&&x(l.t)-x(last.end)<24&&l.t>=last.end&&l.passed!==false&&!last.failed){last.end=end;last.items.push({l,i});}
+    else clusters.push({tool:l.tool,start:l.t,end,failed:l.passed===false,items:[{l,i}]});
+  });return clusters;
+}
+function renderEvalTree(D){
+  if(TREE.session!==S.session){TREE.session=S.session;TREE.turn=null;TREE.progress=100;clearInterval(TREE.timer);TREE.timer=null;document.getElementById('treePlay').textContent='Replay growth';}
+  const turns=D.turns,sel=document.getElementById('treeTurn'),host=document.getElementById('evalTree');
+  sel.innerHTML=turns.map(t=>`<option value="${esc(t.id)}">Turn ${t.no} · ${KIND_L[t.kind]}${t.running?' · running':''}</option>`).join('');
+  const t=turns.find(t=>t.id===(TREE.follow?turns.at(-1)?.id:TREE.turn))||turns.at(-1);
+  if(!t){document.getElementById('railSummary').innerHTML='';host.innerHTML='<div class="empty" style="padding:100px 20px">Execution tracks start with your first task.<br>Agent bars and tool branches appear here as Duo works.</div>';document.getElementById('treePosition').textContent='Waiting for a task';return}
+  TREE.turn=t.id;sel.value=t.id;
+  document.getElementById('railSummary').innerHTML=P.map(p=>{const rs=t.by[p],tools=rs.flatMap(r=>r.tools),fail=tools.filter(l=>l.passed===false).length,j=t.judge[p];return `<div style="--model:var(--${p})"><b>${NAME[p]}</b><div class="rail-values"><span><strong>${rs.length?dur(d3.sum(rs,r=>r.dur)):'–'}</strong> run time</span><span><strong>${tools.length}</strong> tool calls</span><span class="${fail?'bad':''}"><strong>${fail}</strong> failures</span><span><strong>${j?f1(j.overall)+'/5':'Pending'}</strong> judge score</span></div></div>`}).join('');
+  const runs=[...t.runs,...t.judges.map(j=>({id:j.id,s:j,provider:j.provider,role:'judge',start:j.start,end:j.end,running:j.status==='running',tools:j.tools,reasoning:j.reasoning,evals:j.evals}))];
+  const runIds=new Set(runs.map(r=>r.id));
+  const findings=S.events.filter(e=>(e.turn_id===t.id||runIds.has(e.span_id))&&/^(evaluation$|judge\.|analysis\.|policy\.reward|evolve\.result)/.test(e.type)&&(F.judge==='all'||!e.judge||String(e.judge).startsWith(F.judge)));
+  const start=t.start,end=Math.max(t.end,...runs.map(r=>r.end),...findings.map(e=>e.timestamp)),span=Math.max(1,end-start),cutoff=start+span*TREE.progress/100;
+  const zoom=+document.getElementById('railZoom').value,w=Math.max(760,host.clientWidth)*zoom,L=170,R=35;
+  const x=d3.scaleLinear().domain([start,start+span]).range([L,w-R]);
+  const svg=d3.create('svg').attr('width',w).attr('role','group').attr('aria-label','Turn '+t.no+' execution railway timeline');
+  const ink=(p,failed)=>failed?'var(--critical)':`var(--${P.includes(p)?p:'judge'})`;
+  function target(g,label,action){g.attr('class','tree-node rail-target').attr('tabindex',0).attr('role','button').attr('aria-label',label).on('click',action).on('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();action()}});g.append('title').text(label);return g;}
+  function text(y,label,sub){svg.append('text').attr('x',14).attr('y',y).attr('class','ink b').text(label);if(sub)svg.append('text').attr('x',14).attr('y',y+17).attr('class','mut').text(sub);}
+  const task=target(svg.append('g'),'Turn '+t.no+' · '+dur((Math.min(end,cutoff)-start)*1000),()=>showTurn(t.id));
+  task.append('rect').attr('x',L).attr('y',58).attr('width',Math.max(3,x(Math.min(end,cutoff))-L)).attr('height',18).attr('rx',5).attr('fill','var(--text)').attr('opacity',.15);
+  text(70,'TASK '+t.no,KIND_L[t.kind]+' · '+dur(span*1000));
+  let y=122,visibleCalls=0;
+  for(const r of runs){
+    const c=ink(r.provider,r.failed),ry=y;if(r.start>cutoff)continue;
+    const finish=Math.min(r.end,cutoff),a=x(r.start),b=x(finish);
+    const run=target(svg.append('g'),(NAME[r.provider]||r.provider)+' '+r.role+' · '+dur((finish-r.start)*1000),()=>r.role==='judge'?showTurn(t.id):showRun(r.id));
+    run.append('rect').attr('x',a).attr('y',ry-7).attr('width',Math.max(3,b-a)).attr('height',14).attr('rx',5).attr('fill',c).attr('opacity',.3);
+    run.append('line').attr('x1',a).attr('x2',b).attr('y1',ry).attr('y2',ry).attr('stroke',c).attr('stroke-width',3);
+    text(ry-2,(NAME[r.provider]||r.provider||'Panel')+' · '+r.role,(r.running&&TREE.progress===100?'Running · ':'')+dur((finish-r.start)*1000));
+    if(r.running&&TREE.progress===100)run.append('circle').attr('cx',b).attr('cy',ry).attr('r',5).attr('fill',c).attr('class','current');
+    const occupied=[];let tracks=1;
+    for(const cl of railClusters(r.tools,x,cutoff)){
+      visibleCalls+=cl.items.length;
+      const a=x(cl.start),b=Math.max(a+12,x(cl.end));let lane=occupied.findIndex(right=>right+18<a);if(lane<0)lane=occupied.length;
+      occupied[lane]=b;tracks=Math.max(tracks,lane+1);const ty=ry+42+lane*38,color=ink(r.provider,cl.failed),n=cl.items.length;
+      const label=(cl.failed?'✗ ':cl.items[0].l.passed===null?'◌ ':'')+short(cl.tool)+(n>1?' ×'+n:'');
+      const g=target(svg.append('g'),label+' · '+dur((cl.end-cl.start)*1000)+' · '+cl.items.map(z=>z.l.detail).join('\n'),()=>{
+        if(r.role==='judge')showTurn(t.id);
+        else if(n===1)showTool(r.id,cl.items[0].i);
+        else openDrawer(esc(label),'<p>'+n+' calls clustered at this zoom. Zoom in to separate them.</p>'+cl.items.map(({l,i})=>`<p><button class="link" data-goto-tool="${esc(r.id)}:${i}">${esc(short(l.tool))} · ${esc(l.detail)||dur(l.dur)}</button></p>`).join(''));
+      });
+      const bend=Math.min(12,(b-a)/3);
+      g.append('path').attr('d',`M${a},${ry} C${a+bend},${ry} ${a},${ty} ${a+bend},${ty} L${b-bend},${ty} C${b},${ty} ${b-bend},${ry} ${b},${ry}`).attr('fill','none').attr('stroke',color).attr('stroke-width',2).attr('opacity',.8);
+      g.append('rect').attr('x',a).attr('y',ty-6).attr('width',Math.max(12,b-a)).attr('height',12).attr('rx',4).attr('fill',color).attr('opacity',.25);
+      g.append('text').attr('x',a+2).attr('y',ty-12).attr('fill',color).text((b-a)>55?label:(cl.failed?'✗':n>1?'×'+n:'•'));
+    }
+    for(const q of r.reasoning.filter(q=>q.t<=cutoff)){
+      const g=target(svg.append('g'),'Reasoning · '+q.chars+' characters',()=>r.role==='judge'?showTurn(t.id):showRun(r.id,q.id));
+      g.append('path').attr('d',`M${x(q.t)},${ry-6}l5,6l-5,6l-5,-6Z`).attr('fill','var(--text)');
+    }
+    y+=76+tracks*38;
+  }
+  if(findings.length){text(y,'EVALUATION','Analysis · judging · learning');
+    const buckets=new Map();for(const e of findings){if(e.timestamp>cutoff)continue;const k=Math.floor(x(e.timestamp)/22);if(!buckets.has(k))buckets.set(k,[]);buckets.get(k).push(e)}
+    svg.append('line').attr('x1',L).attr('x2',x(cutoff)).attr('y1',y).attr('y2',y).attr('stroke','var(--judge)').attr('stroke-width',2);
+    for(const items of buckets.values()){
+      const g=target(svg.append('g'),items.length+' evaluation events',()=>openDrawer('Evaluation evidence',items.map(e=>'<pre>'+esc(JSON.stringify(e,null,2))+'</pre>').join('')));
+      const px=x(items[0].timestamp);g.append('circle').attr('cx',px).attr('cy',y).attr('r',6).attr('fill',items.some(e=>e.passed===false)?'var(--critical)':'var(--judge)');if(items.length>1)g.append('text').attr('x',px).attr('y',y-14).attr('text-anchor','middle').text('×'+items.length);
+    }y+=60;
+  }
+  const height=Math.max(300,y+30);svg.attr('height',height);
+  const grid=svg.insert('g',':first-child');for(const tick of x.ticks(Math.max(4,Math.floor(w/120)))){grid.append('line').attr('x1',x(tick)).attr('x2',x(tick)).attr('y1',42).attr('y2',height-15).attr('stroke','var(--line)').attr('stroke-dasharray','3,5');grid.append('text').attr('x',x(tick)).attr('y',27).attr('text-anchor','middle').text(dur((tick-start)*1000));}
+  if(TREE.progress<100)svg.append('line').attr('x1',x(cutoff)).attr('x2',x(cutoff)).attr('y1',40).attr('y2',height-15).attr('stroke','var(--text)').attr('stroke-dasharray','5,5');
+  host.replaceChildren(svg.node());document.getElementById('treeProgress').value=TREE.progress;
+  document.getElementById('treePosition').textContent=dur(Math.max(0,cutoff-start)*1000)+' / '+dur(span*1000)+' · '+visibleCalls+' tool calls';
+}
+document.getElementById('railZoom').onchange=schedule;
+document.getElementById('treeTurn').onchange=e=>{TREE.turn=e.target.value;TREE.follow=false;TREE.progress=100;document.getElementById('treeFollow').setAttribute('aria-pressed','false');schedule()};
+document.getElementById('treeFollow').onclick=()=>{TREE.follow=!TREE.follow;document.getElementById('treeFollow').setAttribute('aria-pressed',String(TREE.follow));TREE.progress=100;schedule()};
+document.getElementById('treeProgress').oninput=e=>{TREE.progress=+e.target.value;schedule()};
+document.getElementById('treePlay').onclick=()=>{if(TREE.timer){clearInterval(TREE.timer);TREE.timer=null;document.getElementById('treePlay').textContent='Replay growth';return}TREE.progress=0;TREE.seen.clear();document.getElementById('treePlay').textContent='Pause replay';TREE.timer=setInterval(()=>{TREE.progress=Math.min(100,TREE.progress+2);schedule();if(TREE.progress===100){clearInterval(TREE.timer);TREE.timer=null;document.getElementById('treePlay').textContent='Replay growth'}},140);schedule()};
+
+
+/* ================= model observatory: linked evidence lenses ================= */
+const LAB_PHASES=['inspect','plan','edit','verify','run'];
+const LAB_COLORS={inspect:'#3f91b8',plan:'#9577c6',edit:'#de8746',verify:'#39a183',run:'#8a919b'};
+function labSurface(key,height=260,minWidth=440){
+  const host=document.getElementById('lab-'+key),w=Math.max(minWidth,host.clientWidth);
+  const svg=d3.create('svg').attr('width',w).attr('height',height).attr('role','group').attr('aria-label',key+' model analysis');host.replaceChildren(svg.node());return {svg,w,h:height};
+}
+function labNote(key,text){document.getElementById('lab-'+key+'-readout').textContent=text}
+function labEmpty(key,text){document.getElementById('lab-'+key).innerHTML='<div class="empty">'+esc(text)+'</div>';labNote(key,'Only recorded data is shown. Change the scope or collect more runs.');}
+function labMark(g,label,open){g.attr('class','lab-click').attr('role','button').attr('tabindex',0).attr('aria-label',label).on('click',open).on('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();open()}});g.append('title').text(label);return g}
+function labText(svg,x,y,text,cls='mut'){svg.append('text').attr('x',x).attr('y',y).attr('class',cls).text(text)}
+function labColor(p){return `var(--${P.includes(p)?p:'judge'})`}
+function labRunsDrawer(title,items){openDrawer(esc(title),items.map(r=>`<p><button class="link" data-goto-run="${esc(r.id)}">${esc(NAME[r.provider])} · turn ${r.turnNo} · ${esc(r.role)}</button> · ${r.tools.length} calls · ${dur(r.dur)}</p>`).join(''))}
+function renderObservatory(D){
+  const selected=document.getElementById('labProvider').value,scope=document.getElementById('labScope').value;
+  const turns=D.turns.filter(t=>scope==='session'||t.id===TREE.turn),ids=new Set(turns.map(t=>t.id));
+  const runs=D.runs.filter(r=>ids.has(r.turn)&&(selected==='all'||r.provider===selected));
+  const calls=runs.flatMap(r=>r.tools.map((l,i)=>({r,l,i}))),complete=calls.filter(c=>c.l.dur!=null&&c.l.passed!==null);
+  const scored=turns.flatMap(t=>P.filter(p=>selected==='all'||selected===p).filter(p=>t.judge[p]).map(p=>({t,p,j:t.judge[p],runs:t.by[p],seconds:d3.sum(t.by[p],r=>r.dur)/1000,tools:d3.sum(t.by[p],r=>r.tools.length)})));
+  const failed=calls.filter(c=>c.l.passed===false).length;
+  document.getElementById('labMetrics').innerHTML=[['Turns in scope',turns.length],['Agent runs',runs.length],['Tool calls',calls.length],['Failed calls',failed]].map(([label,value])=>`<div class="lab-metric"><b>${value}</b><span>${label}</span></div>`).join('');
+  // Speed-quality scatter, preserving per-turn pairing and underlying scores.
+  if(!scored.length)labEmpty('atlas','Judge-scored turns will appear here after evaluation.');else{
+    const {svg,w,h}=labSurface('atlas'),x=d3.scaleSymlog().domain([0,Math.max(1,d3.max(scored,d=>d.seconds))]).range([50,w-25]),y=d3.scaleLinear().domain([1,5]).range([h-45,24]),size=d3.scaleSqrt().domain([0,Math.max(1,d3.max(scored,d=>d.tools))]).range([4,13]);
+    svg.append('g').attr('transform',`translate(0,${h-45})`).call(d3.axisBottom(x).ticks(5).tickFormat(d=>dur(d*1000)));
+    svg.append('g').attr('transform','translate(50,0)').call(d3.axisLeft(y).ticks(5));
+    labText(svg,50,14,'Judge score / 5');labText(svg,w/2,h-5,'Total agent run time →');
+    for(const pair of d3.groups(scored,d=>d.t.id).map(d=>d[1]))if(pair.length===2)svg.append('line').attr('x1',x(pair[0].seconds)).attr('x2',x(pair[1].seconds)).attr('y1',y(pair[0].j.overall)).attr('y2',y(pair[1].j.overall)).attr('stroke','var(--line)');
+    for(const d of scored){const g=labMark(svg.append('g'),`${NAME[d.p]} · turn ${d.t.no} · ${f1(d.j.overall)}/5 · ${dur(d.seconds*1000)} · ${d.tools} calls`,()=>showTurn(d.t.id));g.append('circle').attr('cx',x(d.seconds)).attr('cy',y(d.j.overall)).attr('r',size(d.tools)).attr('fill',labColor(d.p)).attr('opacity',.65).attr('stroke','var(--panel)').attr('stroke-width',1.5)}
+    labNote('atlas',scored.length+' scored model/turns. Lines join models on the same task. Time sums runs, including overlapping ones; this is not wall-clock task latency.');
+  }
+  // Twelve-sample phase braid, per-run paths, tool-count bins.
+  const active=runs.filter(r=>r.tools.length);
+  if(!active.length)labEmpty('braid','Tool-enabled runs reveal their phase sequences here.');else{
+    const {svg,w,h}=labSurface('braid',280),x=d3.scaleLinear().domain([0,11]).range([70,w-25]),y=d3.scalePoint().domain(LAB_PHASES).range([40,h-48]);
+    LAB_PHASES.forEach(p=>{svg.append('line').attr('x1',70).attr('x2',w-25).attr('y1',y(p)).attr('y2',y(p)).attr('stroke','var(--line)');labText(svg,2,y(p)+4,p)});
+    for(const [ri,r] of active.slice(-160).entries()){
+      const pts=d3.range(12).map(k=>({x:x(k),y:y(phaseOf(r.tools[Math.round(k*(r.tools.length-1)/11)]))+(r.provider==='codex'?-4:4)+(ri%3-1)*2}));
+      const g=labMark(svg.append('g'),`${NAME[r.provider]} · turn ${r.turnNo} · ${r.tools.length} steps`,()=>showRun(r.id));g.append('path').attr('d',d3.line().x(d=>d.x).y(d=>d.y).curve(d3.curveMonotoneX)(pts)).attr('fill','none').attr('stroke',labColor(r.provider)).attr('opacity',.35).attr('stroke-width',2);
+    }
+    labText(svg,70,h-15,'First tool');labText(svg,w-78,h-15,'Last tool');labNote('braid','Latest '+Math.min(160,active.length)+' tool-enabled runs. Blue = Codex; orange = Claude. Curves show sampled order, not dependencies or model thought.');
+  }
+  // Busy-time occupancy union prevents double-counting concurrent tool calls.
+  if(!active.length)labEmpty('occupancy','Activity appears once tool calls are recorded.');else{
+    const rows=active.slice(-32),{svg,w}=labSurface('occupancy',Math.max(170,rows.length*24+65),650),cw=(w-170)/32;
+    rows.forEach((r,ri)=>{const y=32+ri*24,span=Math.max(.001,r.end-r.start);labText(svg,2,y+13,`${NAME[r.provider]} T${r.turnNo} · ${r.role}`);
+      for(let b=0;b<32;b++){const lo=r.start+span*b/32,hi=r.start+span*(b+1)/32,iv=r.tools.map(l=>[Math.max(lo,l.t),Math.min(hi,l.dur==null?r.end:l.t+l.dur/1000)]).filter(([a,z])=>z>a).sort((a,z)=>a[0]-z[0]);let covered=0,last=lo;for(const [a,z]of iv){covered+=Math.max(0,z-Math.max(a,last));last=Math.max(last,z)}const fill=Math.min(1,covered/(hi-lo)),bad=r.tools.some(l=>l.passed===false&&l.t<hi&&l.t+(l.dur||.001)/1000>lo);
+        const g=labMark(svg.append('g'),`${NAME[r.provider]} turn ${r.turnNo} · ${Math.round(b/32*100)}–${Math.round((b+1)/32*100)}% · tool busy ${pct(fill)}`,()=>showRun(r.id));g.append('rect').attr('x',160+b*cw).attr('y',y).attr('width',cw-2).attr('height',17).attr('rx',3).attr('fill',labColor(r.provider)).attr('fill-opacity',.08+.9*fill).attr('stroke',bad?'var(--critical)':'none');
+      }});
+    labText(svg,160,18,'0% of run');labText(svg,w/2,18,'50%');labText(svg,w-65,18,'100%');labNote('occupancy','Latest '+rows.length+' runs, each normalized to its own duration. Pale bins mean little observed tool time; they do not establish that the model was idle.');
+  }
+  // Two-level squarified treemap with duration/count switch.
+  const area=document.getElementById('labArea').value,terrain=area==='calls'?calls:complete.filter(c=>c.l.dur>0);
+  if(!terrain.length)labEmpty('terrain',area==='calls'?'No tool calls recorded.':'No completed tool durations recorded. Try the call-count metric.');else{
+    const {svg,w,h}=labSurface('terrain',280),root=d3.hierarchy({children:d3.groups(terrain,c=>c.r.provider).map(([name,items])=>({name,children:d3.groups(items,c=>short(c.l.tool)).map(([tool,items])=>({name:tool,provider:name,items,value:area==='calls'?items.length:d3.sum(items,c=>c.l.dur)}))}))}).sum(d=>d.value||0).sort((a,b)=>b.value-a.value);
+    d3.treemap().size([w,h]).paddingOuter(3).paddingInner(3).paddingTop(d=>d.depth===1?22:0)(root);
+    root.children.forEach(n=>labText(svg,n.x0+5,n.y0+16,NAME[n.data.name],'ink b'));
+    root.leaves().forEach(n=>{const d=n.data,ww=n.x1-n.x0,hh=n.y1-n.y0;const g=labMark(svg.append('g'),`${NAME[d.provider]} · ${d.name} · ${d.items.length} calls · ${area==='calls'?n.value+' calls':dur(n.value)}`,()=>openDrawer(esc(d.name),d.items.slice(0,100).map(c=>`<p><button class="link" data-goto-tool="${esc(c.r.id)}:${c.i}">${esc(NAME[c.r.provider])} T${c.r.turnNo} · ${esc(c.l.detail)||esc(d.name)}</button> · ${dur(c.l.dur)}</p>`).join('')+(d.items.length>100?'<p>First 100 calls shown.</p>':'')));
+      g.append('rect').attr('x',n.x0).attr('y',n.y0).attr('width',ww).attr('height',hh).attr('rx',5).attr('fill',labColor(d.provider)).attr('opacity',.18+.5*d.items.filter(c=>c.l.passed===false).length/d.items.length);
+      if(ww>45&&hh>20)labText(g,n.x0+6,n.y0+17,d.name.slice(0,Math.floor(ww/7)-1),'ink b');if(ww>65&&hh>40)labText(g,n.x0+6,n.y0+34,area==='calls'?n.value+' calls':dur(n.value));
+    });labNote('terrain',area==='calls'?'Area measures call count. Darker tiles have a higher failed-call share.':'Area measures summed completed tool duration, not exclusive wall time. Darker tiles have a higher failed-call share.');
+  }
+  // Deterministic dot jitter keeps redraws stable.
+  if(!complete.length)labEmpty('latency','Completed calls with timing will appear here.');else{
+    const dots=complete.slice(-1200),{svg,w,h}=labSurface('latency',260),max=Math.max(1,d3.max(dots,c=>c.l.dur)),x=d3.scaleLog().domain([1,Math.max(10,max)]).range([65,w-22]);
+    svg.append('g').attr('transform',`translate(0,${h-42})`).call(d3.axisBottom(x).ticks(5).tickFormat(d=>dur(d)));
+    P.forEach((p,i)=>{const y=65+i*95;labText(svg,2,y+4,NAME[p]);svg.append('line').attr('x1',65).attr('x2',w-22).attr('y1',y).attr('y2',y).attr('stroke','var(--line)')});
+    dots.forEach((c,i)=>{const y=65+P.indexOf(c.r.provider)*95+((i*37)%53-26);const g=labMark(svg.append('g'),`${NAME[c.r.provider]} · ${short(c.l.tool)} · ${dur(c.l.dur)}${c.l.passed===false?' · failed':''}`,()=>showTool(c.r.id,c.i));g.append('circle').attr('cx',x(Math.max(1,c.l.dur))).attr('cy',y).attr('r',3.5).attr('fill',c.l.passed===false?'var(--critical)':labColor(c.r.provider)).attr('opacity',.6)});
+    labNote('latency','Latest '+dots.length+' completed calls. Median '+dur(median(complete.map(c=>c.l.dur)))+'; p95 '+dur(d3.quantile(complete.map(c=>c.l.dur).sort((a,b)=>a-b),.95))+'. Sub-millisecond calls sit at 1 ms.');
+  }
+  // Parallel coordinates use the rubric's fixed 1–5 scale, never normalized to observed extrema.
+  if(!scored.length)labEmpty('rubriclab','Rubric scores are available after judges evaluate a turn.');else{
+    const {svg,w,h}=labSurface('rubriclab',280,560),x=d3.scalePoint().domain(DIMS).range([35,w-30]),y=d3.scaleLinear().domain([1,5]).range([h-48,30]);
+    for(const dim of DIMS){svg.append('g').attr('transform',`translate(${x(dim)},0)`).call(d3.axisLeft(y).ticks(5));labText(svg,x(dim)-30,h-20,(DIML[dim]||dim).slice(0,13));}
+    for(const d of scored.slice(-160)){const g=labMark(svg.append('g'),`${NAME[d.p]} · turn ${d.t.no} · ${DIMS.map(k=>k+': '+f1(d.j.dims[k])).join(', ')}`,()=>showTurn(d.t.id));g.append('path').attr('d',d3.line().defined(k=>d.j.dims[k]!=null).x(k=>x(k)).y(k=>y(d.j.dims[k]))(DIMS)).attr('fill','none').attr('stroke',labColor(d.p)).attr('stroke-width',2).attr('opacity',.35);DIMS.filter(k=>d.j.dims[k]!=null).forEach(k=>g.append('circle').attr('cx',x(k)).attr('cy',y(d.j.dims[k])).attr('r',3).attr('fill',labColor(d.p)))}
+    labNote('rubriclab','Latest '+Math.min(160,scored.length)+' scored model/turns. Lines average the selected judges within each dimension; missing scores remain missing. Click a line for judge rationale.');
+  }
+  // Bipartite recovery ribbons, explicitly next action rather than causal repair.
+  const errors=calls.filter(c=>c.l.passed===false),edges=d3.groups(errors,c=>phaseOf(c.l)+'|'+(c.r.tools[c.i+1]?phaseOf(c.r.tools[c.i+1]):'ended'));
+  if(!edges.length)labEmpty('recovery','No failed tool calls in this scope.');else{
+    const {svg,w,h}=labSurface('recovery',300,440),left=90,right=w-120,y=d3.scalePoint().domain([...LAB_PHASES,'ended']).range([45,h-30]),scale=d3.scaleSqrt().domain([1,Math.max(1,d3.max(edges,e=>e[1].length))]).range([3,22]);
+    labText(svg,left,17,'Failed call phase');labText(svg,right-40,17,'Next action phase');
+    for(const [key,items]of edges){const [a,b]=key.split('|'),g=labMark(svg.append('g'),`${a} → ${b} · ${items.length} failures`,()=>openDrawer(esc(a+' → '+b),items.slice(0,100).map(c=>`<p><button class="link" data-goto-tool="${esc(c.r.id)}:${c.i}">${esc(NAME[c.r.provider])} T${c.r.turnNo} · ${esc(c.l.detail)||esc(short(c.l.tool))}</button></p>`).join('')));g.append('path').attr('d',`M${left+15},${y(a)} C${w*.45},${y(a)} ${w*.55},${y(b)} ${right},${y(b)}`).attr('fill','none').attr('stroke','var(--critical)').attr('stroke-width',scale(items.length)).attr('opacity',.25);}
+    [...LAB_PHASES,'ended'].forEach(p=>{labText(svg,5,y(p)+4,p,'ink');labText(svg,right+12,y(p)+4,p,'ink');svg.append('circle').attr('cx',left+15).attr('cy',y(p)).attr('r',4).attr('fill',LAB_COLORS[p]||'var(--muted)');svg.append('circle').attr('cx',right).attr('cy',y(p)).attr('r',4).attr('fill',LAB_COLORS[p]||'var(--muted)')});
+    labNote('recovery',errors.length+' failed calls; ribbon width encodes count. “Ended” means no subsequent tool was recorded in that run, including runs still in progress. Click a ribbon for the failed-call evidence.');
+  }
+
+  // Directed chords aggregate adjacent calls; low-frequency tools remain in Other.
+  if(!active.some(r=>r.tools.length>1))labEmpty('switchboard','At least two tool calls in one run are needed for a transition.');else{
+    const counts=d3.rollups(calls,v=>v.length,c=>short(c.l.tool)).sort((a,b)=>b[1]-a[1]),names=counts.slice(0,8).map(d=>d[0]);if(counts.length>8)names.push('Other');
+    const name=l=>names.includes(short(l.tool))?short(l.tool):'Other',matrix=names.map(()=>names.map(()=>0)),evidence=new Map();
+    active.forEach(r=>r.tools.slice(1).forEach((l,i)=>{const a=names.indexOf(name(r.tools[i])),b=names.indexOf(name(l));matrix[a][b]++;const k=a+':'+b;if(!evidence.has(k))evidence.set(k,[]);evidence.get(k).push({r,i:i+1})}));
+    const {svg,w,h}=labSurface('switchboard',360),radius=Math.min(w/2-92,h/2-60),chord=d3.chordDirected().padAngle(.05).sortSubgroups(d3.descending)(matrix),g=svg.append('g').attr('transform',`translate(${w/2},${h/2})`),palette=d3.scaleOrdinal(names,d3.schemeTableau10);
+    for(const ribbon of chord){const items=evidence.get(ribbon.source.index+':'+ribbon.target.index)||[],a=names[ribbon.source.index],b=names[ribbon.target.index];const mark=labMark(g.append('g'),`${a} → ${b} · ${items.length} transitions`,()=>openDrawer(esc(a+' → '+b),items.slice(0,80).map(({r,i})=>`<p><button class="link" data-goto-tool="${esc(r.id)}:${i}">${esc(NAME[r.provider])} T${r.turnNo} · ${esc(r.tools[i].detail)||esc(short(r.tools[i].tool))}</button></p>`).join('')+(items.length>80?'<p>First 80 transitions shown.</p>':'')));mark.append('path').attr('d',d3.ribbonArrow().radius(radius-3)(ribbon)).attr('fill',palette(a)).attr('opacity',.3).on('mouseenter',function(){d3.select(this).attr('opacity',.8)}).on('mouseleave',function(){d3.select(this).attr('opacity',.3)})}
+    for(const arc of chord.groups){g.append('path').attr('d',d3.arc().innerRadius(radius).outerRadius(radius+9)(arc)).attr('fill',palette(names[arc.index]));const angle=(arc.startAngle+arc.endAngle)/2-Math.PI/2;g.append('text').attr('x',Math.cos(angle)*(radius+17)).attr('y',Math.sin(angle)*(radius+17)).attr('text-anchor',Math.cos(angle)>0?'start':'end').attr('dominant-baseline','middle').text(names[arc.index].slice(0,18));}
+    labNote('switchboard','Top eight tools by call count; rarer tools grouped as Other. Ribbons are adjacent calls, pooled across the selected models. Hover to highlight; click for evidence.');
+  }
+  if(!active.length)labEmpty('pace','Tool calls will reveal execution pace.');else{
+    const rows=active.slice(-120),{svg,w,h}=labSurface('pace',280),x=d3.scaleLinear().domain([0,1]).range([45,w-25]),y=d3.scaleLinear().domain([0,Math.max(1,d3.max(rows,r=>r.tools.length))]).nice().range([h-40,25]);
+    svg.append('g').attr('transform',`translate(0,${h-40})`).call(d3.axisBottom(x).ticks(5).tickFormat(d3.format('.0%')));svg.append('g').attr('transform','translate(45,0)').call(d3.axisLeft(y).ticks(5));labText(svg,45,14,'Cumulative tool starts');labText(svg,w/2-80,h-6,'Fraction of each run’s duration');
+    for(const r of rows){const span=Math.max(.001,r.end-r.start),points=[{t:0,n:0},...r.tools.map((l,i)=>({t:Math.max(0,Math.min(1,(l.t-r.start)/span)),n:i+1})),{t:1,n:r.tools.length}];const g=labMark(svg.append('g'),`${NAME[r.provider]} T${r.turnNo} · ${r.tools.length} starts · ${dur(r.dur)}`,()=>showRun(r.id));g.append('path').attr('d',d3.line().x(d=>x(d.t)).y(d=>y(d.n)).curve(d3.curveStepAfter)(points)).attr('fill','none').attr('stroke',labColor(r.provider)).attr('opacity',.35).attr('stroke-width',2)}
+    labNote('pace','Latest '+rows.length+' tool-enabled runs. Normalized time supports shape comparison; it hides absolute duration. Use the railway timeline for elapsed seconds.');
+  }
+  if(!scored.length)labEmpty('mosaic','Judged tasks will populate the outcome matrix.');else{
+    const ts=turns.filter(t=>Object.keys(t.judge).length).slice(-36),ps=P.filter(p=>selected==='all'||p===selected),rows=ps.flatMap(p=>DIMS.map(dim=>({p,dim}))),{svg,w}=labSurface('mosaic',rows.length*24+70,Math.max(650,ts.length*28+190)),cw=(w-185)/Math.max(1,ts.length);
+    ts.forEach((t,i)=>labText(svg,180+i*cw+3,21,'T'+t.no));rows.forEach(({p,dim},j)=>{labText(svg,2,46+j*24,NAME[p]+' · '+(DIML[dim]||dim));ts.forEach((t,i)=>{const value=t.judge[p]?.dims[dim],mark=labMark(svg.append('g'),`${NAME[p]} T${t.no} · ${dim}: ${value==null?'not recorded':f1(value)}`,()=>showTurn(t.id));mark.append('rect').attr('x',180+i*cw).attr('y',32+j*24).attr('width',cw-3).attr('height',20).attr('rx',3).attr('fill',value==null?'var(--grid)':labColor(p)).attr('fill-opacity',value==null?1:.12+.85*(value-1)/4);if(cw>34)labText(mark,185+i*cw,46+j*24,value==null?'–':f1(value),'ink')})});
+    labNote('mosaic','Latest '+ts.length+' judged tasks. Pale = lower score; saturated = higher. Gray = missing. Judge filter applies; tasks and writer/reviewer roles may differ.');
+  }
+}
+document.getElementById('labNav').onclick=e=>{const b=e.target.closest('[data-lens]');if(b)document.getElementById('lab-'+b.dataset.lens).closest('article').scrollIntoView({behavior:'smooth',block:'center'})};
+['labScope','labProvider','labArea'].forEach(id=>document.getElementById(id).onchange=schedule);
+
+document.getElementById('viewDepth').onclick=e=>{const detailed=document.body.classList.toggle('focus-view')===false;e.target.textContent=detailed?'Focus timeline':'Explore charts';e.target.setAttribute('aria-pressed',String(detailed));schedule()};
+/* ================= controls ================= */
+function seg(id,key){const el=document.getElementById(id);el.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;F[key]=b.dataset.v;el.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b));if(key!=='sort'){TL.user=false;TL.domain=null}schedule()})}
+seg('fKind','kind');seg('fJudge','judge');seg('fSort','sort');
+document.getElementById('theme').onclick=()=>{const r=document.documentElement;const dark=r.dataset.theme?r.dataset.theme==='dark':matchMedia('(prefers-color-scheme: dark)').matches;r.dataset.theme=dark?'light':'dark';try{localStorage.setItem('duo-theme',r.dataset.theme)}catch(e){}schedule()};
+try{const t=localStorage.getItem('duo-theme');if(t)document.documentElement.dataset.theme=t}catch(e){}
+/* ================= render loop ================= */
+let pending=false;function schedule(){if(pending)return;pending=true;requestAnimationFrame(()=>{pending=false;render()})}
+function render(){
+  const D=derive(),K=metrics(D);
+  renderEvalTree(D);renderObservatory(D);renderLive(D);renderPlain(D,K);renderVerdict(D,K);renderCurve(D);renderBandit();renderActions(D);renderChecks(D,K);renderPRs();renderClaims(D);renderFingerprint(D);renderFilm(D);renderPhase(D);renderScoreboard(D,K);renderRubric(D);renderDuel(D);renderTimeline(D);renderTools(D);renderFailures(D);
+}
+let rz;addEventListener('resize',()=>{clearTimeout(rz);rz=setTimeout(schedule,120)});
+function setLive(on,text){document.getElementById('live').classList.toggle('on',on);document.getElementById('liveText').textContent=text}
+let src=null,TRACING_EXITED=false,LOAD_GENERATION=0;
+function exitTracing(){
+  TRACING_EXITED=true;LOAD_GENERATION++;S.live=false;
+  if(src){src.close();src=null}
+  clearInterval(TREE.timer);TREE.timer=null;
+  document.getElementById('treePlay').textContent='Replay growth';
+  document.getElementById('traceExitNotice').hidden=false;
+  document.getElementById('exitTracing').disabled=true;
+  document.getElementById('session').disabled=true;
+  setLive(false,'tracing disconnected');schedule();
+}
+document.getElementById('exitTracing').onclick=exitTracing;
+document.getElementById('resumeTracing').onclick=async()=>{
+  TRACING_EXITED=false;document.getElementById('traceExitNotice').hidden=true;
+  document.getElementById('exitTracing').disabled=false;
+  await sessions();if(!TRACING_EXITED)await load(FOLLOW?DEFAULT_SESSION:(document.getElementById('session').value||null));
+};
+async function load(session){
+  if(TRACING_EXITED)return;const generation=++LOAD_GENERATION;
+  if(src){src.close();src=null}reset();TL.domain=null;TL.user=false;F.turn=null;
+  const q=session?'?session='+encodeURIComponent(session):'';
+  try{const snap=await (await fetch('/snapshot'+q)).json();S.session=snap.session_id;S.started=snap.started;S.stored=!!snap.stored;(snap.events||[]).forEach(ingest)}catch(e){setLive(false,'snapshot unavailable')}
+  if(TRACING_EXITED||generation!==LOAD_GENERATION)return;
+  const isCurrent=!session||session===current;
+  S.live=!qs.has('static');schedule();
+  if(!S.live){setLive(false,'static snapshot');return}
+  // Always stream: the current session from memory, any stored session by tailing the trace DB (follows a duo chat running elsewhere)
+  src=new EventSource(isCurrent?'/events':'/events?session='+encodeURIComponent(session)+'&after='+S.maxId);
+  src.onopen=()=>setLive(true,isCurrent?'live':'live · following the trace DB');
+  src.onmessage=m=>{try{const e=JSON.parse(m.data);ingest(e);schedule();onStream(e)}catch(e){}};src.onerror=()=>setLive(false,'reconnecting');
+}
+let current=null,DEFAULT_SESSION=null;
+async function sessions(){
+  const sel=document.getElementById('session');
+  try{const r=await (await fetch('/sessions')).json();current=r.current;
+    const fmt=s=>new Date(s.started*1000).toLocaleString([], {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})+` · ${s.turns} turns`;
+    sel.innerHTML=`<option value="__follow">Follow latest (live)</option><option value="">This server's session</option>`+r.sessions.filter(s=>s.id!==r.current).map(s=>`<option value="${esc(s.id)}">${esc(fmt(s))}</option>`).join('');
+    // the standalone viewer's own session is empty: open the newest session that has turns (still streams live)
+    const curTurns=(r.sessions.find(s=>s.id===r.current)||{}).turns||0;const best=r.sessions.find(s=>s.id!==r.current&&s.turns>0);
+    if(!curTurns&&best){DEFAULT_SESSION=best.id}
+    sel.value=FOLLOW?'__follow':(qs.get('session')||'');
+    sel.title=r.db?'Trace DB: '+r.db:'Trace DB off (DUO_TRACE_DB=off)';if(!r.db)sel.disabled=true;
+  }catch(e){sel.innerHTML='<option>This session</option>';sel.disabled=true}
+  if(TRACING_EXITED)sel.disabled=true;
+  sel.onchange=()=>{FOLLOW=sel.value==='__follow';load(FOLLOW?DEFAULT_SESSION:(sel.value||null))};
+}
+let FOLLOW=!qs.get('session');  // default: follow whichever session is most recently active
+sessions().then(()=>load(qs.get('session')||DEFAULT_SESSION));
+setInterval(async()=>{
+  if(TRACING_EXITED||!FOLLOW)return;
+  try{const r=await (await fetch('/sessions')).json();
+    const act=r.sessions.filter(x=>x.id!==r.current&&x.turns>0).sort((a,b)=>(b.last_ts||0)-(a.last_ts||0))[0];
+    if(act&&act.id!==S.session&&(act.last_ts||0)>(S.events.at(-1)?.timestamp||0)){await sessions();document.getElementById('session').value=act.id;load(act.id)}
+  }catch(e){}
+},4000);
+fetchLearning();fetchExtras();fetchNext();fetchMap();setInterval(()=>{if(!TRACING_EXITED&&S.live){fetchLearning();fetchExtras()}},60000);  // fallback only; updates are stream-driven
+setInterval(()=>{if(!TRACING_EXITED&&S.live&&S.spans.size&&[...S.spans.values()].some(s=>s.status==='running'))schedule()},1000);
+</script>
+</body>
+</html>
