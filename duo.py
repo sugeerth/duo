@@ -296,7 +296,8 @@ def lessons_update(body):
 
 def traced_call(role,provider,*args):
     """call() inside an agent span so the trace tree shows responder/synthesis runs."""
-    with HUB.span('agent',provider,role=role) as span:
+    model=(args[3] if len(args)>3 else None) or os.environ.get('DUO_'+provider.upper()+'_MODEL')
+    with HUB.span('agent',provider,role=role,model=model or 'default') as span:
         if role=='responder' and lessons.count(provider):
             args=(apply_lessons(provider,args[0],span),)+args[1:]
         result=call(provider,*args)
@@ -421,10 +422,11 @@ def duo_activity(provider,message):
 def agent_backend(provider,prompt,readonly=False,approve=None,notice=None,timeout=300,model=None,role=None):
     from agents import codex_run,claude_run
     fn=codex_run if provider=='codex' else claude_run
-    with HUB.span('agent',provider,role=role or ('reader' if readonly else 'writer')) as span:
+    model=model or os.environ.get('DUO_'+provider.upper()+'_MODEL')
+    with HUB.span('agent',provider,role=role or ('reader' if readonly else 'writer'),model=model or 'default') as span:
         emit('agent.started',provider,phase='review' if readonly else 'work')
         if lessons.count(provider):prompt=apply_lessons(provider,prompt,span)
-        result=fn(prompt,Path.cwd(),approve or duo_approval,notice or duo_activity,readonly=readonly,timeout=timeout,model=model or os.environ.get('DUO_'+provider.upper()+'_MODEL'))
+        result=fn(prompt,Path.cwd(),approve or duo_approval,notice or duo_activity,readonly=readonly,timeout=timeout,model=model)
         emit('agent.completed',provider,status='completed' if result['ok'] else 'failed',duration_ms=int(result.get('seconds',0)*1000),
              payload=result.get('answer') or result.get('error'),payload_kind='answer' if result['ok'] else 'error')
         emit('evaluation',provider,name='backend_success',passed=result['ok'])

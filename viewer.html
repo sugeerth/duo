@@ -166,11 +166,11 @@ section:not(.open){padding-top:9px;padding-bottom:9px}
 .tw-hatch{background:repeating-linear-gradient(135deg,var(--c) 0 3px,transparent 3px 6px)}
 .tw-legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:11.5px;color:var(--text-2);margin-top:8px}.tw-legend i{display:inline-block;width:12px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
 .tw-tools{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:12px}.tw-tools table{width:100%;font-size:12px}.tw-tools td{padding:2px 4px}.tw-tools tr[data-goto-tool]{cursor:pointer}.tw-tools tr[data-goto-tool]:hover{background:var(--hover)}
-.tt-wrap{overflow-x:auto;margin-top:8px;border:1px solid var(--line);border-radius:10px;background:var(--panel)}.tt-wrap svg{display:block}
-.tt-node{cursor:pointer;outline:none}.tt-node:focus .tt-hit,.tt-node:hover .tt-hit{stroke:var(--text);stroke-width:1.5}
-.tt-link{fill:none;stroke:var(--base);stroke-width:1.4}.tt-link.fault{stroke:var(--critical);stroke-width:2}.tt-link.dead{stroke-dasharray:3 3}
-.tt-label{font-size:11.5px;fill:var(--text);paint-order:stroke;stroke:var(--panel);stroke-width:4px;stroke-linejoin:round}.tt-label.m{fill:var(--text-2)}.tt-label.b{font-weight:650}
 .tw-why{font-size:12px;color:var(--text-2);margin-top:8px;line-height:1.5}
+.rail-compo{display:flex;height:8px;border-radius:4px;overflow:hidden;margin-top:9px;background:var(--grid)}.rail-compo i{display:block;height:100%}
+.rail-compo-key{font-size:11.5px;color:var(--text-2);margin-top:4px}
+#stepDiff{border:1px solid var(--line);border-radius:12px;overflow-x:auto;margin-top:6px;background:var(--panel)}
+.diff-head{display:flex;gap:12px;align-items:baseline;flex-wrap:wrap;margin-top:16px}.diff-head h3{margin:0;font-size:15px}
 @media(max-width:600px){.rail-summary{grid-template-columns:1fr}.tw-tools{grid-template-columns:1fr}.focus-view #evalTreeSec{min-height:0}}
 </style>
 </head>
@@ -195,11 +195,12 @@ section:not(.open){padding-top:9px;padding-bottom:9px}
 <main>
   <section class="c12" id="evalTreeSec" data-open="1">
     <h2>Duo · one task, two execution tracks</h2>
-    <p class="sub">Long runs stay on a shared timeline. Tool calls split off as railway tracks, with nearby calls clustered until you zoom in.</p>
+    <p class="sub">Long runs stay on a shared timeline. Tool calls split off as railway tracks, with nearby calls clustered until you zoom in. The Tree view regrows each run as a tree: trunk = run time, branches = tool calls, canopy = judge score.</p>
     <div id="verdictCard" class="vcard" aria-live="polite"></div>
     <div id="railSummary" class="rail-summary"></div>
     <div class="tree-toolbar">
       <select id="treeTurn" aria-label="Execution timeline turn"></select>
+      <span class="seg" id="treeView" role="group" aria-label="Timeline view"><button data-v="rail" aria-pressed="true">Railway</button><button data-v="tree" aria-pressed="false">Tree</button></span>
       <button id="treeFollow" aria-pressed="true">Follow latest</button>
       <button id="treePlay">Replay growth</button>
       <select id="railZoom" aria-label="Timeline zoom"><option value="1">Fit timeline</option><option value="2">Zoom 2×</option><option value="4">Zoom 4×</option><option value="8">Zoom 8×</option></select>
@@ -207,16 +208,16 @@ section:not(.open){padding-top:9px;padding-bottom:9px}
       <span id="treePosition" class="sub"></span>
     </div>
     <div id="evalTree" aria-label="Execution railway timeline"></div>
+    <div class="diff-head"><h3>Step diff — where the runs diverge</h3><span class="sub" id="diffSentence"></span></div>
+    <div id="stepDiff" aria-label="Step-aligned comparison of both models on this turn"></div>
     <div class="tree-caption"><span>━ Task bar</span><span style="color:var(--codex)">● Codex</span><span style="color:var(--claude)">● Claude</span><span>◆ Reasoning</span><span class="ok">✓ Passed</span><span class="bad">✗ Failed</span><span>Branches = tool calls · clustered calls expand with zoom · click for evidence</span></div>
-    <div class="tw-head"><h3>The turn as a tree</h3><span class="sub">The task at the root, each model's run as a branch, then its phases and tool calls. Red links follow the judges' fault path, a ring marks the root cause, and dashed links lead to wasted calls. Click a phase to fold it or a call to open it.</span></div>
-    <div id="turnTree" class="tt-wrap"></div>
     <div class="tw-head"><h3>Where the time went</h3><span class="sub">Each bar is a model's run time on one shared scale. Hatched time went to failed or repeated tool calls.</span></div>
     <div id="timeWent"></div>
   </section>
   <section class="c12" id="labSec" data-open="1"><h2 id="labTitle">Model observatory</h2>
 <div class="lab-top"><div><div class="lab-kicker">TRACES → PATTERNS → EVIDENCE</div><h3>Understand how the models work.</h3><p class="sub">Ten lenses on the same recorded runs. Click a mark to inspect its evidence.</p></div><div class="lab-controls"><select id="labScope" aria-label="Observatory scope"><option value="session">Filtered session</option><option value="turn">Timeline turn</option></select><select id="labProvider" aria-label="Observatory model"><option value="all">Both models</option><option value="codex">Codex</option><option value="claude">Claude</option></select><select id="labArea" aria-label="Tool terrain metric"><option value="duration">Terrain: duration</option><option value="calls">Terrain: calls</option></select></div></div>
-<div class="legend" id="labNav" style="margin-top:12px"><button data-lens="atlas">Speed &amp; quality</button><button data-lens="occupancy">Time &amp; workload</button><button data-lens="rubriclab">Quality &amp; failures</button><button data-lens="switchboard">Behavior &amp; loops</button><button data-lens="mosaic">Compare tasks</button></div>
-<div id="labMetrics" class="lab-metrics"></div><div class="lab-grid"><article class="lab-card"><div class="lab-kicker">01 · Behavioral atlas</div><h3>Where do speed and judged quality meet?</h3><p>Each dot is one scored model/turn. Horizontal position is total run time; vertical position is judge score. Size shows tool count.</p><div id="lab-atlas" class="lab-chart"></div><div id="lab-atlas-readout" class="lab-readout"></div></article><article class="lab-card"><div class="lab-kicker">02 · Decision braid</div><h3>How does each model move through work?</h3><p>Tool steps sampled at 12 positions through each run. Curves reveal repeated phase changes; this is execution order, not time.</p><div id="lab-braid" class="lab-chart"></div><div id="lab-braid-readout" class="lab-readout"></div></article><article class="lab-card wide"><div class="lab-kicker">03 · Activity weather</div><h3>When is the agent busy with tools?</h3><p>Each row is a run, divided into 32 equal time bins. Fill shows the fraction of each bin covered by tool calls; red borders flag failed calls.</p><div id="lab-occupancy" class="lab-chart"></div><div id="lab-occupancy-readout" class="lab-readout"></div></article><article class="lab-card"><div class="lab-kicker">04 · Tool terrain</div><h3>Which tools dominate the workload?</h3><p>Rectangle area is summed completed call duration. Overlapping calls count separately. Switch to call count to compare frequency.</p><div id="lab-terrain" class="lab-chart"></div><div id="lab-terrain-readout" class="lab-readout"></div></article><article class="lab-card"><div class="lab-kicker">05 · Latency constellation</div><h3>Are slow calls rare or routine?</h3><p>Every plotted dot is a completed tool call on a log duration scale. Vertical jitter separates nearby points; red marks failed calls.</p><div id="lab-latency" class="lab-chart"></div><div id="lab-latency-readout" class="lab-readout"></div></article><article class="lab-card"><div class="lab-kicker">06 · Quality contours</div><h3>Does a strong total hide a weak dimension?</h3><p>Each line is one scored model/turn across the five judge dimensions. Missing dimensions break the line; scores are judgments, not ground truth.</p><div id="lab-rubriclab" class="lab-chart"></div><div id="lab-rubriclab-readout" class="lab-readout"></div></article><article class="lab-card"><div class="lab-kicker">07 · After the error</div><h3>What action follows a failed tool call?</h3><p>Links connect a failed call’s phase to the next tool action. This describes the next action; it does not prove that the error was diagnosed or repaired.</p><div id="lab-recovery" class="lab-chart"></div><div id="lab-recovery-readout" class="lab-readout"></div></article><article class="lab-card"><div class="lab-kicker">08 · Tool switchboard</div><h3>Which tools keep pulling the model back?</h3><p>Chord ribbons count consecutive tool transitions within each run. Loops expose repeated use; direction is recorded order, not dependency.</p><div id="lab-switchboard" class="lab-chart"></div><div id="lab-switchboard-readout" class="lab-readout"></div></article><article class="lab-card"><div class="lab-kicker">09 · Execution pace</div><h3>Do tools arrive in bursts or steadily?</h3><p>Cumulative tool starts over normalized run time. Each curve is a run; steeper segments indicate a burst of observed tool calls.</p><div id="lab-pace" class="lab-chart"></div><div id="lab-pace-readout" class="lab-readout"></div></article><article class="lab-card wide"><div class="lab-kicker">10 · Outcome matrix</div><h3>Where do the two models disagree?</h3><p>One column per judged task; rows separate models and rubric dimensions. Color intensity shows score on the fixed 1–5 scale.</p><div id="lab-mosaic" class="lab-chart"></div><div id="lab-mosaic-readout" class="lab-readout"></div></article></div><details class="lab-sources"><summary>Current observability patterns &amp; reading</summary><p>Use both an overview of repeated work and a literal execution view, with evaluations linked to recorded evidence. These are useful design references, not a ranking of products:</p><a href="https://langfuse.com/docs/observability/features/agent-graphs" target="_blank" rel="noopener noreferrer">Langfuse · aggregated and expanded agent graphs</a> · <a href="https://arize.com/docs/phoenix/tracing/tutorial" target="_blank" rel="noopener noreferrer">Phoenix · traces, annotations, sessions</a> · <a href="https://www.langchain.com/langsmith/observability" target="_blank" rel="noopener noreferrer">LangSmith · agent trajectory observability</a></details></section>
+<div class="legend" id="labNav" style="margin-top:12px"><button data-lens="atlas">Speed &amp; quality</button><button data-lens="occupancy">Time &amp; workload</button><button data-lens="rubriclab">Quality &amp; failures</button><button data-lens="switchboard">Behavior &amp; loops</button><button data-lens="flow">Agent graph</button><button data-lens="mosaic">Compare tasks</button></div>
+<div id="labMetrics" class="lab-metrics"></div><div class="lab-grid"><article class="lab-card"><div class="lab-kicker">01 · Behavioral atlas</div><h3>Where do speed and judged quality meet?</h3><p>Each dot is one scored model/turn. Horizontal position is total run time; vertical position is judge score. Size shows tool count.</p><div id="lab-atlas" class="lab-chart"></div><div id="lab-atlas-readout" class="lab-readout"></div></article><article class="lab-card"><div class="lab-kicker">02 · Decision braid</div><h3>How does each model move through work?</h3><p>Tool steps sampled at 12 positions through each run. Curves reveal repeated phase changes; this is execution order, not time.</p><div id="lab-braid" class="lab-chart"></div><div id="lab-braid-readout" class="lab-readout"></div></article><article class="lab-card wide"><div class="lab-kicker">03 · Activity weather</div><h3>When is the agent busy with tools?</h3><p>Each row is a run, divided into 32 equal time bins. Fill shows the fraction of each bin covered by tool calls; red borders flag failed calls.</p><div id="lab-occupancy" class="lab-chart"></div><div id="lab-occupancy-readout" class="lab-readout"></div></article><article class="lab-card"><div class="lab-kicker">04 · Tool terrain</div><h3>Which tools dominate the workload?</h3><p>Rectangle area is summed completed call duration. Overlapping calls count separately. Switch to call count to compare frequency.</p><div id="lab-terrain" class="lab-chart"></div><div id="lab-terrain-readout" class="lab-readout"></div></article><article class="lab-card"><div class="lab-kicker">05 · Latency constellation</div><h3>Are slow calls rare or routine?</h3><p>Every plotted dot is a completed tool call on a log duration scale. Vertical jitter separates nearby points; red marks failed calls.</p><div id="lab-latency" class="lab-chart"></div><div id="lab-latency-readout" class="lab-readout"></div></article><article class="lab-card"><div class="lab-kicker">06 · Quality contours</div><h3>Does a strong total hide a weak dimension?</h3><p>Each line is one scored model/turn across the five judge dimensions. Missing dimensions break the line; scores are judgments, not ground truth.</p><div id="lab-rubriclab" class="lab-chart"></div><div id="lab-rubriclab-readout" class="lab-readout"></div></article><article class="lab-card"><div class="lab-kicker">07 · After the error</div><h3>What action follows a failed tool call?</h3><p>Links connect a failed call’s phase to the next tool action. This describes the next action; it does not prove that the error was diagnosed or repaired.</p><div id="lab-recovery" class="lab-chart"></div><div id="lab-recovery-readout" class="lab-readout"></div></article><article class="lab-card"><div class="lab-kicker">08 · Tool switchboard</div><h3>Which tools keep pulling the model back?</h3><p>Chord ribbons count consecutive tool transitions within each run. Loops expose repeated use; direction is recorded order, not dependency.</p><div id="lab-switchboard" class="lab-chart"></div><div id="lab-switchboard-readout" class="lab-readout"></div></article><article class="lab-card"><div class="lab-kicker">09 · Execution pace</div><h3>Do tools arrive in bursts or steadily?</h3><p>Cumulative tool starts over normalized run time. Each curve is a run; steeper segments indicate a burst of observed tool calls.</p><div id="lab-pace" class="lab-chart"></div><div id="lab-pace-readout" class="lab-readout"></div></article><article class="lab-card wide"><div class="lab-kicker">10 · Outcome matrix</div><h3>Where do the two models disagree?</h3><p>One column per judged task; rows separate models and rubric dimensions. Color intensity shows score on the fixed 1–5 scale.</p><div id="lab-mosaic" class="lab-chart"></div><div id="lab-mosaic-readout" class="lab-readout"></div></article><article class="lab-card wide"><div class="lab-kicker">11 · Agent flow graph</div><h3>What path does each model take through the tools?</h3><p>Layered graph drawing of the tool-transition digraph. Each node splits in half — left is Codex's visit share, right is Claude's; arrowed edges count consecutive transitions, dashed curves loop back to an earlier phase. Hover a node to isolate its traffic.</p><div id="lab-flow" class="lab-chart"></div><div id="lab-flow-readout" class="lab-readout"></div></article></div><details class="lab-sources"><summary>Current observability patterns &amp; reading</summary><p>Use both an overview of repeated work and a literal execution view, with evaluations linked to recorded evidence. These are useful design references, not a ranking of products:</p><a href="https://langfuse.com/docs/observability/features/agent-graphs" target="_blank" rel="noopener noreferrer">Langfuse · aggregated and expanded agent graphs</a> · <a href="https://arize.com/docs/phoenix/tracing/tutorial" target="_blank" rel="noopener noreferrer">Phoenix · traces, annotations, sessions</a> · <a href="https://www.langchain.com/langsmith/observability" target="_blank" rel="noopener noreferrer">LangSmith · agent trajectory observability</a></details></section>
   <section class="c12" id="liveSec" data-open="1">
     <h2 id="liveTitle">Live</h2>
     <p class="note">Streams as it happens: each glyph is a step the agent just took (shape = action; ✗ failed; ◆ reasoning; the newest pulses). The pipeline below lights up as duo analyses the turn, the judges score it, the learning updates, and the next prompt is ready. The sparkline is events per second over the last minute.</p>
@@ -379,7 +380,7 @@ function ingest(e){
   if(e.id<=S.maxId)return;S.maxId=e.id;S.events.push(e);
   if(S.started===null)S.started=e.timestamp;
   if(e.type==='span.start'){
-    const s={id:e.span_id,parent:e.parent_id,kind:e.span_kind,provider:e.provider,role:e.role,mode:e.mode,turnId:e.turn_id,start:e.timestamp,end:null,status:'running',duration:null,children:[],tools:[],reasoning:[],evals:[],answerId:null,promptId:null};
+    const s={id:e.span_id,parent:e.parent_id,kind:e.span_kind,provider:e.provider,role:e.role,mode:e.mode,model:e.model&&e.model!=='default'?e.model:null,turnId:e.turn_id,start:e.timestamp,end:null,status:'running',duration:null,children:[],tools:[],reasoning:[],evals:[],answerId:null,promptId:null};
     S.spans.set(s.id,s);S.order.push(s.id);const p=s.parent&&S.spans.get(s.parent);if(p)p.children.push(s.id);return;
   }
   const J=S.J;
@@ -440,7 +441,7 @@ function derive(){
     const failedTools=s.tools.filter(l=>l.passed===false&&!l.declined);
     const retries=[];for(let i=1;i<s.tools.length;i++){const a=s.tools[i-1],b=s.tools[i];if(a.passed===false&&b.tool===a.tool)retries.push(b)}
     const failedEval=s.evals.some(e=>/backend_success|nonempty_successful_response/.test(e.name)&&e.passed===false);
-    runs.push({id:s.id,s,provider:s.provider,role:s.role||'run',turn:t?.id,turnNo:t?turnNo.get(t.id):0,kind:kindOf(t?.mode),start:s.start,end:s.end||now,running:s.status==='running',
+    runs.push({id:s.id,s,provider:s.provider,role:s.role||'run',model:s.model,turn:t?.id,turnNo:t?turnNo.get(t.id):0,kind:kindOf(t?.mode),start:s.start,end:s.end||now,running:s.status==='running',
       dur:s.duration??(now-s.start)*1000,tools:s.tools.filter(l=>!l.declined),failedTools,declined:s.tools.filter(l=>l.declined),retries,
       failed:s.status==='failed'||failedEval,reasoning:s.reasoning,evals:s.evals});
   }
@@ -1328,7 +1329,7 @@ function report(){
 document.getElementById('copyMd').onclick=async e=>{try{await navigator.clipboard.writeText(report());e.target.textContent='Copied ✓'}catch(_){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([report()],{type:'text/markdown'}));a.download='duo-compare.md';a.click();e.target.textContent='Downloaded ✓'}setTimeout(()=>e.target.textContent='Copy report',1600)};
 
 /* ================= growing evaluation tree ================= */
-const TREE={turn:null,follow:true,progress:100,timer:null,seen:new Set(),session:null};
+const TREE={turn:null,follow:true,progress:100,timer:null,seen:new Set(),session:null,view:'rail'};
 
 function railClusters(tools,x,cutoff){
   const clusters=[];
@@ -1418,66 +1419,10 @@ function timeBudget(rs){
     out.total+=r.dur/1000;out.tool+=tool;out.failed+=tf-tool;out.repeat+=all-tf;out.model+=Math.max(0,r.dur/1000-all)}
   return out}
 
-/* ================= the turn as a tree (from AgentDiff's "trace as a tree") =================
-   Turn → each model's run → consecutive phases → tool calls. The fault path (the judges' root-cause and
-   critical-error steps) is red, the root cause is ringed, and wasted calls (failed, repeated, or labelled
-   wasted by a judge) hang off dashed links. Big quiet phases start folded; fold state survives re-renders. */
-const TT={collapsed:{},turn:null};
-function turnTreeData(t){
-  const roots=new Set(),crit=new Set(),wasted=new Set();
-  for(const p of P){t.ann[p].roots.forEach(r=>r.item_id&&roots.add(+r.item_id));t.ann[p].steps.forEach(s=>{if(s.verdict==='critical_error')crit.add(+s.item_id);if(s.verdict==='wasted')wasted.add(+s.item_id)})}
-  const runs=t.runs.filter(r=>r.role!=='synthesis').map(r=>{const seen=new Set(),phases=[];
-    r.tools.forEach((l,i)=>{const key=l.tool+'|'+l.detail,ph=phaseOf(l),dead=l.passed===false||(l.detail&&seen.has(key))||wasted.has(l.eid);if(l.passed!==false)seen.add(key);
-      const step={kind:'step',key:r.id+':'+i,run:r.id,i,l,provider:r.provider,dead,fault:roots.has(l.eid)||crit.has(l.eid),root:roots.has(l.eid)};
-      const last=phases.at(-1);if(last&&last.phase===ph)last.children.push(step);else phases.push({kind:'phase',key:r.id+':p'+phases.length,phase:ph,provider:r.provider,children:[step]})});
-    phases.forEach(ph=>{ph.fault=ph.children.some(c=>c.fault);ph.dead=ph.children.filter(c=>c.dead).length});
-    return {kind:'run',key:r.id,run:r.id,provider:r.provider,name:`${NAME[r.provider]} · ${r.role}`,failed:r.failed,n:r.tools.length,dur:r.dur,children:phases.length?phases:null}});
-  return {kind:'task',key:t.id,name:`Turn ${t.no} · ${KIND_L[t.kind]}`,children:runs};
-}
-function renderTurnTree(t){
-  const host=document.getElementById('turnTree');
-  if(!t||!t.runs.length){host.innerHTML='<div class="empty">The tree grows once a model starts working.</div>';return}
-  if(TT.turn!==t.id){TT.turn=t.id;TT.collapsed={}}
-  const root=d3.hierarchy(turnTreeData(t));
-  root.descendants().forEach(d=>{d._children=d.children;const k=d.data;
-    if(TT.collapsed[k.key]===undefined)TT.collapsed[k.key]=k.kind==='phase'&&k.children.length>8&&!k.fault;
-    if(TT.collapsed[k.key]&&d.children)d.children=null});
-  const W=Math.max(640,host.clientWidth-2),colW=Math.max(120,Math.min(230,Math.floor((W-40)/4.2))),rowH=22;
-  d3.tree().nodeSize([rowH,colW])(root);
-  const nodes=root.descendants(),minX=d3.min(nodes,d=>d.x),maxX=d3.max(nodes,d=>d.x),H=maxX-minX+40;
-  const maxY=d3.max(nodes,d=>d.y)+colW;
-  const svg=d3.create('svg').attr('width',Math.max(W,maxY+20)).attr('height',H).attr('role','group').attr('aria-label',`Turn ${t.no} as a tree`);
-  const g=svg.append('g').attr('transform',`translate(14,${20-minX})`);
-  const ink=p=>`var(--${P.includes(p)?p:'judge'})`;
-  g.selectAll('path').data(root.links()).join('path').attr('class',l=>{const k=l.target.data;return 'tt-link'+((k.kind==='step'&&k.fault)||(k.kind==='phase'&&k.fault&&!l.target.children)?' fault':'')+(k.kind==='step'&&k.dead?' dead':'')})
-    .attr('style',l=>l.target.data.kind==='run'?`stroke:${ink(l.target.data.provider)}`:null)
-    .attr('d',d3.linkHorizontal().x(d=>d.y).y(d=>d.x));
-  const label=d=>{const k=d.data,cut=(s,n)=>s.length>n?s.slice(0,n-1)+'…':s,n=Math.floor((colW-26)/6.4);
-    if(k.kind==='task'||k.kind==='run')return cut(k.name,n);
-    if(k.kind==='phase')return cut(`${k.phase} ×${k.children.length}`,n)+(d.children?'':' ▸');
-    const det=k.l.detail?' '+k.l.detail:'';return cut(`${k.i+1} · ${short(k.l.tool)}${det}`,d.children||d.depth<3?n:Math.floor((W-d.y-30)/6.4))};
-  const tip=d=>{const k=d.data;if(k.kind==='task')return k.name;if(k.kind==='run')return `${k.name}: ${k.n} tool calls, ${dur(k.dur)}${k.failed?', run failed':''}`;
-    if(k.kind==='phase')return `${k.phase}: ${k.children.length} calls${k.dead?`, ${k.dead} wasted`:''}${k.fault?', on the fault path':''}. Click to ${d.children?'fold':'open'}.`;
-    return `${short(k.l.tool)} ${k.l.detail||''}\n${k.l.passed===false?'failed':'ok'} · ${dur(k.l.dur)}${k.root?'\njudges\' root cause':k.fault?'\ncritical error':''}${k.dead&&k.l.passed!==false?'\nwasted (repeat or judged wasted)':''}`};
-  const node=g.selectAll('g.tt-node').data(nodes).join('g').attr('class','tt-node').attr('transform',d=>`translate(${d.y},${d.x})`)
-    .attr('tabindex',0).attr('role','button').attr('aria-label',d=>tip(d).replace(/\n/g,'; '));
-  node.append('title').text(tip);
-  node.each(function(d){const gg=d3.select(this),k=d.data;
-    if(k.kind==='task')gg.append('circle').attr('class','tt-hit').attr('r',5).attr('fill','var(--text)');
-    else if(k.kind==='run'){gg.append('circle').attr('class','tt-hit').attr('r',6).attr('fill',ink(k.provider))}
-    else if(k.kind==='phase')gg.append('rect').attr('class','tt-hit').attr('x',-6).attr('y',-6).attr('width',12).attr('height',12).attr('rx',3).attr('fill',ink(k.provider)).attr('opacity',d.children?.85:.45).attr('stroke',k.fault?'var(--critical)':'none').attr('stroke-width',k.fault?2:0);
-    else{gg.append('circle').attr('class','tt-hit').attr('r',4.5).attr('fill',k.l.passed===false?'var(--critical)':k.dead?'var(--panel)':ink(k.provider)).attr('stroke',k.dead||k.l.passed===false?(k.l.passed===false?'var(--critical)':ink(k.provider)):'none').attr('stroke-width',1.5);
-      if(k.root)gg.append('circle').attr('r',9.5).attr('fill','none').attr('stroke','var(--critical)').attr('stroke-width',1.6)}
-    gg.append('text').attr('class','tt-label'+(k.kind==='task'||k.kind==='run'?' b':k.kind==='phase'?' m':'')).attr('x',k.kind==='step'&&k.root?14:k.kind==='run'?11:10).attr('y',4).text(label(d)+(k.kind==='run'?(k.failed?'  ✗':'  ✓'):''))
-      .attr('style',k.kind==='run'?`fill:${k.failed?'var(--critical)':'var(--text)'}`:k.kind==='step'&&k.l.passed===false?'fill:var(--critical)':null)});
-  const act=d=>{const k=d.data;if(k.kind==='phase'){TT.collapsed[k.key]=!TT.collapsed[k.key];renderTurnTree(t)}else if(k.kind==='step')showTool(k.run,k.i);else if(k.kind==='run')showRun(k.run);else showTurn(t.id)};
-  node.on('click',(e,d)=>act(d)).on('keydown',(e,d)=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();act(d)}});
-  host.replaceChildren(svg.node());
-}
 function renderTurnReading(D){
   const t=D.turns.find(t=>t.id===TREE.turn),card=document.getElementById('verdictCard'),host=document.getElementById('timeWent');
-  if(!t){card.innerHTML='';renderTurnTree(null);host.innerHTML='<div class="empty">Time budgets appear once a turn finishes.</div>';return}
-  card.innerHTML=cardHtml(verdictCard(t));renderTurnTree(t);
+  if(!t){card.innerHTML='';host.innerHTML='<div class="empty">Time budgets appear once a turn finishes.</div>';return}
+  card.innerHTML=cardHtml(verdictCard(t));
   const B=P.map(p=>({p,b:timeBudget(t.by[p].filter(r=>r.role!=='synthesis'&&!r.running))})).filter(x=>x.b.total>0);
   if(!B.length){host.innerHTML='<div class="empty">No finished runs in this turn yet.</div>';return}
   const max=d3.max(B,x=>x.b.total),w=v=>(100*v/max).toFixed(2)+'%',sec=v=>dur(v*1000);
@@ -1499,11 +1444,20 @@ function renderEvalTree(D){
   const t=turns.find(t=>t.id===(TREE.follow?turns.at(-1)?.id:TREE.turn))||turns.at(-1);
   if(!t){document.getElementById('railSummary').innerHTML='';host.innerHTML='<div class="empty" style="padding:100px 20px">Execution tracks start with your first task.<br>Agent bars and tool branches appear here as Duo works.</div>';document.getElementById('treePosition').textContent='Waiting for a task';return}
   TREE.turn=t.id;sel.value=t.id;
-  document.getElementById('railSummary').innerHTML=P.map(p=>{const rs=t.by[p],tools=rs.flatMap(r=>r.tools),fail=tools.filter(l=>l.passed===false).length,j=t.judge[p];return `<div style="--model:var(--${p})"><b>${NAME[p]}</b><div class="rail-values"><span><strong>${rs.length?dur(d3.sum(rs,r=>r.dur)):'–'}</strong> run time</span><span><strong>${tools.length}</strong> tool calls</span><span class="${fail?'bad':''}"><strong>${fail}</strong> failures</span><span><strong>${j?f1(j.overall)+'/5':'Pending'}</strong> judge score</span></div></div>`}).join('');
+  document.getElementById('railSummary').innerHTML=P.map(p=>{const rs=t.by[p],tools=rs.flatMap(r=>r.tools),fail=tools.filter(l=>l.passed===false).length,j=t.judge[p];
+    const runMs=d3.sum(rs,r=>r.dur),toolMs=Math.min(runMs,d3.sum(tools,l=>l.dur||0)),slow=tools.filter(l=>l.dur!=null).sort((a,b)=>b.dur-a.dur)[0];
+    // Where the time went: tool time vs the rest of the run (model thinking + orchestration). Tool time is summed, so overlapping calls can overstate it.
+    const compo=runMs?`<div class="rail-compo" data-tip="Where the time went: <b>${dur(toolMs)}</b> in tools · <b>${dur(runMs-toolMs)}</b> model thinking"><i style="width:${Math.round(100*toolMs/runMs)}%;background:var(--model)"></i></div><div class="rail-compo-key">${pct(toolMs/runMs)} in tools · ${pct(1-toolMs/runMs)} thinking${slow&&slow.dur>0?` · slowest: ${esc(short(slow.tool))} ${dur(slow.dur)}`:''}</div>`:'';
+    const mdl=[...new Set(rs.map(r=>r.model).filter(Boolean))].join(', ');
+    return `<div style="--model:var(--${p})"><b>${NAME[p]}</b>${mdl?` <span class="sub" data-tip="The model this provider ran on this turn — comparisons are between these models, not just the two providers">${esc(mdl)}</span>`:''}<div class="rail-values"><span><strong>${rs.length?dur(runMs):'–'}</strong> run time</span><span><strong>${tools.length}</strong> tool calls</span><span class="${fail?'bad':''}"><strong>${fail}</strong> failures</span><span><strong>${j?f1(j.overall)+'/5':'Pending'}</strong> judge score</span></div>${compo}</div>`}).join('');
   const runs=[...t.runs,...t.judges.map(j=>({id:j.id,s:j,provider:j.provider,role:'judge',start:j.start,end:j.end,running:j.status==='running',tools:j.tools,reasoning:j.reasoning,evals:j.evals}))];
   const runIds=new Set(runs.map(r=>r.id));
   const findings=S.events.filter(e=>(e.turn_id===t.id||runIds.has(e.span_id))&&/^(evaluation$|judge\.|analysis\.|policy\.reward|evolve\.result)/.test(e.type)&&(F.judge==='all'||!e.judge||String(e.judge).startsWith(F.judge)));
   const start=t.start,end=Math.max(t.end,...runs.map(r=>r.end),...findings.map(e=>e.timestamp)),span=Math.max(1,end-start),cutoff=start+span*TREE.progress/100;
+  if(TREE.view==='tree'){const n=renderGrowthTree(t,span,cutoff,host);
+    document.getElementById('treeProgress').value=TREE.progress;
+    document.getElementById('treePosition').textContent=dur(Math.max(0,cutoff-start)*1000)+' / '+dur(span*1000)+' · '+n+' tool calls';
+    renderStepDiff(t);return}
   const zoom=+document.getElementById('railZoom').value,w=Math.max(760,host.clientWidth)*zoom,L=170,R=35;
   const x=d3.scaleLinear().domain([start,start+span]).range([L,w-R]);
   const svg=d3.create('svg').attr('width',w).attr('role','group').attr('aria-label','Turn '+t.no+' execution railway timeline');
@@ -1520,7 +1474,7 @@ function renderEvalTree(D){
     const run=target(svg.append('g'),(NAME[r.provider]||r.provider)+' '+r.role+' · '+dur((finish-r.start)*1000),()=>r.role==='judge'?showTurn(t.id):showRun(r.id));
     run.append('rect').attr('x',a).attr('y',ry-7).attr('width',Math.max(3,b-a)).attr('height',14).attr('rx',5).attr('fill',c).attr('opacity',.3);
     run.append('line').attr('x1',a).attr('x2',b).attr('y1',ry).attr('y2',ry).attr('stroke',c).attr('stroke-width',3);
-    text(ry-2,(NAME[r.provider]||r.provider||'Panel')+' · '+r.role,(r.running&&TREE.progress===100?'Running · ':'')+dur((finish-r.start)*1000));
+    text(ry-2,(NAME[r.provider]||r.provider||'Panel')+' · '+r.role,(r.running&&TREE.progress===100?'Running · ':'')+dur((finish-r.start)*1000)+(r.model?' · '+r.model:''));
     if(r.running&&TREE.progress===100)run.append('circle').attr('cx',b).attr('cy',ry).attr('r',5).attr('fill',c).attr('class','current');
     const occupied=[];let tracks=1;
     for(const cl of railClusters(r.tools,x,cutoff)){
@@ -1542,7 +1496,7 @@ function renderEvalTree(D){
       const g=target(svg.append('g'),'Reasoning · '+q.chars+' characters',()=>r.role==='judge'?showTurn(t.id):showRun(r.id,q.id));
       g.append('path').attr('d',`M${x(q.t)},${ry-6}l5,6l-5,6l-5,-6Z`).attr('fill','var(--text)');
     }
-    y+=76+tracks*38;
+    y+=r.tools.length?76+tracks*38:46;  // tool-less rows (judges, pure-answer runs) stay compact
   }
   if(findings.length){text(y,'EVALUATION','Analysis · judging · learning');
     const buckets=new Map();for(const e of findings){if(e.timestamp>cutoff)continue;const k=Math.floor(x(e.timestamp)/22);if(!buckets.has(k))buckets.set(k,[]);buckets.get(k).push(e)}
@@ -1557,6 +1511,141 @@ function renderEvalTree(D){
   if(TREE.progress<100)svg.append('line').attr('x1',x(cutoff)).attr('x2',x(cutoff)).attr('y1',40).attr('y2',height-15).attr('stroke','var(--text)').attr('stroke-dasharray','5,5');
   host.replaceChildren(svg.node());document.getElementById('treeProgress').value=TREE.progress;
   document.getElementById('treePosition').textContent=dur(Math.max(0,cutoff-start)*1000)+' / '+dur(span*1000)+' · '+visibleCalls+' tool calls';
+  renderStepDiff(t);
+}
+/* Execution tree, horizontal, textured, gap-constricted. Time flows left-to-right on a shared
+   run-relative scale. Long idle stretches with no activity in ANY run are constricted to a thin
+   waist with a "+Ns" badge, so long horizons stay on one screen. Trunk girth swells where the run
+   is tool-busy (sampled occupancy), branches sprout at their moment (length = call time, colour =
+   phase, red = failed, leaf tip), trunk diamonds = reasoning, canopy at the tip = judge score
+   (star = turn winner). Grows with the replay slider; the x-mapping is built from the full turn so
+   replay never re-flows the axis. */
+function renderGrowthTree(t,span,cutoff,host){
+  const runs=t.runs.filter(r=>r.start<=cutoff);
+  const n=Math.max(1,runs.length),laneH=Math.min(170,Math.max(110,440/n));
+  const w=Math.max(760,host.clientWidth),h=70+laneH*n+86;
+  const svg=d3.create('svg').attr('width',w).attr('height',h).attr('role','group').attr('aria-label','Turn '+t.no+' execution trees: trunks are agent runs, branches are tool calls');
+  function target(g,label,action){g.attr('class','tree-node rail-target').attr('tabindex',0).attr('role','button').attr('aria-label',label).on('click',action).on('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();action()}});g.append('title').text(label);return g}
+  svg.append('text').attr('x',14).attr('y',24).attr('class','ink b').text('TASK '+t.no+' · '+KIND_L[t.kind]);
+  svg.append('text').attr('x',14).attr('y',40).attr('class','mut').text(dur(span*1000)+' total · trunk length = run time (idle stretches pinched) · girth = tool activity · branch = call, colour = phase');
+  let lx=w-430;for(const ph of LAB_PHASES){svg.append('circle').attr('cx',lx).attr('cy',h-16).attr('r',4).attr('fill',LAB_COLORS[ph]);svg.append('text').attr('x',lx+8).attr('y',h-12).attr('class','mut').text(ph);lx+=ph.length*7+30}
+  svg.append('text').attr('x',lx+6).attr('y',h-12).attr('class','mut').text('✗ failed · ◆ reasoning · ★ winner');
+  if(!runs.length){svg.append('text').attr('x',w/2).attr('y',h/2).attr('text-anchor','middle').attr('class','mut').text('Trees grow once the agents start running.');host.replaceChildren(svg.node());return 0}
+  // --- shared gap-constricted scale, built from the FULL turn (stable during replay) ---
+  const x0=150,W=w-x0-150,relDur=r=>Math.max(.001,r.end-r.start);
+  const maxDur=Math.max(...runs.map(relDur)),gapMin=Math.max(6,maxDur*.08),GAPW=22;
+  let iv=[[0,Math.min(1,maxDur)]];
+  for(const r of runs){iv.push([relDur(r)-.5,relDur(r)]);
+    for(const l of r.tools)iv.push([l.t-r.start,l.t-r.start+Math.max(.3,(l.dur||300)/1000)]);
+    for(const q of r.reasoning)iv.push([q.t-r.start,q.t-r.start+.4]);}
+  iv=iv.map(([a,b])=>[Math.max(0,Math.min(a,maxDur)),Math.max(0,Math.min(b,maxDur))]).sort((p,q)=>p[0]-q[0]);
+  const B=[];for(const [a,b] of iv){const c=B.at(-1);if(c&&a-c[1]<gapMin)c[1]=Math.max(c[1],b);else B.push([a,b])}
+  const active=d3.sum(B,s=>s[1]-s[0]),kx=(W-GAPW*(B.length-1))/Math.max(.001,active);
+  const seg=[];let xc=x0;
+  B.forEach((s,i)=>{seg.push({a:s[0],b:s[1],xa:xc,k:kx});xc+=(s[1]-s[0])*kx;
+    if(i<B.length-1){seg.push({a:s[1],b:B[i+1][0],xa:xc,k:GAPW/Math.max(.001,B[i+1][0]-s[1]),gap:true});xc+=GAPW}});
+  const X=t=>{for(const s of seg)if(t<=s.b||s===seg.at(-1))return s.xa+(Math.max(s.a,Math.min(t,s.b))-s.a)*s.k;return xc};
+  const inGap=t=>seg.some(s=>s.gap&&t>s.a&&t<s.b);
+  // axis: a tick at each activity block edge; a pinch badge inside each gap
+  for(const s of seg){if(s.gap){const gx=(s.xa+GAPW/2);
+      svg.append('path').attr('d',`M${gx-7},${h-46} q3,-5 7,0 q4,5 7,0`).attr('stroke','var(--text-2)').attr('fill','none');
+      svg.append('text').attr('x',gx).attr('y',h-30).attr('text-anchor','middle').attr('class','mut').text('+'+dur((s.b-s.a)*1000));continue}
+    svg.append('line').attr('x1',s.xa).attr('x2',s.xa).attr('y1',56).attr('y2',h-48).attr('stroke','var(--line)').attr('stroke-dasharray','3,6').attr('opacity',.6);
+    const prev=seg[seg.indexOf(s)-1];
+    if((s.b-s.a)*s.k>58&&!(prev&&prev.gap))svg.append('text').attr('x',s.xa).attr('y',h-30).attr('text-anchor','middle').attr('class','mut').text(dur(s.a*1000));}
+  svg.append('text').attr('x',xc).attr('y',h-30).attr('text-anchor','middle').attr('class','mut').text(dur(maxDur*1000));
+  svg.append('text').attr('x',14).attr('y',h-12).attr('class','mut').text('Trunks share a start line (compare shape and speed) · 〜 pinch = idle time removed · Railway shows real wall-clock overlap.');
+  let visible=0;
+  const ordered=[...runs.filter(r=>r.provider==='codex'),...runs.filter(r=>r.provider==='claude'),...runs.filter(r=>!P.includes(r.provider))];
+  ordered.forEach((r,li)=>{
+    const p=r.provider,c=`var(--${P.includes(p)?p:'judge'})`,ty=66+laneH*li+laneH/2;
+    const finRel=Math.min(r.end,cutoff)-r.start,endX=X(finRel);
+    const spans=r.tools.map(l=>[l.t-r.start,l.t-r.start+Math.max(.2,(l.dur||200)/1000)]).sort((a,b)=>a[0]-b[0]);
+    const hw=Math.max(.4,maxDur/50);
+    const cov=tt=>{let o=0;for(const [a,b] of spans){const lo=Math.max(a,tt-hw),hi=Math.min(b,tt+hw);if(hi>lo)o+=hi-lo;if(a>tt+hw)break}return Math.min(1,o/(2*hw))};
+    const S=72,pts=d3.range(S+1).map(i=>{const tt=finRel*i/S;
+      let th=2.2+5.4*cov(tt);if(inGap(tt))th=1.3;if(i>S-3)th*=(S-i)/3+.2;if(i===0)th*=.7;
+      return {x:X(tt),th}});
+    const area=d3.area().x(d=>d.x).y0(d=>ty-d.th).y1(d=>ty+d.th).curve(d3.curveBasis);
+    const trunk=target(svg.append('g'),NAME[p]+' '+r.role+' · '+dur(finRel*1000)+(r.model?' · '+r.model:'')+(r.running&&TREE.progress===100?' · running':''),()=>showRun(r.id));
+    trunk.append('path').attr('d',area(pts)).attr('fill',c).attr('opacity',.82);
+    trunk.append('path').attr('d',area.y0(d=>ty-d.th*.35).y1(d=>ty-d.th*.05)(pts)).attr('fill','#fff').attr('opacity',.25);
+    area.y0(d=>ty-d.th).y1(d=>ty+d.th);
+    trunk.append('path').attr('d',`M${x0},${ty-3} q-8,-8 -10,-16 M${x0},${ty+3} q-8,8 -10,16 M${x0},${ty} q-12,0 -18,4`).attr('stroke',c).attr('fill','none').attr('stroke-width',1.5).attr('opacity',.5);
+    svg.append('text').attr('x',x0-26).attr('y',ty-2).attr('text-anchor','end').attr('class','b').attr('fill',c).text(NAME[p]+(ordered.filter(o=>o.provider===p).length>1?' · '+r.role:''));
+    if(r.model)svg.append('text').attr('x',x0-26).attr('y',ty+13).attr('text-anchor','end').attr('class','mut').text(r.model);
+    const maxLen=laneH/2-16;
+    const tools=r.tools.filter(l=>l.t<=cutoff);visible+=tools.length;
+    tools.forEach((l,i)=>{
+      const bx=Math.min(endX-2,X(l.t-r.start)),side=i%2?1:-1,sway=((i*37)%7-3)/14;
+      const len=Math.min(maxLen,20+50*Math.sqrt(Math.min(l.dur||120,20000)/20000));
+      const ex=bx+len*(.5+sway),ey=ty-side*len;
+      const col=l.passed===false?'var(--critical)':(LAB_COLORS[phaseOf(l)]||'var(--judge)');
+      const g=target(svg.append('g'),short(l.tool)+(l.detail?' · '+l.detail:'')+' · '+dur(l.dur)+(l.passed===false?' · failed':''),()=>showTool(r.id,r.tools.indexOf(l)));
+      g.append('path').attr('d',`M${bx},${ty} Q${bx+len*(.1+sway*.5)},${ty-side*len*.5} ${ex},${ey}`).attr('fill','none').attr('stroke',col).attr('stroke-width',2.4).attr('stroke-linecap','round');
+      const ang=Math.atan2(-side*len*.5,len*(.4+sway))*180/Math.PI;
+      if(l.passed===false){g.append('circle').attr('cx',ex).attr('cy',ey).attr('r',4.5).attr('fill',col);g.append('text').attr('x',ex+4).attr('y',ey-6).attr('fill','var(--critical)').attr('class','b').text('✗')}
+      else g.append('ellipse').attr('cx',ex).attr('cy',ey).attr('rx',6).attr('ry',3).attr('transform',`rotate(${ang},${ex},${ey})`).attr('fill',col).attr('opacity',.9);
+    });
+    for(const q of r.reasoning.filter(q=>q.t<=cutoff)){const qx=Math.min(endX-2,X(q.t-r.start));
+      const g=target(svg.append('g'),'Reasoning · '+q.chars+' characters',()=>showRun(r.id,q.id));
+      g.append('path').attr('d',`M${qx},${ty-5}l4.5,5l-4.5,5l-4.5,-5Z`).attr('fill','var(--text)')}
+    const j=t.judge[p],won=t.winner===p;
+    const crown=target(svg.append('g'),NAME[p]+(j?' · judge score '+f1(j.overall)+'/5':' · judge pending')+(won?' · turn winner':''),()=>showTurn(t.id));
+    crown.append('ellipse').attr('cx',endX+42).attr('cy',ty).attr('rx',Math.min(60,30+tools.length*.8)).attr('ry',Math.min(laneH/2-10,20+tools.length*.4)).attr('fill',c).attr('opacity',won?.3:.14).attr('stroke',won?c:'none').attr('stroke-width',2);
+    crown.append('text').attr('x',endX+42).attr('y',ty+4).attr('text-anchor','middle').attr('class','ink b').text(j?f1(j.overall)+'/5':'…');
+    if(won)crown.append('text').attr('x',endX+42).attr('y',ty-Math.min(laneH/2-10,20+tools.length*.4)-6).attr('text-anchor','middle').text('★');
+    if(r.running&&TREE.progress===100)trunk.append('circle').attr('cx',endX).attr('cy',ty).attr('r',5).attr('fill',c).attr('class','current');
+  });
+  for(const p of P)if(!ordered.some(r=>r.provider===p))svg.append('text').attr('x',w/2).attr('y',h-62).attr('text-anchor','middle').attr('class','mut').text(NAME[p]+' made no run on this turn');
+  host.replaceChildren(svg.node());
+  return visible;
+}
+document.getElementById('treeView').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;TREE.view=b.dataset.v;document.querySelectorAll('#treeView button').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));schedule()});
+/* Step-aligned diff: Needleman–Wunsch over tool sequences, first divergence pinned. */
+function renderStepDiff(t){
+  const host=document.getElementById('stepDiff'),note=document.getElementById('diffSentence');
+  const seq=p=>t.by[p].flatMap(r=>r.tools.map((l,i)=>({l,i,run:r.id}))).filter(s=>!s.l.declined).sort((a,b)=>a.l.t-b.l.t).slice(0,120);
+  const A=seq('codex'),B=seq('claude');
+  if(!A.length||!B.length){host.innerHTML='<div class="empty" style="padding:26px 20px">The diff appears when both models make tool calls on the same turn.</div>';note.textContent=A.length||B.length?`Only ${A.length?'Codex':'Claude'} used tools on this turn.`:'';return}
+  const score=(a,b)=>short(a.l.tool)===short(b.l.tool)?2:phaseOf(a.l)===phaseOf(b.l)?.75:-1,GAP=-.45;
+  const n=A.length,m=B.length,M=Array.from({length:n+1},()=>new Float32Array(m+1));
+  for(let i=1;i<=n;i++)M[i][0]=i*GAP;for(let j=1;j<=m;j++)M[0][j]=j*GAP;
+  for(let i=1;i<=n;i++)for(let j=1;j<=m;j++)M[i][j]=Math.max(M[i-1][j-1]+score(A[i-1],B[j-1]),M[i-1][j]+GAP,M[i][j-1]+GAP);
+  const cols=[];let i=n,j=m;
+  while(i>0||j>0){
+    if(i>0&&j>0&&Math.abs(M[i][j]-(M[i-1][j-1]+score(A[i-1],B[j-1])))<1e-6){cols.push({a:A[i-1],b:B[j-1]});i--;j--}
+    else if(i>0&&Math.abs(M[i][j]-(M[i-1][j]+GAP))<1e-6){cols.push({a:A[i-1]});i--}
+    else{cols.push({b:B[j-1]});j--}
+  }
+  cols.reverse();
+  const kindOfCol=c=>c.a&&c.b?(short(c.a.l.tool)===short(c.b.l.tool)?'match':'drift'):'gap';
+  const d0=cols.findIndex(c=>kindOfCol(c)!=='match');
+  if(d0<0)note.textContent=`No divergence: both took the same ${cols.length}-step tool path.`;
+  else{const c=cols[d0];note.textContent=`Diverged at step ${d0+1}: `+(c.a&&c.b?`Codex ran ${short(c.a.l.tool)} while Claude ran ${short(c.b.l.tool)}.`:c.a?`Codex ran ${short(c.a.l.tool)} with no Claude counterpart.`:`Claude ran ${short(c.b.l.tool)} with no Codex counterpart.`)}
+  const cw=26,L=86,w=Math.max(host.clientWidth-2,L+cols.length*cw+40),h=190;
+  const svg=d3.create('svg').attr('width',w).attr('height',h).attr('role','group').attr('aria-label','Step-aligned diff of Codex and Claude tool sequences');
+  const ya=52,yb=118;
+  svg.append('text').attr('x',10).attr('y',ya+4).attr('class','ink b').attr('fill','var(--codex)').text('Codex');
+  svg.append('text').attr('x',10).attr('y',yb+4).attr('class','ink b').attr('fill','var(--claude)').text('Claude');
+  cols.forEach((c,k)=>{const x=L+k*cw,kind=kindOfCol(c);
+    if(c.a&&c.b)svg.append('line').attr('x1',x+9).attr('x2',x+9).attr('y1',ya+11).attr('y2',yb-11).attr('stroke',kind==='match'?'var(--line)':'#d97706').attr('stroke-width',kind==='match'?2:3).attr('opacity',.9);
+    const box=(s,y)=>{if(!s)return;
+      const g=svg.append('g').attr('class','tree-node').attr('tabindex',0).attr('role','button').on('click',()=>showTool(s.run,s.i)).on('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();showTool(s.run,s.i)}});
+      g.append('title').text(short(s.l.tool)+(s.l.detail?' · '+s.l.detail:'')+' · '+dur(s.l.dur)+(s.l.passed===false?' · failed':'')+(kind==='gap'?' · no counterpart in the other run':''));
+      g.append('rect').attr('x',x).attr('y',y-9).attr('width',18).attr('height',18).attr('rx',4)
+        .attr('fill',LAB_COLORS[phaseOf(s.l)]||'var(--judge)').attr('fill-opacity',.9)
+        .attr('stroke',s.l.passed===false?'var(--critical)':kind==='gap'?'var(--critical)':'none')
+        .attr('stroke-width',s.l.passed===false?2.5:1.5).attr('stroke-dasharray',kind==='gap'&&s.l.passed!==false?'3,2':null);
+      if(s.l.passed===false)g.append('text').attr('x',x+4).attr('y',y+5).attr('fill','#fff').attr('class','b').text('✗');
+    };
+    box(c.a,ya);box(c.b,yb);
+  });
+  if(d0>=0){const x=L+d0*cw+9;svg.append('line').attr('x1',x).attr('x2',x).attr('y1',20).attr('y2',h-36).attr('stroke','var(--critical)').attr('stroke-dasharray','5,4');
+    svg.append('text').attr('x',Math.min(x+6,w-120)).attr('y',16).attr('class','mut').text('first divergence');}
+  let lx=L;for(const ph of LAB_PHASES){svg.append('rect').attr('x',lx).attr('y',h-20).attr('width',10).attr('height',10).attr('rx',2).attr('fill',LAB_COLORS[ph]);svg.append('text').attr('x',lx+14).attr('y',h-11).attr('class','mut').text(ph);lx+=ph.length*7+38;}
+  svg.append('text').attr('x',lx+10).attr('y',h-11).attr('class','mut').text('│ gray link = same tool · amber = different tool · dashed = only one model · click a step for evidence');
+  host.replaceChildren(svg.node());
 }
 document.getElementById('railZoom').onchange=schedule;
 document.getElementById('treeTurn').onchange=e=>{TREE.turn=e.target.value;TREE.follow=false;TREE.progress=100;document.getElementById('treeFollow').setAttribute('aria-pressed','false');schedule()};
@@ -1672,6 +1761,59 @@ function renderObservatory(D){
     const ts=turns.filter(t=>Object.keys(t.judge).length).slice(-36),ps=P.filter(p=>selected==='all'||p===selected),rows=ps.flatMap(p=>DIMS.map(dim=>({p,dim}))),{svg,w}=labSurface('mosaic',rows.length*24+70,Math.max(650,ts.length*28+190)),cw=(w-185)/Math.max(1,ts.length);
     ts.forEach((t,i)=>labText(svg,180+i*cw+3,21,'T'+t.no));rows.forEach(({p,dim},j)=>{labText(svg,2,46+j*24,NAME[p]+' · '+(DIML[dim]||dim));ts.forEach((t,i)=>{const value=t.judge[p]?.dims[dim],mark=labMark(svg.append('g'),`${NAME[p]} T${t.no} · ${dim}: ${value==null?'not recorded':f1(value)}`,()=>showTurn(t.id));mark.append('rect').attr('x',180+i*cw).attr('y',32+j*24).attr('width',cw-3).attr('height',20).attr('rx',3).attr('fill',value==null?'var(--grid)':labColor(p)).attr('fill-opacity',value==null?1:.12+.85*(value-1)/4);if(cw>34)labText(mark,185+i*cw,46+j*24,value==null?'–':f1(value),'ink')})});
     labNote('mosaic','Latest '+ts.length+' judged tasks. Pale = lower score; saturated = higher. Gray = missing. Judge filter applies; tasks and writer/reviewer roles may differ.');
+  }
+  // Agent flow graph: Sugiyama-style layered drawing of the tool-transition digraph.
+  // Temporal order breaks cycles (an edge against the tools' average in-run order is a back-edge),
+  // longest-path over forward edges assigns columns, and four barycenter sweeps cut crossings.
+  if(!active.length)labEmpty('flow','Tool calls will reveal each model’s path through the tools.');else{
+    const nodes=new Map(),trans=new Map();
+    for(const r of active){const names=r.tools.map(l=>short(l.tool));
+      names.forEach((nm,i)=>{let nd=nodes.get(nm);if(!nd){nd={name:nm,c:{codex:0,claude:0},pos:[],self:0,fails:0};nodes.set(nm,nd)}
+        nd.c[r.provider]=(nd.c[r.provider]||0)+1;nd.pos.push(names.length>1?i/(names.length-1):.5);if(r.tools[i].passed===false)nd.fails++;
+        if(i){const prev=names[i-1];if(prev===nm)nd.self++;else{const k=prev+'|'+nm+'|'+r.provider;trans.set(k,(trans.get(k)||0)+1)}}})}
+    const ns=[...nodes.values()].sort((a,b)=>(b.c.codex+b.c.claude)-(a.c.codex+a.c.claude)).slice(0,14);
+    const byName=new Map(ns.map(nd=>[nd.name,nd]));
+    const E=[];for(const [k,cnt] of trans){const [a,b,p]=k.split('|');if(byName.has(a)&&byName.has(b))E.push({a:byName.get(a),b:byName.get(b),p,cnt})}
+    ns.forEach(nd=>{nd.t=mean(nd.pos);nd.layer=0});
+    E.forEach(e=>e.back=e.b.t<e.a.t||(e.b.t===e.a.t&&e.b.name<e.a.name));
+    const torder=[...ns].sort((a,b)=>a.t-b.t||(a.name<b.name?-1:1));
+    for(const nd of torder)for(const e of E)if(!e.back&&e.a===nd)e.b.layer=Math.max(e.b.layer,nd.layer+1);
+    const L=1+(d3.max(ns,n=>n.layer)||0),layers=d3.range(L).map(i=>ns.filter(n=>n.layer===i));
+    layers.forEach(l=>{l.sort((a,b)=>a.t-b.t);l.forEach((n,i)=>n.o=i)});
+    for(let s=0;s<4;s++){const dn=s%2===0;
+      for(let i=dn?1:L-2;dn?i<L:i>=0;dn?i++:i--){const l=layers[i];
+        l.forEach(n=>{const ref=E.filter(e=>!e.back&&(dn?e.b===n:e.a===n)).map(e=>dn?e.a:e.b);n.bc=ref.length?mean(ref.map(m=>m.o)):n.o});
+        l.sort((a,b)=>a.bc-b.bc||a.o-b.o);l.forEach((n,j)=>n.o=j);}}
+    const {svg,w,h}=labSurface('flow',360,650),gx=L>1?d3.scalePoint().domain(d3.range(L)).range([120,w-120]):()=>w/2;
+    layers.forEach(l=>{const step=Math.min(62,(h-130)/Math.max(1,l.length-1)||62),y0=(h-28)/2-step*(l.length-1)/2;l.forEach(n=>{n.x=gx(n.layer);n.y=l.length===1?(h-28)/2:y0+n.o*step})});
+    ns.forEach(nd=>nd.bw=Math.max(56,14+nd.name.length*7));
+    const defs=svg.append('defs');
+    for(const p of P)defs.append('marker').attr('id','arr-'+p).attr('viewBox','0 0 8 8').attr('refX',7).attr('refY',4).attr('markerWidth',9).attr('markerHeight',9).attr('markerUnits','userSpaceOnUse').attr('orient','auto-start-reverse').append('path').attr('d','M0,0L8,4L0,8Z').attr('fill',labColor(p));
+    const maxE=Math.max(1,...E.map(e=>e.cnt)),edgeSel=[];
+    for(const e of E){const off=e.p==='codex'?-3.5:3.5;
+      const x1=e.a.x+(e.back?-e.a.bw/2:e.a.bw/2),x2=e.b.x+(e.back?e.b.bw/2:-e.b.bw/2),y1=e.a.y+off,y2=e.b.y+off;
+      const d=e.back?`M${x1},${y1} C${x1-80},${y1+56} ${x2+80},${y2+56} ${x2},${y2}`:`M${x1},${y1} C${(x1+x2)/2},${y1} ${(x1+x2)/2},${y2} ${x2},${y2}`;
+      const g=labMark(svg.append('g'),`${NAME[e.p]} · ${e.a.name} → ${e.b.name} · ${e.cnt} transitions${e.back?' · returns to an earlier phase of the run':''}`,()=>{});
+      const path=g.append('path').attr('d',d).attr('fill','none').attr('stroke',labColor(e.p)).attr('stroke-width',1+4.5*Math.sqrt(e.cnt/maxE)).attr('opacity',e.back?.55:.38).attr('marker-end',`url(#arr-${e.p})`);
+      if(e.back)path.attr('stroke-dasharray','7,3');
+      edgeSel.push({e,el:g});
+    }
+    const maxC=Math.max(1,...ns.map(nd=>nd.c.codex+nd.c.claude)),nodeSel=[];
+    for(const nd of ns){const bw=nd.bw,single=!(nd.c.codex&&nd.c.claude);
+      const g=labMark(svg.append('g'),`${nd.name} · Codex ${nd.c.codex||0} calls · Claude ${nd.c.claude||0} calls${nd.self?' · immediate repeats ↺'+nd.self:''}${nd.fails?' · '+nd.fails+' failed':''}`,
+        ()=>openDrawer(esc(nd.name),P.map(p=>`<p>${sw(p)} ${NAME[p]}: <b>${nd.c[p]||0}</b> calls</p>`).join('')+`<p class="muted">↺ ${nd.self} immediate repeats · ${nd.fails} failed calls. Use the railway timeline or Tool terrain to open individual calls.</p>`));
+      g.append('rect').attr('x',nd.x-bw/2).attr('y',nd.y-14).attr('width',bw/2).attr('height',28).attr('fill','var(--codex)').attr('fill-opacity',.1+.6*(nd.c.codex||0)/maxC);
+      g.append('rect').attr('x',nd.x).attr('y',nd.y-14).attr('width',bw/2).attr('height',28).attr('fill','var(--claude)').attr('fill-opacity',.1+.6*(nd.c.claude||0)/maxC);
+      g.append('rect').attr('x',nd.x-bw/2).attr('y',nd.y-14).attr('width',bw).attr('height',28).attr('rx',7).attr('fill','none').attr('stroke',single?'var(--critical)':'var(--line)').attr('stroke-width',1.5).attr('stroke-dasharray',single?'4,3':null);
+      g.append('text').attr('x',nd.x).attr('y',nd.y+4).attr('text-anchor','middle').attr('class','ink b').text(nd.name.slice(0,13));
+      if(nd.self){g.append('path').attr('d',`M${nd.x-10},${nd.y-14} C${nd.x-17},${nd.y-35} ${nd.x+17},${nd.y-35} ${nd.x+10},${nd.y-14}`).attr('fill','none').attr('stroke','var(--text)').attr('opacity',.45).attr('stroke-width',1.5);labText(svg,nd.x+15,nd.y-27,'↺'+nd.self)}
+      nodeSel.push({nd,el:g});
+      g.on('mouseenter',()=>{for(const {e,el} of edgeSel)el.attr('opacity',e.a===nd||e.b===nd?1:.06);
+        for(const o of nodeSel)o.el.attr('opacity',o.nd===nd||E.some(e=>(e.a===nd&&e.b===o.nd)||(e.b===nd&&e.a===o.nd))?1:.22)})
+       .on('mouseleave',()=>{for(const {el} of edgeSel)el.attr('opacity',1);for(const o of nodeSel)o.el.attr('opacity',1)});
+    }
+    labText(svg,120,16,'Run starts here');labText(svg,w-200,16,'Deeper into the run →');
+    labNote('flow','Layered graph drawing (Sugiyama): columns from longest-path layering in temporal order, rows settled by barycenter sweeps to cut crossings. Arrowheads give direction; dashed curves loop back to an earlier phase; ↺ arcs are immediate repeats. Blue = Codex, orange = Claude; dashed outline = single-model tool. Hover a node to isolate its traffic; click it for counts.');
   }
 }
 document.getElementById('labNav').onclick=e=>{const b=e.target.closest('[data-lens]');if(b)document.getElementById('lab-'+b.dataset.lens).closest('article').scrollIntoView({behavior:'smooth',block:'center'})};
