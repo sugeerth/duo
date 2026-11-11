@@ -1400,60 +1400,91 @@ function renderEvalTree(D){
   document.getElementById('treePosition').textContent=dur(Math.max(0,cutoff-start)*1000)+' / '+dur(span*1000)+' · '+visibleCalls+' tool calls';
   renderStepDiff(t);
 }
-/* Execution tree, horizontal: time flows left-to-right like the railway. Each agent run is a
-   trunk lying on its own lane (length = run time, one shared scale per turn); branches = tool calls
-   sprouting up/down at their moment (length = call duration, colour = phase, red = failed);
-   diamonds on the trunk = reasoning; the canopy at the tip = judge score (\u2605 = turn winner).
-   Grows with the replay slider. */
+/* Execution tree, horizontal, textured, gap-constricted. Time flows left-to-right on a shared
+   run-relative scale. Long idle stretches with no activity in ANY run are constricted to a thin
+   waist with a "+Ns" badge, so long horizons stay on one screen. Trunk girth swells where the run
+   is tool-busy (sampled occupancy), branches sprout at their moment (length = call time, colour =
+   phase, red = failed, leaf tip), trunk diamonds = reasoning, canopy at the tip = judge score
+   (star = turn winner). Grows with the replay slider; the x-mapping is built from the full turn so
+   replay never re-flows the axis. */
 function renderGrowthTree(t,span,cutoff,host){
   const runs=t.runs.filter(r=>r.start<=cutoff);
   const n=Math.max(1,runs.length),laneH=Math.min(170,Math.max(110,440/n));
-  const w=Math.max(760,host.clientWidth),h=70+laneH*n+74;
+  const w=Math.max(760,host.clientWidth),h=70+laneH*n+86;
   const svg=d3.create('svg').attr('width',w).attr('height',h).attr('role','group').attr('aria-label','Turn '+t.no+' execution trees: trunks are agent runs, branches are tool calls');
   function target(g,label,action){g.attr('class','tree-node rail-target').attr('tabindex',0).attr('role','button').attr('aria-label',label).on('click',action).on('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();action()}});g.append('title').text(label);return g}
-  svg.append('text').attr('x',14).attr('y',24).attr('class','ink b').text('TASK '+t.no+' \u00b7 '+KIND_L[t.kind]);
-  svg.append('text').attr('x',14).attr('y',40).attr('class','mut').text(dur(span*1000)+' total \u00b7 trunk length = run time \u00b7 branch length = call time \u00b7 colour = phase');
+  svg.append('text').attr('x',14).attr('y',24).attr('class','ink b').text('TASK '+t.no+' · '+KIND_L[t.kind]);
+  svg.append('text').attr('x',14).attr('y',40).attr('class','mut').text(dur(span*1000)+' total · trunk length = run time (idle stretches pinched) · girth = tool activity · branch = call, colour = phase');
   let lx=w-430;for(const ph of LAB_PHASES){svg.append('circle').attr('cx',lx).attr('cy',h-16).attr('r',4).attr('fill',LAB_COLORS[ph]);svg.append('text').attr('x',lx+8).attr('y',h-12).attr('class','mut').text(ph);lx+=ph.length*7+30}
-  svg.append('text').attr('x',lx+6).attr('y',h-12).attr('class','mut').text('\u2717 failed \u00b7 \u25c6 reasoning \u00b7 \u2605 winner');
+  svg.append('text').attr('x',lx+6).attr('y',h-12).attr('class','mut').text('✗ failed · ◆ reasoning · ★ winner');
   if(!runs.length){svg.append('text').attr('x',w/2).attr('y',h/2).attr('text-anchor','middle').attr('class','mut').text('Trees grow once the agents start running.');host.replaceChildren(svg.node());return 0}
-  const x0=150,maxDur=Math.max(.001,...runs.map(r=>Math.min(r.end,cutoff)-r.start)),kx=(w-x0-150)/maxDur;
-  const ordered=[...runs.filter(r=>r.provider==='codex'),...runs.filter(r=>r.provider==='claude'),...runs.filter(r=>!P.includes(r.provider))];
-  // light time axis shared by every lane
-  const ticks=d3.scaleLinear().domain([0,maxDur]).ticks(Math.max(4,Math.floor(w/180)));
-  for(const tk of ticks){const tx=x0+tk*kx;svg.append('line').attr('x1',tx).attr('x2',tx).attr('y1',56).attr('y2',h-44).attr('stroke','var(--line)').attr('stroke-dasharray','3,6').attr('opacity',.6);svg.append('text').attr('x',tx).attr('y',h-32).attr('text-anchor','middle').attr('class','mut').text(dur(tk*1000))}
-  svg.append('text').attr('x',14).attr('y',h-12).attr('class','mut').text('Trunks share a start line to compare shape and speed; the Railway view shows when each run actually started.');
+  // --- shared gap-constricted scale, built from the FULL turn (stable during replay) ---
+  const x0=150,W=w-x0-150,relDur=r=>Math.max(.001,r.end-r.start);
+  const maxDur=Math.max(...runs.map(relDur)),gapMin=Math.max(6,maxDur*.08),GAPW=22;
+  let iv=[[0,Math.min(1,maxDur)]];
+  for(const r of runs){iv.push([relDur(r)-.5,relDur(r)]);
+    for(const l of r.tools)iv.push([l.t-r.start,l.t-r.start+Math.max(.3,(l.dur||300)/1000)]);
+    for(const q of r.reasoning)iv.push([q.t-r.start,q.t-r.start+.4]);}
+  iv=iv.map(([a,b])=>[Math.max(0,Math.min(a,maxDur)),Math.max(0,Math.min(b,maxDur))]).sort((p,q)=>p[0]-q[0]);
+  const B=[];for(const [a,b] of iv){const c=B.at(-1);if(c&&a-c[1]<gapMin)c[1]=Math.max(c[1],b);else B.push([a,b])}
+  const active=d3.sum(B,s=>s[1]-s[0]),kx=(W-GAPW*(B.length-1))/Math.max(.001,active);
+  const seg=[];let xc=x0;
+  B.forEach((s,i)=>{seg.push({a:s[0],b:s[1],xa:xc,k:kx});xc+=(s[1]-s[0])*kx;
+    if(i<B.length-1){seg.push({a:s[1],b:B[i+1][0],xa:xc,k:GAPW/Math.max(.001,B[i+1][0]-s[1]),gap:true});xc+=GAPW}});
+  const X=t=>{for(const s of seg)if(t<=s.b||s===seg.at(-1))return s.xa+(Math.max(s.a,Math.min(t,s.b))-s.a)*s.k;return xc};
+  const inGap=t=>seg.some(s=>s.gap&&t>s.a&&t<s.b);
+  // axis: a tick at each activity block edge; a pinch badge inside each gap
+  for(const s of seg){if(s.gap){const gx=(s.xa+GAPW/2);
+      svg.append('path').attr('d',`M${gx-7},${h-46} q3,-5 7,0 q4,5 7,0`).attr('stroke','var(--text-2)').attr('fill','none');
+      svg.append('text').attr('x',gx).attr('y',h-30).attr('text-anchor','middle').attr('class','mut').text('+'+dur((s.b-s.a)*1000));continue}
+    svg.append('line').attr('x1',s.xa).attr('x2',s.xa).attr('y1',56).attr('y2',h-48).attr('stroke','var(--line)').attr('stroke-dasharray','3,6').attr('opacity',.6);
+    const prev=seg[seg.indexOf(s)-1];
+    if((s.b-s.a)*s.k>58&&!(prev&&prev.gap))svg.append('text').attr('x',s.xa).attr('y',h-30).attr('text-anchor','middle').attr('class','mut').text(dur(s.a*1000));}
+  svg.append('text').attr('x',xc).attr('y',h-30).attr('text-anchor','middle').attr('class','mut').text(dur(maxDur*1000));
+  svg.append('text').attr('x',14).attr('y',h-12).attr('class','mut').text('Trunks share a start line (compare shape and speed) · 〜 pinch = idle time removed · Railway shows real wall-clock overlap.');
   let visible=0;
+  const ordered=[...runs.filter(r=>r.provider==='codex'),...runs.filter(r=>r.provider==='claude'),...runs.filter(r=>!P.includes(r.provider))];
   ordered.forEach((r,li)=>{
     const p=r.provider,c=`var(--${P.includes(p)?p:'judge'})`,ty=66+laneH*li+laneH/2;
-    const fin=Math.min(r.end,cutoff),endX=x0+(fin-r.start)*kx;
-    const trunk=target(svg.append('g'),NAME[p]+' '+r.role+' \u00b7 '+dur((fin-r.start)*1000)+(r.model?' \u00b7 '+r.model:'')+(r.running&&TREE.progress===100?' \u00b7 running':''),()=>showRun(r.id));
-    trunk.append('path').attr('d',`M${x0},${ty-4.5} C${(x0+endX)/2},${ty-5.5} ${endX-14},${ty-2.5} ${endX},${ty} C${endX-14},${ty+2.5} ${(x0+endX)/2},${ty+5.5} ${x0},${ty+4.5} Z`).attr('fill',c).attr('opacity',.8);
-    trunk.append('path').attr('d',`M${x0},${ty-4} q-8,-8 -10,-16 M${x0},${ty+4} q-8,8 -10,16 M${x0},${ty} q-12,0 -18,4`).attr('stroke',c).attr('fill','none').attr('stroke-width',1.5).attr('opacity',.5);
-    svg.append('text').attr('x',x0-26).attr('y',ty-2).attr('text-anchor','end').attr('class','b').attr('fill',c).text(NAME[p]+(ordered.filter(o=>o.provider===p).length>1?' \u00b7 '+r.role:''));
+    const finRel=Math.min(r.end,cutoff)-r.start,endX=X(finRel);
+    const spans=r.tools.map(l=>[l.t-r.start,l.t-r.start+Math.max(.2,(l.dur||200)/1000)]).sort((a,b)=>a[0]-b[0]);
+    const hw=Math.max(.4,maxDur/50);
+    const cov=tt=>{let o=0;for(const [a,b] of spans){const lo=Math.max(a,tt-hw),hi=Math.min(b,tt+hw);if(hi>lo)o+=hi-lo;if(a>tt+hw)break}return Math.min(1,o/(2*hw))};
+    const S=72,pts=d3.range(S+1).map(i=>{const tt=finRel*i/S;
+      let th=2.2+5.4*cov(tt);if(inGap(tt))th=1.3;if(i>S-3)th*=(S-i)/3+.2;if(i===0)th*=.7;
+      return {x:X(tt),th}});
+    const area=d3.area().x(d=>d.x).y0(d=>ty-d.th).y1(d=>ty+d.th).curve(d3.curveBasis);
+    const trunk=target(svg.append('g'),NAME[p]+' '+r.role+' · '+dur(finRel*1000)+(r.model?' · '+r.model:'')+(r.running&&TREE.progress===100?' · running':''),()=>showRun(r.id));
+    trunk.append('path').attr('d',area(pts)).attr('fill',c).attr('opacity',.82);
+    trunk.append('path').attr('d',area.y0(d=>ty-d.th*.35).y1(d=>ty-d.th*.05)(pts)).attr('fill','#fff').attr('opacity',.25);
+    area.y0(d=>ty-d.th).y1(d=>ty+d.th);
+    trunk.append('path').attr('d',`M${x0},${ty-3} q-8,-8 -10,-16 M${x0},${ty+3} q-8,8 -10,16 M${x0},${ty} q-12,0 -18,4`).attr('stroke',c).attr('fill','none').attr('stroke-width',1.5).attr('opacity',.5);
+    svg.append('text').attr('x',x0-26).attr('y',ty-2).attr('text-anchor','end').attr('class','b').attr('fill',c).text(NAME[p]+(ordered.filter(o=>o.provider===p).length>1?' · '+r.role:''));
     if(r.model)svg.append('text').attr('x',x0-26).attr('y',ty+13).attr('text-anchor','end').attr('class','mut').text(r.model);
-    const maxLen=laneH/2-14;
+    const maxLen=laneH/2-16;
     const tools=r.tools.filter(l=>l.t<=cutoff);visible+=tools.length;
     tools.forEach((l,i)=>{
-      const bx=Math.min(endX-2,x0+(l.t-r.start)*kx),side=i%2?1:-1;
-      const len=Math.min(maxLen,22+52*Math.sqrt(Math.min(l.dur||120,20000)/20000));
-      const ex=bx+len*.55,ey=ty-side*len;
+      const bx=Math.min(endX-2,X(l.t-r.start)),side=i%2?1:-1,sway=((i*37)%7-3)/14;
+      const len=Math.min(maxLen,20+50*Math.sqrt(Math.min(l.dur||120,20000)/20000));
+      const ex=bx+len*(.5+sway),ey=ty-side*len;
       const col=l.passed===false?'var(--critical)':(LAB_COLORS[phaseOf(l)]||'var(--judge)');
-      const g=target(svg.append('g'),short(l.tool)+(l.detail?' \u00b7 '+l.detail:'')+' \u00b7 '+dur(l.dur)+(l.passed===false?' \u00b7 failed':''),()=>showTool(r.id,r.tools.indexOf(l)));
-      g.append('path').attr('d',`M${bx},${ty} Q${bx+len*.12},${ty-side*len*.5} ${ex},${ey}`).attr('fill','none').attr('stroke',col).attr('stroke-width',2.5).attr('stroke-linecap','round');
-      g.append('circle').attr('cx',ex).attr('cy',ey).attr('r',l.passed===false?4.5:3.5).attr('fill',col);
-      if(l.passed===false)g.append('text').attr('x',ex+4).attr('y',ey-6).attr('fill','var(--critical)').attr('class','b').text('\u2717');
+      const g=target(svg.append('g'),short(l.tool)+(l.detail?' · '+l.detail:'')+' · '+dur(l.dur)+(l.passed===false?' · failed':''),()=>showTool(r.id,r.tools.indexOf(l)));
+      g.append('path').attr('d',`M${bx},${ty} Q${bx+len*(.1+sway*.5)},${ty-side*len*.5} ${ex},${ey}`).attr('fill','none').attr('stroke',col).attr('stroke-width',2.4).attr('stroke-linecap','round');
+      const ang=Math.atan2(-side*len*.5,len*(.4+sway))*180/Math.PI;
+      if(l.passed===false){g.append('circle').attr('cx',ex).attr('cy',ey).attr('r',4.5).attr('fill',col);g.append('text').attr('x',ex+4).attr('y',ey-6).attr('fill','var(--critical)').attr('class','b').text('✗')}
+      else g.append('ellipse').attr('cx',ex).attr('cy',ey).attr('rx',6).attr('ry',3).attr('transform',`rotate(${ang},${ex},${ey})`).attr('fill',col).attr('opacity',.9);
     });
-    for(const q of r.reasoning.filter(q=>q.t<=cutoff)){const qx=Math.min(endX-2,x0+(q.t-r.start)*kx);
-      const g=target(svg.append('g'),'Reasoning \u00b7 '+q.chars+' characters',()=>showRun(r.id,q.id));
+    for(const q of r.reasoning.filter(q=>q.t<=cutoff)){const qx=Math.min(endX-2,X(q.t-r.start));
+      const g=target(svg.append('g'),'Reasoning · '+q.chars+' characters',()=>showRun(r.id,q.id));
       g.append('path').attr('d',`M${qx},${ty-5}l4.5,5l-4.5,5l-4.5,-5Z`).attr('fill','var(--text)')}
     const j=t.judge[p],won=t.winner===p;
-    const crown=target(svg.append('g'),NAME[p]+(j?' \u00b7 judge score '+f1(j.overall)+'/5':' \u00b7 judge pending')+(won?' \u00b7 turn winner':''),()=>showTurn(t.id));
+    const crown=target(svg.append('g'),NAME[p]+(j?' · judge score '+f1(j.overall)+'/5':' · judge pending')+(won?' · turn winner':''),()=>showTurn(t.id));
     crown.append('ellipse').attr('cx',endX+42).attr('cy',ty).attr('rx',Math.min(60,30+tools.length*.8)).attr('ry',Math.min(laneH/2-10,20+tools.length*.4)).attr('fill',c).attr('opacity',won?.3:.14).attr('stroke',won?c:'none').attr('stroke-width',2);
-    crown.append('text').attr('x',endX+42).attr('y',ty+4).attr('text-anchor','middle').attr('class','ink b').text(j?f1(j.overall)+'/5':'\u2026');
-    if(won)crown.append('text').attr('x',endX+42).attr('y',ty-Math.min(laneH/2-10,20+tools.length*.4)-6).attr('text-anchor','middle').text('\u2605');
+    crown.append('text').attr('x',endX+42).attr('y',ty+4).attr('text-anchor','middle').attr('class','ink b').text(j?f1(j.overall)+'/5':'…');
+    if(won)crown.append('text').attr('x',endX+42).attr('y',ty-Math.min(laneH/2-10,20+tools.length*.4)-6).attr('text-anchor','middle').text('★');
     if(r.running&&TREE.progress===100)trunk.append('circle').attr('cx',endX).attr('cy',ty).attr('r',5).attr('fill',c).attr('class','current');
   });
-  for(const p of P)if(!ordered.some(r=>r.provider===p))svg.append('text').attr('x',w/2).attr('y',h-36).attr('text-anchor','middle').attr('class','mut').text(NAME[p]+' made no run on this turn');
+  for(const p of P)if(!ordered.some(r=>r.provider===p))svg.append('text').attr('x',w/2).attr('y',h-62).attr('text-anchor','middle').attr('class','mut').text(NAME[p]+' made no run on this turn');
   host.replaceChildren(svg.node());
   return visible;
 }
