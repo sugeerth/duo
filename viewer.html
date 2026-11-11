@@ -166,6 +166,10 @@ section:not(.open){padding-top:9px;padding-bottom:9px}
 .tw-hatch{background:repeating-linear-gradient(135deg,var(--c) 0 3px,transparent 3px 6px)}
 .tw-legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:11.5px;color:var(--text-2);margin-top:8px}.tw-legend i{display:inline-block;width:12px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
 .tw-tools{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:12px}.tw-tools table{width:100%;font-size:12px}.tw-tools td{padding:2px 4px}.tw-tools tr[data-goto-tool]{cursor:pointer}.tw-tools tr[data-goto-tool]:hover{background:var(--hover)}
+.tt-wrap{overflow-x:auto;margin-top:8px;border:1px solid var(--line);border-radius:10px;background:var(--panel)}.tt-wrap svg{display:block}
+.tt-node{cursor:pointer;outline:none}.tt-node:focus .tt-hit,.tt-node:hover .tt-hit{stroke:var(--text);stroke-width:1.5}
+.tt-link{fill:none;stroke:var(--base);stroke-width:1.4}.tt-link.fault{stroke:var(--critical);stroke-width:2}.tt-link.dead{stroke-dasharray:3 3}
+.tt-label{font-size:11.5px;fill:var(--text);paint-order:stroke;stroke:var(--panel);stroke-width:4px;stroke-linejoin:round}.tt-label.m{fill:var(--text-2)}.tt-label.b{font-weight:650}
 .tw-why{font-size:12px;color:var(--text-2);margin-top:8px;line-height:1.5}
 @media(max-width:600px){.rail-summary{grid-template-columns:1fr}.tw-tools{grid-template-columns:1fr}.focus-view #evalTreeSec{min-height:0}}
 </style>
@@ -204,6 +208,8 @@ section:not(.open){padding-top:9px;padding-bottom:9px}
     </div>
     <div id="evalTree" aria-label="Execution railway timeline"></div>
     <div class="tree-caption"><span>━ Task bar</span><span style="color:var(--codex)">● Codex</span><span style="color:var(--claude)">● Claude</span><span>◆ Reasoning</span><span class="ok">✓ Passed</span><span class="bad">✗ Failed</span><span>Branches = tool calls · clustered calls expand with zoom · click for evidence</span></div>
+    <div class="tw-head"><h3>The turn as a tree</h3><span class="sub">The task at the root, each model's run as a branch, then its phases and tool calls. Red links follow the judges' fault path, a ring marks the root cause, and dashed links lead to wasted calls. Click a phase to fold it or a call to open it.</span></div>
+    <div id="turnTree" class="tt-wrap"></div>
     <div class="tw-head"><h3>Where the time went</h3><span class="sub">Each bar is a model's run time on one shared scale. Hatched time went to failed or repeated tool calls.</span></div>
     <div id="timeWent"></div>
   </section>
@@ -1411,10 +1417,67 @@ function timeBudget(rs){
     const u=intervalsUnion,all=u([...iv.tool,...iv.failed,...iv.repeat]),tool=u(iv.tool),tf=u([...iv.tool,...iv.failed]);
     out.total+=r.dur/1000;out.tool+=tool;out.failed+=tf-tool;out.repeat+=all-tf;out.model+=Math.max(0,r.dur/1000-all)}
   return out}
+
+/* ================= the turn as a tree (from AgentDiff's "trace as a tree") =================
+   Turn → each model's run → consecutive phases → tool calls. The fault path (the judges' root-cause and
+   critical-error steps) is red, the root cause is ringed, and wasted calls (failed, repeated, or labelled
+   wasted by a judge) hang off dashed links. Big quiet phases start folded; fold state survives re-renders. */
+const TT={collapsed:{},turn:null};
+function turnTreeData(t){
+  const roots=new Set(),crit=new Set(),wasted=new Set();
+  for(const p of P){t.ann[p].roots.forEach(r=>r.item_id&&roots.add(+r.item_id));t.ann[p].steps.forEach(s=>{if(s.verdict==='critical_error')crit.add(+s.item_id);if(s.verdict==='wasted')wasted.add(+s.item_id)})}
+  const runs=t.runs.filter(r=>r.role!=='synthesis').map(r=>{const seen=new Set(),phases=[];
+    r.tools.forEach((l,i)=>{const key=l.tool+'|'+l.detail,ph=phaseOf(l),dead=l.passed===false||(l.detail&&seen.has(key))||wasted.has(l.eid);if(l.passed!==false)seen.add(key);
+      const step={kind:'step',key:r.id+':'+i,run:r.id,i,l,provider:r.provider,dead,fault:roots.has(l.eid)||crit.has(l.eid),root:roots.has(l.eid)};
+      const last=phases.at(-1);if(last&&last.phase===ph)last.children.push(step);else phases.push({kind:'phase',key:r.id+':p'+phases.length,phase:ph,provider:r.provider,children:[step]})});
+    phases.forEach(ph=>{ph.fault=ph.children.some(c=>c.fault);ph.dead=ph.children.filter(c=>c.dead).length});
+    return {kind:'run',key:r.id,run:r.id,provider:r.provider,name:`${NAME[r.provider]} · ${r.role}`,failed:r.failed,n:r.tools.length,dur:r.dur,children:phases.length?phases:null}});
+  return {kind:'task',key:t.id,name:`Turn ${t.no} · ${KIND_L[t.kind]}`,children:runs};
+}
+function renderTurnTree(t){
+  const host=document.getElementById('turnTree');
+  if(!t||!t.runs.length){host.innerHTML='<div class="empty">The tree grows once a model starts working.</div>';return}
+  if(TT.turn!==t.id){TT.turn=t.id;TT.collapsed={}}
+  const root=d3.hierarchy(turnTreeData(t));
+  root.descendants().forEach(d=>{d._children=d.children;const k=d.data;
+    if(TT.collapsed[k.key]===undefined)TT.collapsed[k.key]=k.kind==='phase'&&k.children.length>8&&!k.fault;
+    if(TT.collapsed[k.key]&&d.children)d.children=null});
+  const W=Math.max(640,host.clientWidth-2),colW=Math.max(120,Math.min(230,Math.floor((W-40)/4.2))),rowH=22;
+  d3.tree().nodeSize([rowH,colW])(root);
+  const nodes=root.descendants(),minX=d3.min(nodes,d=>d.x),maxX=d3.max(nodes,d=>d.x),H=maxX-minX+40;
+  const maxY=d3.max(nodes,d=>d.y)+colW;
+  const svg=d3.create('svg').attr('width',Math.max(W,maxY+20)).attr('height',H).attr('role','group').attr('aria-label',`Turn ${t.no} as a tree`);
+  const g=svg.append('g').attr('transform',`translate(14,${20-minX})`);
+  const ink=p=>`var(--${P.includes(p)?p:'judge'})`;
+  g.selectAll('path').data(root.links()).join('path').attr('class',l=>{const k=l.target.data;return 'tt-link'+((k.kind==='step'&&k.fault)||(k.kind==='phase'&&k.fault&&!l.target.children)?' fault':'')+(k.kind==='step'&&k.dead?' dead':'')})
+    .attr('style',l=>l.target.data.kind==='run'?`stroke:${ink(l.target.data.provider)}`:null)
+    .attr('d',d3.linkHorizontal().x(d=>d.y).y(d=>d.x));
+  const label=d=>{const k=d.data,cut=(s,n)=>s.length>n?s.slice(0,n-1)+'…':s,n=Math.floor((colW-26)/6.4);
+    if(k.kind==='task'||k.kind==='run')return cut(k.name,n);
+    if(k.kind==='phase')return cut(`${k.phase} ×${k.children.length}`,n)+(d.children?'':' ▸');
+    const det=k.l.detail?' '+k.l.detail:'';return cut(`${k.i+1} · ${short(k.l.tool)}${det}`,d.children||d.depth<3?n:Math.floor((W-d.y-30)/6.4))};
+  const tip=d=>{const k=d.data;if(k.kind==='task')return k.name;if(k.kind==='run')return `${k.name}: ${k.n} tool calls, ${dur(k.dur)}${k.failed?', run failed':''}`;
+    if(k.kind==='phase')return `${k.phase}: ${k.children.length} calls${k.dead?`, ${k.dead} wasted`:''}${k.fault?', on the fault path':''}. Click to ${d.children?'fold':'open'}.`;
+    return `${short(k.l.tool)} ${k.l.detail||''}\n${k.l.passed===false?'failed':'ok'} · ${dur(k.l.dur)}${k.root?'\njudges\' root cause':k.fault?'\ncritical error':''}${k.dead&&k.l.passed!==false?'\nwasted (repeat or judged wasted)':''}`};
+  const node=g.selectAll('g.tt-node').data(nodes).join('g').attr('class','tt-node').attr('transform',d=>`translate(${d.y},${d.x})`)
+    .attr('tabindex',0).attr('role','button').attr('aria-label',d=>tip(d).replace(/\n/g,'; '));
+  node.append('title').text(tip);
+  node.each(function(d){const gg=d3.select(this),k=d.data;
+    if(k.kind==='task')gg.append('circle').attr('class','tt-hit').attr('r',5).attr('fill','var(--text)');
+    else if(k.kind==='run'){gg.append('circle').attr('class','tt-hit').attr('r',6).attr('fill',ink(k.provider))}
+    else if(k.kind==='phase')gg.append('rect').attr('class','tt-hit').attr('x',-6).attr('y',-6).attr('width',12).attr('height',12).attr('rx',3).attr('fill',ink(k.provider)).attr('opacity',d.children?.85:.45).attr('stroke',k.fault?'var(--critical)':'none').attr('stroke-width',k.fault?2:0);
+    else{gg.append('circle').attr('class','tt-hit').attr('r',4.5).attr('fill',k.l.passed===false?'var(--critical)':k.dead?'var(--panel)':ink(k.provider)).attr('stroke',k.dead||k.l.passed===false?(k.l.passed===false?'var(--critical)':ink(k.provider)):'none').attr('stroke-width',1.5);
+      if(k.root)gg.append('circle').attr('r',9.5).attr('fill','none').attr('stroke','var(--critical)').attr('stroke-width',1.6)}
+    gg.append('text').attr('class','tt-label'+(k.kind==='task'||k.kind==='run'?' b':k.kind==='phase'?' m':'')).attr('x',k.kind==='step'&&k.root?14:k.kind==='run'?11:10).attr('y',4).text(label(d)+(k.kind==='run'?(k.failed?'  ✗':'  ✓'):''))
+      .attr('style',k.kind==='run'?`fill:${k.failed?'var(--critical)':'var(--text)'}`:k.kind==='step'&&k.l.passed===false?'fill:var(--critical)':null)});
+  const act=d=>{const k=d.data;if(k.kind==='phase'){TT.collapsed[k.key]=!TT.collapsed[k.key];renderTurnTree(t)}else if(k.kind==='step')showTool(k.run,k.i);else if(k.kind==='run')showRun(k.run);else showTurn(t.id)};
+  node.on('click',(e,d)=>act(d)).on('keydown',(e,d)=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();act(d)}});
+  host.replaceChildren(svg.node());
+}
 function renderTurnReading(D){
   const t=D.turns.find(t=>t.id===TREE.turn),card=document.getElementById('verdictCard'),host=document.getElementById('timeWent');
-  if(!t){card.innerHTML='';host.innerHTML='<div class="empty">Time budgets appear once a turn finishes.</div>';return}
-  card.innerHTML=cardHtml(verdictCard(t));
+  if(!t){card.innerHTML='';renderTurnTree(null);host.innerHTML='<div class="empty">Time budgets appear once a turn finishes.</div>';return}
+  card.innerHTML=cardHtml(verdictCard(t));renderTurnTree(t);
   const B=P.map(p=>({p,b:timeBudget(t.by[p].filter(r=>r.role!=='synthesis'&&!r.running))})).filter(x=>x.b.total>0);
   if(!B.length){host.innerHTML='<div class="empty">No finished runs in this turn yet.</div>';return}
   const max=d3.max(B,x=>x.b.total),w=v=>(100*v/max).toFixed(2)+'%',sec=v=>dur(v*1000);
