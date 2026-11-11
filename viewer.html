@@ -157,6 +157,10 @@ section:not(.open){padding-top:9px;padding-bottom:9px}
 .rail-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:16px}
 .rail-summary>div{border:1px solid var(--line);border-left:3px solid var(--model);padding:10px 14px;border-radius:10px;background:var(--panel)}
 .rail-summary b{color:var(--model);font-size:15px}.rail-summary .rail-values{display:flex;gap:8px 18px;flex-wrap:wrap;color:var(--text-2);font-size:12px;margin-top:6px}.rail-values strong{font-weight:600;color:var(--text)}
+.rail-compo{display:flex;height:8px;border-radius:4px;overflow:hidden;margin-top:9px;background:var(--grid)}.rail-compo i{display:block;height:100%}
+.rail-compo-key{font-size:11.5px;color:var(--text-2);margin-top:4px}
+#stepDiff{border:1px solid var(--line);border-radius:12px;overflow-x:auto;margin-top:6px;background:var(--panel)}
+.diff-head{display:flex;gap:12px;align-items:baseline;flex-wrap:wrap;margin-top:16px}.diff-head h3{margin:0;font-size:15px}
 @media(max-width:600px){.rail-summary{grid-template-columns:1fr}.focus-view #evalTreeSec{min-height:0}}
 </style>
 </head>
@@ -192,12 +196,14 @@ section:not(.open){padding-top:9px;padding-bottom:9px}
       <span id="treePosition" class="sub"></span>
     </div>
     <div id="evalTree" aria-label="Execution railway timeline"></div>
+    <div class="diff-head"><h3>Step diff — where the runs diverge</h3><span class="sub" id="diffSentence"></span></div>
+    <div id="stepDiff" aria-label="Step-aligned comparison of both models on this turn"></div>
     <div class="tree-caption"><span>━ Task bar</span><span style="color:var(--codex)">● Codex</span><span style="color:var(--claude)">● Claude</span><span>◆ Reasoning</span><span class="ok">✓ Passed</span><span class="bad">✗ Failed</span><span>Branches = tool calls · clustered calls expand with zoom · click for evidence</span></div>
   </section>
   <section class="c12" id="labSec" data-open="1"><h2 id="labTitle">Model observatory</h2>
 <div class="lab-top"><div><div class="lab-kicker">TRACES → PATTERNS → EVIDENCE</div><h3>Understand how the models work.</h3><p class="sub">Ten lenses on the same recorded runs. Click a mark to inspect its evidence.</p></div><div class="lab-controls"><select id="labScope" aria-label="Observatory scope"><option value="session">Filtered session</option><option value="turn">Timeline turn</option></select><select id="labProvider" aria-label="Observatory model"><option value="all">Both models</option><option value="codex">Codex</option><option value="claude">Claude</option></select><select id="labArea" aria-label="Tool terrain metric"><option value="duration">Terrain: duration</option><option value="calls">Terrain: calls</option></select></div></div>
-<div class="legend" id="labNav" style="margin-top:12px"><button data-lens="atlas">Speed &amp; quality</button><button data-lens="occupancy">Time &amp; workload</button><button data-lens="rubriclab">Quality &amp; failures</button><button data-lens="switchboard">Behavior &amp; loops</button><button data-lens="mosaic">Compare tasks</button></div>
-<div id="labMetrics" class="lab-metrics"></div><div class="lab-grid"><article class="lab-card"><div class="lab-kicker">01 · Behavioral atlas</div><h3>Where do speed and judged quality meet?</h3><p>Each dot is one scored model/turn. Horizontal position is total run time; vertical position is judge score. Size shows tool count.</p><div id="lab-atlas" class="lab-chart"></div><div id="lab-atlas-readout" class="lab-readout"></div></article><article class="lab-card"><div class="lab-kicker">02 · Decision braid</div><h3>How does each model move through work?</h3><p>Tool steps sampled at 12 positions through each run. Curves reveal repeated phase changes; this is execution order, not time.</p><div id="lab-braid" class="lab-chart"></div><div id="lab-braid-readout" class="lab-readout"></div></article><article class="lab-card wide"><div class="lab-kicker">03 · Activity weather</div><h3>When is the agent busy with tools?</h3><p>Each row is a run, divided into 32 equal time bins. Fill shows the fraction of each bin covered by tool calls; red borders flag failed calls.</p><div id="lab-occupancy" class="lab-chart"></div><div id="lab-occupancy-readout" class="lab-readout"></div></article><article class="lab-card"><div class="lab-kicker">04 · Tool terrain</div><h3>Which tools dominate the workload?</h3><p>Rectangle area is summed completed call duration. Overlapping calls count separately. Switch to call count to compare frequency.</p><div id="lab-terrain" class="lab-chart"></div><div id="lab-terrain-readout" class="lab-readout"></div></article><article class="lab-card"><div class="lab-kicker">05 · Latency constellation</div><h3>Are slow calls rare or routine?</h3><p>Every plotted dot is a completed tool call on a log duration scale. Vertical jitter separates nearby points; red marks failed calls.</p><div id="lab-latency" class="lab-chart"></div><div id="lab-latency-readout" class="lab-readout"></div></article><article class="lab-card"><div class="lab-kicker">06 · Quality contours</div><h3>Does a strong total hide a weak dimension?</h3><p>Each line is one scored model/turn across the five judge dimensions. Missing dimensions break the line; scores are judgments, not ground truth.</p><div id="lab-rubriclab" class="lab-chart"></div><div id="lab-rubriclab-readout" class="lab-readout"></div></article><article class="lab-card"><div class="lab-kicker">07 · After the error</div><h3>What action follows a failed tool call?</h3><p>Links connect a failed call’s phase to the next tool action. This describes the next action; it does not prove that the error was diagnosed or repaired.</p><div id="lab-recovery" class="lab-chart"></div><div id="lab-recovery-readout" class="lab-readout"></div></article><article class="lab-card"><div class="lab-kicker">08 · Tool switchboard</div><h3>Which tools keep pulling the model back?</h3><p>Chord ribbons count consecutive tool transitions within each run. Loops expose repeated use; direction is recorded order, not dependency.</p><div id="lab-switchboard" class="lab-chart"></div><div id="lab-switchboard-readout" class="lab-readout"></div></article><article class="lab-card"><div class="lab-kicker">09 · Execution pace</div><h3>Do tools arrive in bursts or steadily?</h3><p>Cumulative tool starts over normalized run time. Each curve is a run; steeper segments indicate a burst of observed tool calls.</p><div id="lab-pace" class="lab-chart"></div><div id="lab-pace-readout" class="lab-readout"></div></article><article class="lab-card wide"><div class="lab-kicker">10 · Outcome matrix</div><h3>Where do the two models disagree?</h3><p>One column per judged task; rows separate models and rubric dimensions. Color intensity shows score on the fixed 1–5 scale.</p><div id="lab-mosaic" class="lab-chart"></div><div id="lab-mosaic-readout" class="lab-readout"></div></article></div><details class="lab-sources"><summary>Current observability patterns &amp; reading</summary><p>Use both an overview of repeated work and a literal execution view, with evaluations linked to recorded evidence. These are useful design references, not a ranking of products:</p><a href="https://langfuse.com/docs/observability/features/agent-graphs" target="_blank" rel="noopener noreferrer">Langfuse · aggregated and expanded agent graphs</a> · <a href="https://arize.com/docs/phoenix/tracing/tutorial" target="_blank" rel="noopener noreferrer">Phoenix · traces, annotations, sessions</a> · <a href="https://www.langchain.com/langsmith/observability" target="_blank" rel="noopener noreferrer">LangSmith · agent trajectory observability</a></details></section>
+<div class="legend" id="labNav" style="margin-top:12px"><button data-lens="atlas">Speed &amp; quality</button><button data-lens="occupancy">Time &amp; workload</button><button data-lens="rubriclab">Quality &amp; failures</button><button data-lens="switchboard">Behavior &amp; loops</button><button data-lens="flow">Agent graph</button><button data-lens="mosaic">Compare tasks</button></div>
+<div id="labMetrics" class="lab-metrics"></div><div class="lab-grid"><article class="lab-card"><div class="lab-kicker">01 · Behavioral atlas</div><h3>Where do speed and judged quality meet?</h3><p>Each dot is one scored model/turn. Horizontal position is total run time; vertical position is judge score. Size shows tool count.</p><div id="lab-atlas" class="lab-chart"></div><div id="lab-atlas-readout" class="lab-readout"></div></article><article class="lab-card"><div class="lab-kicker">02 · Decision braid</div><h3>How does each model move through work?</h3><p>Tool steps sampled at 12 positions through each run. Curves reveal repeated phase changes; this is execution order, not time.</p><div id="lab-braid" class="lab-chart"></div><div id="lab-braid-readout" class="lab-readout"></div></article><article class="lab-card wide"><div class="lab-kicker">03 · Activity weather</div><h3>When is the agent busy with tools?</h3><p>Each row is a run, divided into 32 equal time bins. Fill shows the fraction of each bin covered by tool calls; red borders flag failed calls.</p><div id="lab-occupancy" class="lab-chart"></div><div id="lab-occupancy-readout" class="lab-readout"></div></article><article class="lab-card"><div class="lab-kicker">04 · Tool terrain</div><h3>Which tools dominate the workload?</h3><p>Rectangle area is summed completed call duration. Overlapping calls count separately. Switch to call count to compare frequency.</p><div id="lab-terrain" class="lab-chart"></div><div id="lab-terrain-readout" class="lab-readout"></div></article><article class="lab-card"><div class="lab-kicker">05 · Latency constellation</div><h3>Are slow calls rare or routine?</h3><p>Every plotted dot is a completed tool call on a log duration scale. Vertical jitter separates nearby points; red marks failed calls.</p><div id="lab-latency" class="lab-chart"></div><div id="lab-latency-readout" class="lab-readout"></div></article><article class="lab-card"><div class="lab-kicker">06 · Quality contours</div><h3>Does a strong total hide a weak dimension?</h3><p>Each line is one scored model/turn across the five judge dimensions. Missing dimensions break the line; scores are judgments, not ground truth.</p><div id="lab-rubriclab" class="lab-chart"></div><div id="lab-rubriclab-readout" class="lab-readout"></div></article><article class="lab-card"><div class="lab-kicker">07 · After the error</div><h3>What action follows a failed tool call?</h3><p>Links connect a failed call’s phase to the next tool action. This describes the next action; it does not prove that the error was diagnosed or repaired.</p><div id="lab-recovery" class="lab-chart"></div><div id="lab-recovery-readout" class="lab-readout"></div></article><article class="lab-card"><div class="lab-kicker">08 · Tool switchboard</div><h3>Which tools keep pulling the model back?</h3><p>Chord ribbons count consecutive tool transitions within each run. Loops expose repeated use; direction is recorded order, not dependency.</p><div id="lab-switchboard" class="lab-chart"></div><div id="lab-switchboard-readout" class="lab-readout"></div></article><article class="lab-card"><div class="lab-kicker">09 · Execution pace</div><h3>Do tools arrive in bursts or steadily?</h3><p>Cumulative tool starts over normalized run time. Each curve is a run; steeper segments indicate a burst of observed tool calls.</p><div id="lab-pace" class="lab-chart"></div><div id="lab-pace-readout" class="lab-readout"></div></article><article class="lab-card wide"><div class="lab-kicker">10 · Outcome matrix</div><h3>Where do the two models disagree?</h3><p>One column per judged task; rows separate models and rubric dimensions. Color intensity shows score on the fixed 1–5 scale.</p><div id="lab-mosaic" class="lab-chart"></div><div id="lab-mosaic-readout" class="lab-readout"></div></article><article class="lab-card wide"><div class="lab-kicker">11 · Agent flow graph</div><h3>What path does each model take through the tools?</h3><p>Aggregated tool-transition graph. Each node splits in half — left is Codex's visit share, right is Claude's; edge thickness counts consecutive transitions. A dashed outline marks a tool only one model uses.</p><div id="lab-flow" class="lab-chart"></div><div id="lab-flow-readout" class="lab-readout"></div></article></div><details class="lab-sources"><summary>Current observability patterns &amp; reading</summary><p>Use both an overview of repeated work and a literal execution view, with evaluations linked to recorded evidence. These are useful design references, not a ranking of products:</p><a href="https://langfuse.com/docs/observability/features/agent-graphs" target="_blank" rel="noopener noreferrer">Langfuse · aggregated and expanded agent graphs</a> · <a href="https://arize.com/docs/phoenix/tracing/tutorial" target="_blank" rel="noopener noreferrer">Phoenix · traces, annotations, sessions</a> · <a href="https://www.langchain.com/langsmith/observability" target="_blank" rel="noopener noreferrer">LangSmith · agent trajectory observability</a></details></section>
   <section class="c12" id="liveSec" data-open="1">
     <h2 id="liveTitle">Live</h2>
     <p class="note">Streams as it happens: each glyph is a step the agent just took (shape = action; ✗ failed; ◆ reasoning; the newest pulses). The pipeline below lights up as duo analyses the turn, the judges score it, the learning updates, and the next prompt is ready. The sparkline is events per second over the last minute.</p>
@@ -1324,7 +1330,11 @@ function renderEvalTree(D){
   const t=turns.find(t=>t.id===(TREE.follow?turns.at(-1)?.id:TREE.turn))||turns.at(-1);
   if(!t){document.getElementById('railSummary').innerHTML='';host.innerHTML='<div class="empty" style="padding:100px 20px">Execution tracks start with your first task.<br>Agent bars and tool branches appear here as Duo works.</div>';document.getElementById('treePosition').textContent='Waiting for a task';return}
   TREE.turn=t.id;sel.value=t.id;
-  document.getElementById('railSummary').innerHTML=P.map(p=>{const rs=t.by[p],tools=rs.flatMap(r=>r.tools),fail=tools.filter(l=>l.passed===false).length,j=t.judge[p];return `<div style="--model:var(--${p})"><b>${NAME[p]}</b><div class="rail-values"><span><strong>${rs.length?dur(d3.sum(rs,r=>r.dur)):'–'}</strong> run time</span><span><strong>${tools.length}</strong> tool calls</span><span class="${fail?'bad':''}"><strong>${fail}</strong> failures</span><span><strong>${j?f1(j.overall)+'/5':'Pending'}</strong> judge score</span></div></div>`}).join('');
+  document.getElementById('railSummary').innerHTML=P.map(p=>{const rs=t.by[p],tools=rs.flatMap(r=>r.tools),fail=tools.filter(l=>l.passed===false).length,j=t.judge[p];
+    const runMs=d3.sum(rs,r=>r.dur),toolMs=Math.min(runMs,d3.sum(tools,l=>l.dur||0)),slow=tools.filter(l=>l.dur!=null).sort((a,b)=>b.dur-a.dur)[0];
+    // Where the time went: tool time vs the rest of the run (model thinking + orchestration). Tool time is summed, so overlapping calls can overstate it.
+    const compo=runMs?`<div class="rail-compo" data-tip="Where the time went: <b>${dur(toolMs)}</b> in tools · <b>${dur(runMs-toolMs)}</b> model thinking"><i style="width:${Math.round(100*toolMs/runMs)}%;background:var(--model)"></i></div><div class="rail-compo-key">${pct(toolMs/runMs)} in tools · ${pct(1-toolMs/runMs)} thinking${slow&&slow.dur>0?` · slowest: ${esc(short(slow.tool))} ${dur(slow.dur)}`:''}</div>`:'';
+    return `<div style="--model:var(--${p})"><b>${NAME[p]}</b><div class="rail-values"><span><strong>${rs.length?dur(runMs):'–'}</strong> run time</span><span><strong>${tools.length}</strong> tool calls</span><span class="${fail?'bad':''}"><strong>${fail}</strong> failures</span><span><strong>${j?f1(j.overall)+'/5':'Pending'}</strong> judge score</span></div>${compo}</div>`}).join('');
   const runs=[...t.runs,...t.judges.map(j=>({id:j.id,s:j,provider:j.provider,role:'judge',start:j.start,end:j.end,running:j.status==='running',tools:j.tools,reasoning:j.reasoning,evals:j.evals}))];
   const runIds=new Set(runs.map(r=>r.id));
   const findings=S.events.filter(e=>(e.turn_id===t.id||runIds.has(e.span_id))&&/^(evaluation$|judge\.|analysis\.|policy\.reward|evolve\.result)/.test(e.type)&&(F.judge==='all'||!e.judge||String(e.judge).startsWith(F.judge)));
@@ -1367,7 +1377,7 @@ function renderEvalTree(D){
       const g=target(svg.append('g'),'Reasoning · '+q.chars+' characters',()=>r.role==='judge'?showTurn(t.id):showRun(r.id,q.id));
       g.append('path').attr('d',`M${x(q.t)},${ry-6}l5,6l-5,6l-5,-6Z`).attr('fill','var(--text)');
     }
-    y+=76+tracks*38;
+    y+=r.tools.length?76+tracks*38:46;  // tool-less rows (judges, pure-answer runs) stay compact
   }
   if(findings.length){text(y,'EVALUATION','Analysis · judging · learning');
     const buckets=new Map();for(const e of findings){if(e.timestamp>cutoff)continue;const k=Math.floor(x(e.timestamp)/22);if(!buckets.has(k))buckets.set(k,[]);buckets.get(k).push(e)}
@@ -1382,6 +1392,52 @@ function renderEvalTree(D){
   if(TREE.progress<100)svg.append('line').attr('x1',x(cutoff)).attr('x2',x(cutoff)).attr('y1',40).attr('y2',height-15).attr('stroke','var(--text)').attr('stroke-dasharray','5,5');
   host.replaceChildren(svg.node());document.getElementById('treeProgress').value=TREE.progress;
   document.getElementById('treePosition').textContent=dur(Math.max(0,cutoff-start)*1000)+' / '+dur(span*1000)+' · '+visibleCalls+' tool calls';
+  renderStepDiff(t);
+}
+/* Step-aligned diff: Needleman–Wunsch over tool sequences, first divergence pinned. */
+function renderStepDiff(t){
+  const host=document.getElementById('stepDiff'),note=document.getElementById('diffSentence');
+  const seq=p=>t.by[p].flatMap(r=>r.tools.map((l,i)=>({l,i,run:r.id}))).filter(s=>!s.l.declined).sort((a,b)=>a.l.t-b.l.t).slice(0,120);
+  const A=seq('codex'),B=seq('claude');
+  if(!A.length||!B.length){host.innerHTML='<div class="empty" style="padding:26px 20px">The diff appears when both models make tool calls on the same turn.</div>';note.textContent=A.length||B.length?`Only ${A.length?'Codex':'Claude'} used tools on this turn.`:'';return}
+  const score=(a,b)=>short(a.l.tool)===short(b.l.tool)?2:phaseOf(a.l)===phaseOf(b.l)?.75:-1,GAP=-.45;
+  const n=A.length,m=B.length,M=Array.from({length:n+1},()=>new Float32Array(m+1));
+  for(let i=1;i<=n;i++)M[i][0]=i*GAP;for(let j=1;j<=m;j++)M[0][j]=j*GAP;
+  for(let i=1;i<=n;i++)for(let j=1;j<=m;j++)M[i][j]=Math.max(M[i-1][j-1]+score(A[i-1],B[j-1]),M[i-1][j]+GAP,M[i][j-1]+GAP);
+  const cols=[];let i=n,j=m;
+  while(i>0||j>0){
+    if(i>0&&j>0&&Math.abs(M[i][j]-(M[i-1][j-1]+score(A[i-1],B[j-1])))<1e-6){cols.push({a:A[i-1],b:B[j-1]});i--;j--}
+    else if(i>0&&Math.abs(M[i][j]-(M[i-1][j]+GAP))<1e-6){cols.push({a:A[i-1]});i--}
+    else{cols.push({b:B[j-1]});j--}
+  }
+  cols.reverse();
+  const kindOfCol=c=>c.a&&c.b?(short(c.a.l.tool)===short(c.b.l.tool)?'match':'drift'):'gap';
+  const d0=cols.findIndex(c=>kindOfCol(c)!=='match');
+  if(d0<0)note.textContent=`No divergence: both took the same ${cols.length}-step tool path.`;
+  else{const c=cols[d0];note.textContent=`Diverged at step ${d0+1}: `+(c.a&&c.b?`Codex ran ${short(c.a.l.tool)} while Claude ran ${short(c.b.l.tool)}.`:c.a?`Codex ran ${short(c.a.l.tool)} with no Claude counterpart.`:`Claude ran ${short(c.b.l.tool)} with no Codex counterpart.`)}
+  const cw=26,L=86,w=Math.max(host.clientWidth-2,L+cols.length*cw+40),h=190;
+  const svg=d3.create('svg').attr('width',w).attr('height',h).attr('role','group').attr('aria-label','Step-aligned diff of Codex and Claude tool sequences');
+  const ya=52,yb=118;
+  svg.append('text').attr('x',10).attr('y',ya+4).attr('class','ink b').attr('fill','var(--codex)').text('Codex');
+  svg.append('text').attr('x',10).attr('y',yb+4).attr('class','ink b').attr('fill','var(--claude)').text('Claude');
+  cols.forEach((c,k)=>{const x=L+k*cw,kind=kindOfCol(c);
+    if(c.a&&c.b)svg.append('line').attr('x1',x+9).attr('x2',x+9).attr('y1',ya+11).attr('y2',yb-11).attr('stroke',kind==='match'?'var(--line)':'#d97706').attr('stroke-width',kind==='match'?2:3).attr('opacity',.9);
+    const box=(s,y)=>{if(!s)return;
+      const g=svg.append('g').attr('class','tree-node').attr('tabindex',0).attr('role','button').on('click',()=>showTool(s.run,s.i)).on('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();showTool(s.run,s.i)}});
+      g.append('title').text(short(s.l.tool)+(s.l.detail?' · '+s.l.detail:'')+' · '+dur(s.l.dur)+(s.l.passed===false?' · failed':'')+(kind==='gap'?' · no counterpart in the other run':''));
+      g.append('rect').attr('x',x).attr('y',y-9).attr('width',18).attr('height',18).attr('rx',4)
+        .attr('fill',LAB_COLORS[phaseOf(s.l)]||'var(--judge)').attr('fill-opacity',.9)
+        .attr('stroke',s.l.passed===false?'var(--critical)':kind==='gap'?'var(--critical)':'none')
+        .attr('stroke-width',s.l.passed===false?2.5:1.5).attr('stroke-dasharray',kind==='gap'&&s.l.passed!==false?'3,2':null);
+      if(s.l.passed===false)g.append('text').attr('x',x+4).attr('y',y+5).attr('fill','#fff').attr('class','b').text('✗');
+    };
+    box(c.a,ya);box(c.b,yb);
+  });
+  if(d0>=0){const x=L+d0*cw+9;svg.append('line').attr('x1',x).attr('x2',x).attr('y1',20).attr('y2',h-36).attr('stroke','var(--critical)').attr('stroke-dasharray','5,4');
+    svg.append('text').attr('x',Math.min(x+6,w-120)).attr('y',16).attr('class','mut').text('first divergence');}
+  let lx=L;for(const ph of LAB_PHASES){svg.append('rect').attr('x',lx).attr('y',h-20).attr('width',10).attr('height',10).attr('rx',2).attr('fill',LAB_COLORS[ph]);svg.append('text').attr('x',lx+14).attr('y',h-11).attr('class','mut').text(ph);lx+=ph.length*7+38;}
+  svg.append('text').attr('x',lx+10).attr('y',h-11).attr('class','mut').text('│ gray link = same tool · amber = different tool · dashed = only one model · click a step for evidence');
+  host.replaceChildren(svg.node());
 }
 document.getElementById('railZoom').onchange=schedule;
 document.getElementById('treeTurn').onchange=e=>{TREE.turn=e.target.value;TREE.follow=false;TREE.progress=100;document.getElementById('treeFollow').setAttribute('aria-pressed','false');schedule()};
@@ -1497,6 +1553,36 @@ function renderObservatory(D){
     const ts=turns.filter(t=>Object.keys(t.judge).length).slice(-36),ps=P.filter(p=>selected==='all'||p===selected),rows=ps.flatMap(p=>DIMS.map(dim=>({p,dim}))),{svg,w}=labSurface('mosaic',rows.length*24+70,Math.max(650,ts.length*28+190)),cw=(w-185)/Math.max(1,ts.length);
     ts.forEach((t,i)=>labText(svg,180+i*cw+3,21,'T'+t.no));rows.forEach(({p,dim},j)=>{labText(svg,2,46+j*24,NAME[p]+' · '+(DIML[dim]||dim));ts.forEach((t,i)=>{const value=t.judge[p]?.dims[dim],mark=labMark(svg.append('g'),`${NAME[p]} T${t.no} · ${dim}: ${value==null?'not recorded':f1(value)}`,()=>showTurn(t.id));mark.append('rect').attr('x',180+i*cw).attr('y',32+j*24).attr('width',cw-3).attr('height',20).attr('rx',3).attr('fill',value==null?'var(--grid)':labColor(p)).attr('fill-opacity',value==null?1:.12+.85*(value-1)/4);if(cw>34)labText(mark,185+i*cw,46+j*24,value==null?'–':f1(value),'ink')})});
     labNote('mosaic','Latest '+ts.length+' judged tasks. Pale = lower score; saturated = higher. Gray = missing. Judge filter applies; tasks and writer/reviewer roles may differ.');
+  }
+  // Aggregated dual-model tool-transition graph: nodes ordered by average position in the run.
+  if(!active.length)labEmpty('flow','Tool calls will reveal each model’s path through the tools.');else{
+    const nodes=new Map(),trans=new Map();
+    for(const r of active){const names=r.tools.map(l=>short(l.tool));
+      names.forEach((nm,i)=>{let nd=nodes.get(nm);if(!nd){nd={name:nm,c:{codex:0,claude:0},pos:[],self:0,fails:0};nodes.set(nm,nd)}
+        nd.c[r.provider]=(nd.c[r.provider]||0)+1;nd.pos.push(names.length>1?i/(names.length-1):.5);if(r.tools[i].passed===false)nd.fails++;
+        if(i){const prev=names[i-1];if(prev===nm)nd.self++;else{const k=prev+'|'+nm+'|'+r.provider;trans.set(k,(trans.get(k)||0)+1)}}})}
+    const ns=[...nodes.values()].sort((a,b)=>(b.c.codex+b.c.claude)-(a.c.codex+a.c.claude)).slice(0,12);
+    const byName=new Map(ns.map(nd=>[nd.name,nd]));
+    const {svg,w,h}=labSurface('flow',330,650),x=d3.scaleLinear().domain([0,1]).range([90,w-95]);
+    ns.forEach(nd=>nd.x=x(mean(nd.pos)));ns.sort((a,b)=>a.x-b.x);
+    const lanes=[82,166,250],placed=[];
+    ns.forEach(nd=>{nd.y=lanes.reduce((best,yy)=>{const pen=y=>placed.filter(p=>Math.abs(p.x-nd.x)<110&&p.y===y).length;return pen(yy)<pen(best)?yy:best},lanes[0]);placed.push(nd)});
+    const maxE=Math.max(1,...trans.values(),1);
+    for(const [k,cnt] of trans){const [a,b,p]=k.split('|'),A=byName.get(a),B=byName.get(b);if(!A||!B)continue;const off=p==='codex'?-3:3;
+      const g=labMark(svg.append('g'),`${NAME[p]} · ${a} → ${b} · ${cnt} transitions`,()=>{});
+      g.append('path').attr('d',`M${A.x},${A.y+off} C${(A.x+B.x)/2},${A.y+off} ${(A.x+B.x)/2},${B.y+off} ${B.x},${B.y+off}`).attr('fill','none').attr('stroke',labColor(p)).attr('stroke-width',1+4*Math.sqrt(cnt/maxE)).attr('opacity',.4);}
+    const maxC=Math.max(1,...ns.map(nd=>nd.c.codex+nd.c.claude));
+    for(const nd of ns){const bw=Math.max(56,14+nd.name.length*7),single=!(nd.c.codex&&nd.c.claude);
+      const g=labMark(svg.append('g'),`${nd.name} · Codex ${nd.c.codex||0} calls · Claude ${nd.c.claude||0} calls${nd.self?' · immediate repeats ↺'+nd.self:''}${nd.fails?' · '+nd.fails+' failed':''}`,
+        ()=>openDrawer(esc(nd.name),P.map(p=>`<p>${sw(p)} ${NAME[p]}: <b>${nd.c[p]||0}</b> calls</p>`).join('')+`<p class="muted">↺ ${nd.self} immediate repeats · ${nd.fails} failed calls. Use the railway timeline or Tool terrain to open individual calls.</p>`));
+      g.append('rect').attr('x',nd.x-bw/2).attr('y',nd.y-14).attr('width',bw/2).attr('height',28).attr('fill','var(--codex)').attr('fill-opacity',.1+.6*(nd.c.codex||0)/maxC);
+      g.append('rect').attr('x',nd.x).attr('y',nd.y-14).attr('width',bw/2).attr('height',28).attr('fill','var(--claude)').attr('fill-opacity',.1+.6*(nd.c.claude||0)/maxC);
+      g.append('rect').attr('x',nd.x-bw/2).attr('y',nd.y-14).attr('width',bw).attr('height',28).attr('rx',7).attr('fill','none').attr('stroke',single?'var(--critical)':'var(--line)').attr('stroke-width',1.5).attr('stroke-dasharray',single?'4,3':null);
+      g.append('text').attr('x',nd.x).attr('y',nd.y+4).attr('text-anchor','middle').attr('class','ink b').text(nd.name.slice(0,13));
+      if(nd.self)labText(svg,nd.x+bw/2+3,nd.y-10,'↺'+nd.self);
+    }
+    labText(svg,90,16,'Earlier in the run');labText(svg,w-170,16,'Later in the run →');
+    labNote('flow','Top '+ns.length+' tools by call count; horizontal position is each tool’s average position within a run, so this is typical order, not a dependency graph. Blue edges = Codex transitions, orange = Claude. ↺ counts immediate repeats.');
   }
 }
 document.getElementById('labNav').onclick=e=>{const b=e.target.closest('[data-lens]');if(b)document.getElementById('lab-'+b.dataset.lens).closest('article').scrollIntoView({behavior:'smooth',block:'center'})};

@@ -112,8 +112,10 @@ class TraceStore:
         return [{'session_id':sid,'id':i,'timestamp':ts,'type':kind,'provider':p,'span_id':sp,**json.loads(d)} for sid,i,ts,p,sp,d in rows]
     def events_since(self,session_id,after,limit=2000):
         """Live tail: events of one session newer than `after` (used by /events?session=…)."""
-        with self.lock,self.connect() as db:
-            rows=db.execute('SELECT id,ts,type,provider,span_id,data FROM events WHERE session_id=? AND id>? ORDER BY id LIMIT ?',(session_id,after,limit)).fetchall()
+        try:
+            with self.lock,self.connect() as db:
+                rows=db.execute('SELECT id,ts,type,provider,span_id,data FROM events WHERE session_id=? AND id>? ORDER BY id LIMIT ?',(session_id,after,limit)).fetchall()
+        except sqlite3.Error:return []  # DB removed or closing mid-tail; the SSE loop just sees no news
         out=[]
         for id_,ts,kind,provider,span_id,data in rows:
             e={'id':id_,'timestamp':ts,'session_id':session_id,'type':kind,'provider':provider,**json.loads(data)}
