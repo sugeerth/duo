@@ -52,6 +52,23 @@ A line with nothing to say is left out. Under the timeline, **Where the time wen
 
 Every mark opens its evidence. Railway shows the real wall-clock overlap instead.
 
+**Reasoning, memory and context.** One card per model for the selected turn:
+- stat tiles: thoughts, how often it thought before acting, failures it reasoned about before acting again, re-reads with nothing changed in between, and peak context;
+- a step strip: reasoning bars above the line, actions on it, and memory arcs below joining repeat touches of the same file or search (re-read with no change, read then edit, edit then check), plus the growing working set;
+- a context-window chart stacking what the model holds by source (request and lessons, carried conversation, tool output, its own reasoning; estimated as characters / 4). When the log reports each call's input size, the measured context is drawn as a line. The largest outputs are marked.
+
+Answer-only (chat) turns get the same card.
+
+**Answer attribution.** Each sentence of Duo's combined answer is labelled Codex, Claude, both, or new wording, by word-trigram overlap.
+
+**Conversation memory.** For a chat session: which earlier turns each turn still carried, and how much (Duo keeps the last 10 turns). Each turn now records `memory.context`: the earlier turns carried in and the size of the history and attached context.
+
+**Imports.** These sessions can be read in the viewer too:
+- `duo --import-chat FILE`: claude.ai and ChatGPT exports, or a plain JSON message list, as chat sessions. Thinking becomes reasoning, and the whole conversation so far counts as carried context.
+- `duo --import-session FILE`: a Claude Code (`~/.claude/projects/…/*.jsonl`) or Codex CLI (`~/.codex/sessions/…/rollout-*.jsonl`) log, as a single-agent session with every tool call, reasoning, the measured context per model call, and the long-run reading.
+
+When only one agent ran, the viewer drops the comparison-only panels (step diff, attribution) and titles the page as a single-agent session.
+
 Long runs and long-term change (`longrun.py`, `longterm.py`; rules from AgentDiff's long-run reading):
 - **Long run** (per turn, deterministic, after each turn): each model's calls split into sessions (idle ≥ 30 min) and bursts. The burst gap is set by the run itself: Otsu's split of its log gaps, clamped to 20 s to 30 min.
   - Progress is a check (test/lint/typecheck) newly passing or passing more cases. A regression is a check failing after it passed.

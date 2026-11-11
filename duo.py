@@ -37,6 +37,12 @@ NOTICES=[]  # background learning messages, printed before the next prompt
 # LLM/agent-as-judge over finished turns: off|claude|codex|panel|agent (chat defaults to panel).
 EVAL={'mode':os.environ.get('DUO_EVAL_JUDGE','off'),'background':True}
 
+def memory_context(history,context):
+    """What a turn carries in from before: earlier turns of conversation and attached context, with their sizes."""
+    history=history or [];context=context or []
+    return {'history_turns':len(history)//2,'history_chars':sum(len(str(h.get('text',''))) for h in history),
+            'context_items':len(context),'context_chars':len(json.dumps(context,ensure_ascii=False))}
+
 def analyse_turn(turn_id):
     """Deterministic trace analysis (ms, no model calls). Emits analysis.* events; returns findings for the judge."""
     t0=time.monotonic()
@@ -321,7 +327,7 @@ def run_turn(prompt, mode='both', context=None, history=None, timeout=180, model
     providers=[mode] if mode in ('codex','claude') else ['codex','claude']
     results={};completion=[]
     with HUB.span('turn',mode='respond:'+mode) as turn,tempfile.TemporaryDirectory(prefix='duo-') as tmp:
-        emit('prompt','duo',payload=prompt)
+        emit('prompt','duo',payload=prompt);emit('memory.context','duo',count=len(history or [])//2,data=memory_context(history,context))
         root=Path(tmp)
         print('Running '+' + '.join(providers)+' in parallel…' if len(providers)>1 else 'Running '+providers[0]+'…',file=sys.stderr,flush=True)
         with concurrent.futures.ThreadPoolExecutor(max_workers=len(providers)) as pool:
@@ -516,7 +522,7 @@ def unified_work(prompt,history=None,context=None,only=None,auto_context=True,ti
         learned,p,n=policy.route('read')
         if learned!='both':only=learned;print(f'Route: {learned} (learned from {n} judged turns, P={p:.2f}; DUO_ROUTE=auto)',file=sys.stderr)
     with HUB.span('turn',mode='work:'+task_intent(prompt,history)+(':'+only if only else '')) as turn:
-        emit('prompt','duo',payload=prompt)
+        emit('prompt','duo',payload=prompt);emit('memory.context','duo',count=len(history or [])//2,data=memory_context(history,context))
         result=_unified_work(prompt,history,context,only,auto_context,timeout,models)
         if not result['ok']:turn.status='failed'
     writer=result.get('writer')
@@ -686,6 +692,9 @@ def main():
     parser.add_argument('--export-rl',metavar='FILE',help='Export preference/RL data (JSONL) from the trace DB')
     parser.add_argument('--format',choices=['dpo','kto'],default='dpo',help='With --export-rl')
     parser.add_argument('--export-otel',metavar='FILE',help='Export traces as OTLP/JSON with OTel GenAI attributes')
+    parser.add_argument('--import-chat',metavar='FILE',help='Import a chat export (claude.ai, ChatGPT, or a JSON message list) into the trace DB as chat sessions')
+    parser.add_argument('--import-session',metavar='FILE',help='Import a Claude Code or Codex CLI session log (JSONL) as a single-agent session')
+    parser.add_argument('--chat-provider',choices=('claude','codex'),help='With --import-chat: which lane a plain message list belongs to (ChatGPT exports use codex)')
     parser.add_argument('--fork',metavar='TURN',help='Counterfactual rerun: apply the judges\' minimal fix and re-score (answer/read turns)')
     parser.add_argument('--samples',type=int,default=2,help='With --fork: reruns per agent')
     parser.add_argument('--context',action='append',default=[],type=Path)
@@ -724,6 +733,18 @@ def main():
     if args.export_rl:
         n,skipped=export.export_rl(HUB.store,args.export_rl,args.format);print(f'Wrote {n} {args.format.upper()} rows to {args.export_rl} ({skipped} ties/splits skipped)');return 0
     if args.export_otel:print(f'Wrote {export.export_otel(HUB.store,args.export_otel)} spans to {args.export_otel} (OTLP/JSON, gen_ai.* v1.41)');return 0
+    if args.import_session:
+        import chatimport
+        if not HUB.store:print('Trace DB is off (DUO_TRACE_DB=off); nothing to import into.');return 1
+        sid,n=chatimport.import_session(HUB.store,args.import_session,args.chat_provider)
+        print(f'Imported {n} turns as session {sid}.' if sid else 'No user prompts found in that log.');return 0
+    if args.import_chat:
+        import chatimport
+        if not HUB.store:print('Trace DB is off (DUO_TRACE_DB=off); nothing to import into.');return 1
+        done=chatimport.import_file(HUB.store,args.import_chat,args.chat_provider)
+        for title,sid,n in done:print(f'{n:>4} turns  {sid}  {title[:70]}')
+        print(f'Imported {len(done)} conversation(s). Open the viewer (python3 tools/serve_viewer.py) and pick a "chat:" session.' if done else 'No conversations with user messages found.')
+        return 0
     if args.fork:return fork(args.fork,args.samples,args.timeout)
     if args.improve:
         print(lessons.render(learning.ranked_suggestions(learning.gather(HUB.store))));return 0

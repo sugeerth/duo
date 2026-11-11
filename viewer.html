@@ -154,7 +154,8 @@ section:not(.open){padding-top:9px;padding-bottom:9px}
 .focus-view main{max-width:1600px}
 .focus-view #evalTreeSec{min-height:calc(100vh - 150px)}
 .focus-view #evalTree{height:clamp(320px,55vh,640px)}
-.rail-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:16px}
+.rail-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:16px}.rail-summary.one{grid-template-columns:1fr}
+.solo .diff-head,.solo #stepDiff,.solo .att-sec{display:none}
 .rail-summary>div{border:1px solid var(--line);border-left:3px solid var(--model);padding:10px 14px;border-radius:10px;background:var(--panel)}
 .rail-summary b{color:var(--model);font-size:15px}.rail-summary .rail-values{display:flex;gap:8px 18px;flex-wrap:wrap;color:var(--text-2);font-size:12px;margin-top:6px}.rail-values strong{font-weight:600;color:var(--text)}
 .vcard{margin-top:14px;border:1px solid var(--line);border-left:3px solid var(--text);border-radius:10px;background:var(--panel);padding:10px 14px;display:grid;grid-template-columns:auto 1fr;gap:5px 14px;font-size:13px}
@@ -171,6 +172,19 @@ section:not(.open){padding-top:9px;padding-bottom:9px}
 .lt-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:10px}.lt-card{border:1px solid var(--line);border-radius:10px;padding:10px;background:var(--panel);min-width:0}.lt-card h4{margin:0 0 4px;font-size:12.5px}.lt-card svg{display:block;width:100%}
 .lt-meta{font-size:12px;color:var(--text-2);margin-top:6px}
 @media(max-width:700px){.lt-grid{grid-template-columns:1fr}}
+.rm-grid{display:grid;gap:14px;margin-top:8px}.rm-grid.two{grid-template-columns:repeat(2,minmax(0,1fr))}
+.rm-card{border:1px solid var(--line);border-top:3px solid var(--model);border-radius:12px;background:var(--panel);padding:14px 16px;min-width:0;box-shadow:0 1px 2px var(--ring)}
+.rm-head{font-size:14px;margin-bottom:10px}.rm-head b{color:var(--model)}
+.cm-row{cursor:pointer}.cm-row:hover .cm-bg{fill:var(--hover)}
+.rm-tiles{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin-bottom:10px}.rm-tiles>div{background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:8px 10px;min-width:0}
+.rm-tiles b{display:block;font-size:19px;font-variant-numeric:tabular-nums;letter-spacing:-.3px}.rm-tiles span{font-size:11px;color:var(--text-2);line-height:1.25;display:block}
+.rm-scroll{overflow-x:auto}.rm-scroll svg{display:block}.rm-lab{font-size:10.5px;fill:var(--muted)}.rm-hit{cursor:pointer}.rm-hit:hover rect,.rm-hit:hover circle{stroke:var(--text);stroke-width:1.5}
+.rm-key{display:flex;flex-wrap:wrap;gap:3px 12px;font-size:11px;color:var(--text-2);margin-top:4px}.rm-key i{display:inline-block;width:10px;height:8px;border-radius:2px;margin-right:4px;vertical-align:0}
+.rm-top{font-size:12px;color:var(--text-2);margin-top:8px}.rm-mem{font-size:12px;margin-top:10px;padding-top:8px;border-top:1px solid var(--line);color:var(--text-2)}.rm-mem b{color:var(--text);margin-right:6px}
+@media(max-width:700px){.rm-tiles{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.at-card{border:1px solid var(--line);border-radius:12px;background:var(--panel);padding:14px 16px;margin-top:8px}
+.at-bar{display:flex;height:14px;border-radius:7px;overflow:hidden;background:var(--grid)}.at-bar span{height:100%}
+.at-list{margin-top:10px;max-height:340px;overflow:auto;font-size:13px;line-height:1.5}.at-list p{margin:0 0 6px;padding:2px 0 2px 10px;border-left:3px solid}.at-tag{font:600 10.5px/1 system-ui;text-transform:uppercase;letter-spacing:.06em;margin-right:8px}
 .tw-why{font-size:12px;color:var(--text-2);margin-top:8px;line-height:1.5}
 .rail-compo{display:flex;height:8px;border-radius:4px;overflow:hidden;margin-top:9px;background:var(--grid)}.rail-compo i{display:block;height:100%}
 .rail-compo-key{font-size:11.5px;color:var(--text-2);margin-top:4px}
@@ -181,7 +195,7 @@ section:not(.open){padding-top:9px;padding-bottom:9px}
 </head>
 <body class="focus-view">
 <header>
-  <h1>Duo <span class="muted" style="font-weight:400">·</span> <span><i class="sw" style="background:var(--codex)"></i> Codex</span> <span class="muted" style="font-weight:400">vs</span> <span><i class="sw" style="background:var(--claude)"></i> Claude</span></h1>
+  <h1 id="title">Duo <span class="muted" style="font-weight:400">·</span> <span><i class="sw" style="background:var(--codex)"></i> Codex</span> <span class="muted" style="font-weight:400">vs</span> <span><i class="sw" style="background:var(--claude)"></i> Claude</span></h1>
   <span class="live" id="live"><span class="dot"></span><span id="liveText">connecting</span></span>
   <span class="sub" id="summary"></span>
   <span class="grow"></span>
@@ -216,10 +230,16 @@ section:not(.open){padding-top:9px;padding-bottom:9px}
     <div class="diff-head"><h3>Step diff — where the runs diverge</h3><span class="sub" id="diffSentence"></span></div>
     <div id="stepDiff" aria-label="Step-aligned comparison of both models on this turn"></div>
     <div class="tree-caption"><span>━ Task bar</span><span style="color:var(--codex)">● Codex</span><span style="color:var(--claude)">● Claude</span><span>◆ Reasoning</span><span class="ok">✓ Passed</span><span class="bad">✗ Failed</span><span>Branches = tool calls · clustered calls expand with zoom · click for evidence</span></div>
+    <div class="tw-head"><h3>Reasoning, memory &amp; context</h3><span class="sub">How each model thinks, what it remembers, and what fills its context window as the run goes on.</span></div>
+    <div id="reasonMem"></div>
+    <div class="tw-head att-sec"><h3>Answer attribution</h3><span class="sub">Where each sentence of Duo's final answer came from: Codex, Claude, both, or new wording from the synthesis step. Matched by overlapping word sequences, so a paraphrase can read as new.</span></div>
+    <div id="attrib" class="att-sec"></div>
     <div class="tw-head"><h3>Where the time went</h3><span class="sub">Each bar is a model's run time on one shared scale. Hatched time went to failed or repeated tool calls.</span></div>
     <div id="timeWent"></div>
     <div class="tw-head"><h3>Long run: phases, loops and stalls</h3><span class="sub">The run read at the scale it ran: bursts of calls, with idle between them compressed. ✓ a check newly passing, ↻ a burst repeating earlier calls without progress, ! a failing check. Brackets mark the longest loop and the longest stall.</span></div>
     <div id="longRun"></div>
+    <div class="tw-head"><h3>Conversation memory</h3><span class="sub">The chat session as memory: each row is a turn, and filled cells are the earlier turns it still carried in its context. The bar is how much was carried in (≈ tokens). Click a row to open that turn.</span></div>
+    <div id="convMem"></div>
     <div class="tw-head"><h3>Over time: every stored session</h3><span class="sub">Each model across all turns in the trace DB. A change is stated only when it survives a significance test corrected for every test shown (Benjamini-Hochberg, q &lt; 0.05).</span></div>
     <div id="longTerm"></div>
   </section>
@@ -377,7 +397,7 @@ const DIML={correctness:'Correctness',completeness:'Completeness',groundedness:'
 const KIND_L={respond:'Answer',read:'Read',write:'Write'};
 const qs=new URLSearchParams(location.search);
 let S;
-function reset(){S={events:[],maxId:0,started:null,session:'',spans:new Map(),order:[],J:{results:[],scores:[],verdicts:[],agree:[],errors:[],raw:[],steps:[],roots:[],actions:[]},feedback:[],byEvent:new Map(),A:{behaviour:[],flags:[],hacks:[],align:[],claims:[],hackFinal:[],override:[],rootAgree:[],conflicts:[],rewards:[],usage:[],evolve:[],fork:[],longrun:[]},live:false,stored:false}}
+function reset(){S={events:[],maxId:0,started:null,session:'',spans:new Map(),order:[],J:{results:[],scores:[],verdicts:[],agree:[],errors:[],raw:[],steps:[],roots:[],actions:[]},feedback:[],byEvent:new Map(),A:{behaviour:[],flags:[],hacks:[],align:[],claims:[],hackFinal:[],override:[],rootAgree:[],conflicts:[],rewards:[],usage:[],evolve:[],fork:[],longrun:[],memctx:[],ctxtok:[]},live:false,stored:false}}
 reset();
 const PROC=['planning','tool_selection','error_recovery','verification'];
 const PROCL={planning:'Planning',tool_selection:'Tool choice',error_recovery:'Error recovery',verification:'Verification'};
@@ -402,7 +422,7 @@ function ingest(e){
   if(e.type==='judge.root'){J.roots.push(e);return}
   if(e.type==='judge.action'){J.actions.push(e);return}
   if(e.type==='feedback'){S.feedback.push(e);return}
-  const AM={'analysis.behaviour':'behaviour','analysis.flag':'flags','analysis.hack':'hacks','analysis.align':'align','judge.claim':'claims','judge.hack_final':'hackFinal','judge.verdict_override':'override','judge.root_agreement':'rootAgree','judge.conflict':'conflicts','policy.reward':'rewards','usage':'usage','evolve.result':'evolve','fork.result':'fork','analysis.longrun':'longrun'};
+  const AM={'analysis.behaviour':'behaviour','analysis.flag':'flags','analysis.hack':'hacks','analysis.align':'align','judge.claim':'claims','judge.hack_final':'hackFinal','judge.verdict_override':'override','judge.root_agreement':'rootAgree','judge.conflict':'conflicts','policy.reward':'rewards','usage':'usage','evolve.result':'evolve','fork.result':'fork','analysis.longrun':'longrun','memory.context':'memctx','context.tokens':'ctxtok'};
   if(AM[e.type]){S.A[AM[e.type]].push(e);if(e.type!=='usage')return}
   const s=e.span_id&&S.spans.get(e.span_id);
   if(e.type==='judge.raw'){if(s)s.answerId=e.id;return}
@@ -411,15 +431,15 @@ function ingest(e){
   if(e.type==='tool.started'){const l={tool:e.tool||'tool',item:e.item_id,t:e.timestamp,passed:null,dur:null,detail:e.detail||'',inId:e.chars?e.id:null,outId:null,eid:e.id};s.tools.push(l);S.byEvent.set(e.id,{span:s.id,tool:l})}
   else if(e.type==='tool.completed'){
     const l=s.tools.find(l=>l.passed===null&&(e.item_id?l.item===e.item_id:l.tool===(e.tool||'tool')));
-    if(l){l.passed=e.passed;l.dur=(e.timestamp-l.t)*1000;l.outId=e.chars?e.id:null}
+    if(l){l.passed=e.passed;l.dur=(e.timestamp-l.t)*1000;l.outId=e.chars?e.id:null;l.outChars=e.chars||0}
     else s.tools.push({tool:e.tool||'tool',t:e.timestamp,passed:e.passed,dur:0,detail:'',outId:e.chars?e.id:null});
   }
   else if(e.type==='reasoning'){s.reasoning.push({t:e.timestamp,id:e.id,chars:e.chars||0});S.byEvent.set(e.id,{span:s.id,reason:e.id})}
-  else if(e.type==='lessons.applied'){s.lessons=e.count;if(e.chars)s.guidanceId=e.id}
+  else if(e.type==='lessons.applied'){s.lessons=e.count;s.lessonChars=e.chars||0;if(e.chars)s.guidanceId=e.id}
   else if(e.type==='evaluation')s.evals.push(e);
   else if(e.type==='approval.resolved'&&/declin/.test(e.status||''))s.tools.push({tool:'approval:'+(e.tool||e.method||''),t:e.timestamp,passed:false,dur:0,detail:'declined',declined:true});
-  else if(e.type==='answer'||(e.type==='agent.completed'&&e.chars))s.answerId=e.id;
-  else if(e.type==='prompt')s.promptId=e.id;
+  else if(e.type==='answer'||(e.type==='agent.completed'&&e.chars)){s.answerId=e.id;s.answerChars=e.chars||0}
+  else if(e.type==='prompt'){s.promptId=e.id;s.promptChars=e.chars||0}
 }
 /* ================= stats ================= */
 const median=a=>{if(!a.length)return null;const b=[...a].sort((x,y)=>x-y),m=b.length>>1;return b.length%2?b[m]:(b[m-1]+b[m])/2};
@@ -522,7 +542,7 @@ const drawer=document.getElementById('drawer');
 document.getElementById('dClose').onclick=()=>drawer.classList.remove('open');
 document.addEventListener('keydown',e=>{if(e.key==='Escape')drawer.classList.remove('open')});
 function openDrawer(title,html){document.getElementById('dTitle').innerHTML=title;document.getElementById('dBody').innerHTML=html;drawer.classList.add('open');hydrate()}
-const sessQ=()=>S.session&&!S.live?'&session='+encodeURIComponent(S.session):'';
+const sessQ=()=>S.session&&S.session!==current?'&session='+encodeURIComponent(S.session):'';  // stored sessions stream too, so ask by session id whenever it is not this server's own
 async function fetchPayload(id){try{const r=await fetch('/payload?id='+id+sessQ());return r.ok?await r.json():null}catch(e){return null}}
 function payloadSlot(id,label){return id?`<div class="pl" data-pl="${id}"><button class="link">${esc(label)}</button></div>`:''}
 function hydrate(){
@@ -1505,10 +1525,171 @@ function renderLongTerm(){
   h+=`<div class="lt-card"><h4>When they work (local time)</h4>${g}</div><div class="lt-card"><h4>Long-run habits</h4><div class="lt-meta" style="font-size:12.5px;line-height:1.7">${hab||'Long-run readings start with this version; older turns have none.'}</div></div></div>`;
   host.innerHTML=h;
 }
-function renderTurnReading(D){
+
+/* ================= reasoning, memory & context =================
+   Per model, one card:
+   - stat tiles: reasoning volume, thought-before-action share, failures it reasoned about, re-reads, peak context
+   - step strip: reasoning bars above the line (height = length), actions on it, memory arcs below joining repeat
+     touches of the same file or search (amber = re-read with nothing changed in between, orange = read then edit,
+     green = edit then check), the working set as a thin line
+   - context window: what the model has been given or produced so far, stacked by source (instructions and
+     lessons, carried conversation, tool output, its own reasoning), estimated as characters / 4. When the provider
+     reported usage, its input-token count is shown beside the estimate, which ignores system prompts and compaction.
+   - long-term memory: playbook lessons and earlier turns carried in. */
+const CTX_C={instr:'#9577c6',conv:'#8a919b',tools:'#3f91b8',think:'#c9a227'},CTX_L={instr:'request, attached context + lessons',conv:'carried conversation',tools:'tool output read',think:'own reasoning'};
+function memKey(l){const a=atype(l),d=unwrapCmd(l.detail);
+  if(a==='FILE_READ'||a==='FILE_WRITE'){const m=d.match(/[\w./-]+\.\w+/g);return m?m.at(-1).split('/').pop().toLowerCase():null}
+  if(a==='SEARCH'){const tok=d.replace(/^(git grep|rg|grep|egrep|find|fd|ls|ag|tree)\b/,'').split(/\s+/).filter(x=>x&&!x.startsWith('-'));return tok.length?'⌕ '+tok[0].replace(/['"]/g,'').toLowerCase():null}
+  return null}
+function reasonMemory(r,t,hist,md={}){
+  const seq=[...r.tools.map((l,i)=>({k:'act',l,i,t:l.t})),...r.reasoning.map(q=>({k:'think',q,t:q.t}))].sort((a,b)=>a.t-b.t||(a.k==='think'?-1:1));
+  const acts=seq.filter(x=>x.k==='act');let thoughtBefore=0;seq.forEach((x,j)=>{if(x.k==='act'&&j&&seq[j-1].k==='think')thoughtBefore++});
+  const fails=[];seq.forEach((x,j)=>{if(x.k==='act'&&x.l.passed===false){const nxt=seq.slice(j+1).find(y=>y.k==='act');const between=seq.slice(j+1,nxt?seq.indexOf(nxt):seq.length).some(y=>y.k==='think');fails.push({j,diag:between,last:!nxt})}});
+  const last={},arcs=[],distinct=new Set(),ws=[];
+  seq.forEach((x,j)=>{if(x.k==='act'){const key=memKey(x.l),a=atype(x.l);
+      if(key){distinct.add(key);if(last[key]){const pv=last[key];arcs.push({from:pv.j,to:j,key,kind:a==='FILE_WRITE'?'edit':pv.a==='FILE_WRITE'?'verify':'forgot',gap:j-pv.j})}last[key]={j,a}}}
+    ws.push(distinct.size)});
+  const forgot=arcs.filter(a=>a.kind==='forgot');
+  // context: cumulative characters by source, one point per step
+  const turnSpan=S.spans.get(t.id),instr=(turnSpan?.promptChars||0)+(r.s.lessonChars||0)+(md.context_chars||0),conv=md.history_chars!=null?md.history_chars:hist*1200;  // measured when recorded; older turns: ~1.2k chars per carried turn
+  let tools=0,think=0;const ctx=seq.map(x=>{if(x.k==='act')tools+=x.l.outChars||0;else think+=x.q.chars||0;return {instr,conv,tools,think}});
+  const big=r.tools.filter(l=>l.outChars).sort((a,b)=>b.outChars-a.outChars).slice(0,3);
+  const usage=S.A.usage.filter(e=>e.span_id===r.id).at(-1)?.data;
+  const meas=S.A.ctxtok.filter(e=>e.span_id===r.id).sort((a,b)=>a.timestamp-b.timestamp);
+  const measured=meas.length?seq.map(x=>{let v=null;for(const e of meas){if(e.timestamp<=x.t+1)v=e.count;else break}return v==null?null:v*4}):null;
+  return {measured,seq,acts:acts.length,thinks:seq.length-acts.length,chars:d3.sum(r.reasoning,q=>q.chars||0),thoughtBefore,fails,arcs,distinct:distinct.size,forgot,ws,
+    medGap:forgot.length?median(forgot.map(a=>a.gap)):null,ctx,big,usage,instr,conv};
+}
+const tk=c=>{const v=c/4;return v>=1000?(v/1000).toFixed(v>=10000?0:1)+'k':Math.round(v)+''};
+function renderReasonMem(t){
+  const host=document.getElementById('reasonMem');
+  const runs=t?t.runs.filter(r=>r.role!=='synthesis'&&(r.tools.length||r.reasoning.length||r.s.answerId)):[];
+  if(!runs.length){host.innerHTML='<div class="empty">Reasoning, memory and context appear once a model takes steps or answers.</div>';return}
+  const mctx=S.A.memctx.filter(e=>e.span_id===t.id).at(-1),hist=mctx?mctx.count||0:0,mdata=(mctx&&mctx.data)||{};
+  const cardW=runs.length>1&&host.clientWidth>=1100?(host.clientWidth-14)/2:host.clientWidth;
+  host.innerHTML=`<div class="rm-grid${runs.length>1&&host.clientWidth>=1100?' two':''}">`+runs.map(r=>{
+    const chat=!r.tools.length,M=reasonMemory(r,t,hist,mdata),c=`var(--${P.includes(r.provider)?r.provider:'judge'})`,n=Math.max(1,M.seq.length);
+    const W=Math.max(420,cardW-34),L=64,R=r.s.answerId?30:10,step=Math.max(2,Math.min(chat?60:999,(W-L-R)/n)),w=L+R+step*n,X=j=>L+step*(j+.5),maxC=d3.max(r.reasoning,q=>q.chars||0)||1;
+    const fl=M.fails.filter(f=>!f.last),diag=fl.filter(f=>f.diag).length,peak=M.ctx.length?(({instr,conv,tools,think})=>instr+conv+tools+think)(M.ctx.at(-1)):0;
+    const tiles=chat?[[M.thinks,'thoughts',`${M.chars.toLocaleString()} characters of reasoning`],['≈'+tk(M.chars),'reasoning tokens','own reasoning, estimated as characters / 4'],['≈'+tk(r.s.answerChars||0),'answer tokens','length of the answer it returned'],[hist,'turns remembered','earlier turns of conversation carried in'],['≈'+tk(peak),'context tokens','request + carried conversation + lessons + reasoning']]:[[M.thinks,'thoughts',`${M.chars.toLocaleString()} characters of reasoning`],[M.acts?pct(M.thoughtBefore/M.acts):'–','think before acting',`${M.thoughtBefore} of ${M.acts} actions came right after a thought`],
+      [fl.length?`${diag}/${fl.length}`:'–','failures reasoned about',fl.length?'failures followed by reasoning before the next action':'no failures before the last step'],
+      [M.forgot.length,'re-reads, no change',M.forgot.length?`median ${M.medGap} steps after the first read`:'nothing re-read without a change in between'],
+      [M.measured&&M.measured.some(v=>v!=null)?tk(d3.max(M.measured)):'≈'+tk(peak),'context tokens',M.measured&&M.measured.some(v=>v!=null)?'peak input size measured on a model call':M.usage&&M.usage.input_tokens?`provider reported ${tk((M.usage.input_tokens+(M.usage.cache_read_input_tokens||0))*4)} input tokens`:'estimated as characters / 4']];
+    // --- step strip
+    const mid=62,H=128;let s=`<svg width="${w}" height="${H}" role="img" aria-label="${esc(NAME[r.provider])} reasoning, actions and memory">`;
+    s+=`<text x="0" y="24" class="rm-lab">reasoning</text><text x="0" y="${mid+3}" class="rm-lab">actions</text><text x="0" y="${mid+40}" class="rm-lab">memory</text>`;
+    s+=`<line x1="${L}" x2="${w-R}" y1="${mid}" y2="${mid}" stroke="var(--line)"/>`;
+    const wmax=Math.max(1,M.distinct),wy=v=>H-4-v/wmax*20;
+    s+=`<path d="${d3.line().curve(d3.curveStepAfter)(M.ws.map((v,j)=>[X(j),wy(v)]))}" fill="none" stroke="var(--text-2)" stroke-width="1" opacity=".45"><title>working set: ${M.distinct} distinct files and searches</title></path>`;
+    M.arcs.forEach(a=>{const x1=X(a.from),x2=X(a.to),hh=Math.min(30,5+Math.sqrt(a.gap)*5),col=a.kind==='forgot'?'var(--warn)':a.kind==='verify'?'#39a183':'#de8746';
+      s+=`<path d="M${x1},${mid+6} Q${(x1+x2)/2},${mid+6+hh*1.5} ${x2},${mid+6}" fill="none" stroke="${col}" stroke-width="${a.kind==='forgot'?2:1.3}" opacity=".85"><title>${esc(a.key)}: ${a.kind==='forgot'?'re-read with nothing changed in between':a.kind==='verify'?'edited, then checked':'read, then edited'} · ${a.gap} steps apart</title></path>`});
+    M.seq.forEach((x,j)=>{const xx=X(j),bw=Math.max(2,Math.min(10,step*.7));
+      if(x.k==='think'){const hh=5+38*Math.sqrt((x.q.chars||0)/maxC);s+=`<g data-think="${r.id}|${x.q.id}" class="rm-hit"><rect x="${xx-bw/2}" y="${mid-5-hh}" width="${bw}" height="${hh}" rx="2" fill="${CTX_C.think}"/><title>reasoning · ${x.q.chars||0} characters (click to read)</title></g>`}
+      else{const l=x.l,col=l.passed===false?'var(--critical)':(LAB_COLORS[phaseOf(l)]||'var(--judge)');
+        s+=`<g data-gotool="${r.id}:${x.i}" class="rm-hit"><rect x="${xx-bw/2}" y="${mid-5}" width="${bw}" height="10" rx="2.5" fill="${col}"/><title>${esc(short(l.tool))} ${esc(l.detail||'')}${l.passed===false?' · failed':''}${l.outChars?' · '+tk(l.outChars)+' tokens of output':''}</title></g>`}});
+    if(r.s.answerId){const ax=w-R-4;s+=`<g data-goto-run="${r.id}" class="rm-hit"><rect x="${ax-7}" y="${mid-7}" width="14" height="14" rx="3" fill="var(--model)"/><text x="${ax}" y="${mid+24}" text-anchor="middle" class="rm-lab">answer</text><title>final answer · ≈${tk(r.s.answerChars||0)} tokens</title></g>`}
+    fl.forEach(f=>{s+=`<g><circle cx="${X(f.j)}" cy="${mid-17}" r="6.5" fill="${f.diag?'var(--good)':'var(--critical)'}"/><text x="${X(f.j)}" y="${mid-13.5}" text-anchor="middle" style="font-size:9px;fill:#fff;font-weight:700">${f.diag?'↺':'!'}</text><title>${f.diag?'failure, then it reasoned before acting again':'failure, and it acted again without reasoning'}</title></g>`});
+    s+='</svg>';
+    // --- context window
+    const CH=104,cm={l:L,r:R,t:6,b:16},keys=['instr','conv','tools','think'],stack=d3.stack().keys(keys)(M.ctx.length?M.ctx:[{instr:0,conv:0,tools:0,think:0}]);
+    const ymax=Math.max(1,peak,M.measured?d3.max(M.measured)||0:0,M.usage&&M.usage.input_tokens?(M.usage.input_tokens+(M.usage.cache_read_input_tokens||0))*4:0);
+    const y=d3.scaleLinear().domain([0,ymax]).nice(3).range([CH-cm.b,cm.t]);
+    let cs=`<svg width="${w}" height="${CH}" role="img" aria-label="${esc(NAME[r.provider])} context window estimate">`;
+    cs+=`<text x="0" y="14" class="rm-lab">context</text><text x="0" y="27" class="rm-lab" style="opacity:.7">≈ tokens</text>`;
+    y.ticks(3).forEach(v=>{cs+=`<line x1="${L}" x2="${w-R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--grid)"/><text x="${L-4}" y="${y(v)+3}" text-anchor="end" class="rm-lab">${tk(v)}</text>`});
+    stack.forEach(layer=>{cs+=`<path d="${d3.area().curve(d3.curveStepAfter).x((d,j)=>X(j)).y0(d=>y(d[0])).y1(d=>y(d[1]))(layer)}" fill="${CTX_C[layer.key]}" opacity=".78"><title>${CTX_L[layer.key]}: ≈${tk(layer.at(-1)[1]-layer.at(-1)[0])} tokens by the end</title></path>`});
+    if(M.measured&&M.measured.some(v=>v!=null)){cs+=`<path d="${d3.line().defined(v=>v!=null).curve(d3.curveStepAfter).x((v,j)=>X(j)).y(v=>y(v))(M.measured)}" fill="none" stroke="var(--text)" stroke-width="2"><title>measured context: the model's input size on each call, as the provider reported it (≈${tk(d3.max(M.measured))} tokens at most)</title></path>`}
+    else if(M.usage&&M.usage.input_tokens){const u=(M.usage.input_tokens+(M.usage.cache_read_input_tokens||0))*4;cs+=`<line x1="${L}" x2="${w-R}" y1="${y(u)}" y2="${y(u)}" stroke="var(--text)" stroke-dasharray="4 3"/><text x="${w-R}" y="${y(u)-4}" text-anchor="end" class="rm-lab">provider-reported input ${tk(u)}</text>`}
+    M.big.forEach(l=>{const j=M.seq.findIndex(x=>x.k==='act'&&x.l===l);if(j<0)return;cs+=`<g data-gotool="${r.id}:${r.tools.indexOf(l)}" class="rm-hit"><circle cx="${X(j)}" cy="${y(d3.sum(keys,k=>M.ctx[j][k]))}" r="4" fill="var(--panel)" stroke="var(--text)" stroke-width="1.5"/><title>large output: ${esc(short(l.tool))} ${esc(l.detail||'')} · ≈${tk(l.outChars)} tokens</title></g>`});
+    cs+='</svg>';
+    const legend=keys.map(k=>`<span><i style="background:${CTX_C[k]}"></i>${CTX_L[k]}</span>`).join('')+`<span><i style="border:1.5px solid var(--text);border-radius:50%;width:8px;height:8px"></i>largest outputs</span>`+(M.measured?`<span><i style="background:var(--text);height:2px"></i>measured context (provider)</span>`:'');
+    const top=M.big.length?`Largest contributors: ${M.big.map(l=>`<button class="vchip" data-gotool="${r.id}:${r.tools.indexOf(l)}">${esc(short(l.tool))} ${esc((l.detail||'').slice(0,28))} · ≈${tk(l.outChars)}</button>`).join(' ')}`:'';
+    const lessons=r.s.lessons||0;
+    const mem=`<div class="rm-mem"><b>Long-term memory carried in</b> ${lessons?`<button class="vchip" data-guidance="${r.id}">${lessons} playbook lesson${lessons===1?'':'s'}</button>`:'<span class="muted">no playbook lessons</span>'} · ${hist?`${hist} earlier turn${hist===1?'':'s'} of conversation`:'<span class="muted">no earlier turns</span>'}</div>`;
+    return `<article class="rm-card" style="--model:${c}"><div class="rm-head"><b>${NAME[r.provider]}</b> <span class="muted">${esc(r.role)}${r.s.model?' · '+esc(r.s.model):''}${chat?' · chat answer':''}</span></div>
+      <div class="rm-tiles">${tiles.map(([v,l,d])=>`<div title="${esc(d)}"><b>${v}</b><span>${l}</span></div>`).join('')}</div>
+      <div class="rm-scroll">${s}</div>
+      <div class="rm-key"><span><i style="background:${CTX_C.think}"></i>thought</span><span><i style="background:#3f91b8"></i>action (by phase)</span><span><i style="background:var(--warn)"></i>re-read, no change</span><span><i style="background:#de8746"></i>read → edit</span><span><i style="background:#39a183"></i>edit → check</span><span><b style="color:var(--good-text)">↺</b> reasoned after failure</span><span><b class="bad">!</b> acted blind</span></div>
+      <div class="rm-scroll" style="margin-top:6px">${cs}</div><div class="rm-key">${legend}</div>
+      ${top?`<div class="rm-top">${top}</div>`:''}${mem}</article>`}).join('')+'</div>';
+}
+document.getElementById('reasonMem').addEventListener('click',e=>{const th=e.target.closest('[data-think]');if(th){const [r,q]=th.dataset.think.split('|');showRun(r,+q);return}
+  const g=e.target.closest('[data-gotool]');if(g){const [r,i]=g.dataset.gotool.split(':');showTool(r,+i);return}
+  const gr=e.target.closest('[data-goto-run]');if(gr){showRun(gr.dataset.gotoRun);return}
+  const gd=e.target.closest('[data-guidance]');if(gd)showRun(gd.dataset.guidance)});
+
+/* ================= answer attribution =================
+   For a turn with a combined answer: split it into sentences and match each against the candidate answers by
+   word-trigram containment. >= 0.25 overlap counts as a source; both sources within 60% of each other = both;
+   neither = new wording from the synthesis step. Shares are weighted by sentence length. */
+const ATT={cache:new Map(),pending:new Set()};
+const ATT_C={codex:'var(--codex)',claude:'var(--claude)',both:'#8f7bd0',new:'var(--base)'},ATT_L={codex:'Codex',claude:'Claude',both:'both',new:'new wording'};
+function shingles(text){const w=String(text).toLowerCase().match(/[a-z0-9_]+/g)||[];const out=new Set();for(let i=0;i+2<w.length;i++)out.add(w[i]+' '+w[i+1]+' '+w[i+2]);if(w.length&&w.length<3)out.add(w.join(' '));return out}
+function attribute(final,cands){
+  const C={};for(const p in cands)C[p]=shingles(cands[p]);
+  const sents=String(final).replace(/\r/g,'').split(/(?<=[.!?])\s+|\n+/).map(x=>x.trim()).filter(x=>x.length>2);
+  return sents.map(text=>{const S=shingles(text),sc={};for(const p in C){let k=0;S.forEach(g=>{if(C[p].has(g))k++});sc[p]=S.size?k/S.size:0}
+    const ps=Object.keys(sc).sort((a,b)=>sc[b]-sc[a]),top=ps[0],second=ps[1];let src='new';
+    if(top&&sc[top]>=.25)src=second&&sc[second]>=.25&&sc[second]>=.6*sc[top]?'both':top;
+    return {text,src,sc}})}
+async function loadAttribution(t){
+  const syn=t.runs.find(r=>r.role==='synthesis'&&r.s.answerId),cands=t.runs.filter(r=>r.role!=='synthesis'&&r.s.answerId&&P.includes(r.provider));
+  if(!syn||!cands.length)return {none:true};
+  const [f,...cs]=await Promise.all([fetchPayload(syn.s.answerId),...cands.map(r=>fetchPayload(r.s.answerId))]);
+  if(!f||f.text==null)return {missing:true};
+  const texts={};cands.forEach((r,i)=>{if(cs[i]&&cs[i].text)texts[r.provider]=(texts[r.provider]||'')+'\n'+cs[i].text});
+  return {sents:attribute(f.text,texts),synth:syn.provider,roles:Object.fromEntries(cands.map(r=>[r.provider,r.role]))};
+}
+function renderAttribution(t){
+  const host=document.getElementById('attrib');
+  if(!t){host.innerHTML='';return}
+  const key=t.id+'|'+t.runs.map(r=>r.s.answerId||'').join(',');const A=ATT.cache.get(key);
+  if(!A){if(!ATT.pending.has(key)){ATT.pending.add(key);loadAttribution(t).then(v=>{ATT.cache.set(key,v);ATT.pending.delete(key);schedule()}).catch(()=>{ATT.cache.set(key,{missing:true});ATT.pending.delete(key)})}
+    host.innerHTML='<div class="empty">Reading the answers…</div>';return}
+  if(A.none){host.innerHTML='<div class="empty">No combined answer on this turn (one model answered, or the answers were shown separately).</div>';return}
+  if(A.missing||!A.sents.length){host.innerHTML='<div class="empty">The answer text is not stored for this turn, so it cannot be attributed.</div>';return}
+  const tot=d3.sum(A.sents,x=>x.text.length)||1,share={};A.sents.forEach(x=>share[x.src]=(share[x.src]||0)+x.text.length/tot);
+  const order=['claude','both','codex','new'].filter(k=>share[k]);
+  let h=`<div class="at-card"><div class="at-bar">${order.map(k=>`<span style="width:${(100*share[k]).toFixed(1)}%;background:${ATT_C[k]}" title="${ATT_L[k]}: ${pct(share[k])}"></span>`).join('')}</div>`;
+  h+=`<div class="rm-key" style="margin-top:6px">${order.map(k=>`<span><i style="background:${ATT_C[k]}"></i>${ATT_L[k]} <b>${pct(share[k])}</b></span>`).join('')}<span class="muted">· combined by ${NAME[A.synth]||A.synth} · ${A.sents.length} sentences</span></div>`;
+  h+=`<div class="at-list">${A.sents.slice(0,40).map(x=>`<p style="border-color:${ATT_C[x.src]}" title="${esc(Object.entries(x.sc).map(([p,v])=>NAME[p]+' '+pct(v)).join(' · '))}"><span class="at-tag" style="color:${x.src==='new'?'var(--text-2)':ATT_C[x.src]}">${ATT_L[x.src]}</span>${esc(x.text)}</p>`).join('')}${A.sents.length>40?`<p class="muted">… ${A.sents.length-40} more sentences</p>`:''}</div></div>`;
+  host.innerHTML=h;
+}
+/* ================= conversation memory (chat sessions) ================= */
+function renderConvMem(D){
+  const host=document.getElementById('convMem'),T=D.allTurns.slice(-24);
+  if(T.length<2){host.innerHTML='<div class="empty">Conversation memory appears from the second turn of a chat session.</div>';return}
+  const idx=new Map(D.allTurns.map((t,i)=>[t.id,i])),cell=Math.max(10,Math.min(18,(host.clientWidth-260)/T.length)),L=56,top=8;
+  const rows=T.map(t=>{const m=S.A.memctx.filter(e=>e.span_id===t.id).at(-1),d=(m&&m.data)||{},sp=S.spans.get(t.id);
+    return {t,carried:m?m.count||0:null,chars:(d.history_chars||0)+(d.context_chars||0)+(sp?.promptChars||0),hist:d.history_chars,neg:S.feedback.some(f=>f.turn_id===t.id&&f.verdict==='negative')}});
+  const maxC=d3.max(rows,r=>r.chars)||1,W=L+cell*T.length+16+170,H=top+cell*T.length+30,x0=L+cell*T.length+16;
+  let s=`<svg width="${W}" height="${H}" role="img" aria-label="Conversation memory matrix">`;
+  T.forEach((t,j)=>{if(j%Math.ceil(T.length/12)===0)s+=`<text x="${L+cell*j+cell/2}" y="${H-12}" text-anchor="middle" class="rm-lab">T${t.no}</text>`});
+  s+=`<text x="${L}" y="${H-1}" class="rm-lab">earlier turns it remembers →</text>`;
+  rows.forEach((R,i)=>{const y=top+cell*i,gi=idx.get(R.t.id);
+    s+=`<g data-turn-row="${R.t.id}" class="cm-row"><rect class="cm-bg" x="0" y="${y}" width="${W}" height="${cell}" fill="transparent"/><text x="${L-6}" y="${y+cell*.7}" text-anchor="end" class="rm-lab">T${R.t.no}${R.neg?' ✗':''}</text>`;
+    T.forEach((u,j)=>{const gj=idx.get(u.id);let fill='none',op=1,stroke='var(--grid)';
+      if(gj===gi){fill=P.includes(R.t.winner)?`var(--${R.t.winner})`:'var(--text-2)';op=.9}
+      else if(gj<gi&&R.carried!=null&&gj>=gi-R.carried){fill='var(--text)';op=.18+.5*(1-(gi-gj)/Math.max(1,R.carried))}
+      s+=`<rect x="${L+cell*j+1}" y="${y+1}" width="${cell-2}" height="${cell-2}" rx="2" fill="${fill}" opacity="${op}" stroke="${fill==='none'?stroke:'none'}"/>`});
+    const bw=150*R.chars/maxC;s+=`<rect x="${x0}" y="${y+2}" width="${Math.max(1,bw)}" height="${cell-4}" rx="2" fill="#8a919b" opacity=".7"/><text x="${x0+bw+4}" y="${y+cell*.7}" class="rm-lab">${R.carried==null?'not recorded':'≈'+tk(R.chars)+(R.hist==null?' (est.)':'')}</text>`;
+    s+=`<title>Turn ${R.t.no}${R.carried!=null?`: carried ${R.carried} earlier turn${R.carried===1?'':'s'}, ≈${tk(R.chars)} tokens in`:': not recorded'}${R.neg?' · you corrected this turn':''}</title></g>`});
+  s+='</svg>';
+  const rec=rows.filter(r=>r.carried!=null),maxCar=d3.max(rec,r=>r.carried)||0,drop=rec.find((r,i)=>i&&r.carried<=rec[i-1].carried&&rec[i-1].carried===maxCar&&maxCar>0);
+  const why=rec.length?`Each turn carried up to ${maxCar} earlier turn${maxCar===1?'':'s'}${drop?`; from turn ${drop.t.no} the oldest turns start falling out of memory (Duo keeps the last 10)`:''}. Biggest carried context: ≈${tk(d3.max(rec,r=>r.chars)||0)} tokens.${rows.some(r=>r.neg)?' ✗ marks turns you corrected.':''}`:'Turns from before this version do not record what they carried.';
+  host.innerHTML=`<div class="at-card"><div class="rm-scroll">${s}</div><div class="rm-key"><span><i style="background:var(--text);opacity:.5"></i>earlier turn still in context (darker = more recent)</span><span><i style="background:var(--claude)"></i>the turn itself (colour = winner)</span><span><i style="background:#8a919b"></i>carried in, ≈ tokens</span></div><div class="lr-why" style="margin-top:6px">${esc(why)}</div></div>`;
+}
+document.getElementById('convMem').addEventListener('click',e=>{const g=e.target.closest('[data-turn-row]');if(!g)return;TREE.follow=false;TREE.turn=g.dataset.turnRow;document.getElementById('treeFollow').setAttribute('aria-pressed','false');schedule();document.getElementById('evalTreeSec').scrollIntoView({behavior:'smooth'})});
+function renderTitle(D){
+  const ps=[...new Set(D.allRuns.filter(r=>r.role!=='synthesis'&&P.includes(r.provider)).map(r=>r.provider))],el=document.getElementById('title');
+  const html=ps.length===1?`Duo <span class="muted" style="font-weight:400">·</span> <span><i class="sw" style="background:var(--${ps[0]})"></i> ${NAME[ps[0]]}</span> <span class="muted" style="font-weight:400">single-agent session</span>`
+    :'Duo <span class="muted" style="font-weight:400">·</span> <span><i class="sw" style="background:var(--codex)"></i> Codex</span> <span class="muted" style="font-weight:400">vs</span> <span><i class="sw" style="background:var(--claude)"></i> Claude</span>';
+  if(el.dataset.v!==html){el.dataset.v=html;el.innerHTML=html}
+}
+function renderTurnReading(D){renderTitle(D);
   const t=D.turns.find(t=>t.id===TREE.turn),card=document.getElementById('verdictCard'),host=document.getElementById('timeWent');
-  if(!t){card.innerHTML='';renderLongRun(null);if(!LT)fetchLongterm();else renderLongTerm();host.innerHTML='<div class="empty">Time budgets appear once a turn finishes.</div>';return}
-  card.innerHTML=cardHtml(verdictCard(t));renderLongRun(t);if(!LT||Date.now()-LT_AT>30000){LT_AT=Date.now();fetchLongterm()}else renderLongTerm();
+  if(!t){card.innerHTML='';renderLongRun(null);renderReasonMem(null);renderAttribution(null);renderConvMem(D);if(!LT)fetchLongterm();else renderLongTerm();host.innerHTML='<div class="empty">Time budgets appear once a turn finishes.</div>';return}
+  card.innerHTML=cardHtml(verdictCard(t));renderLongRun(t);renderReasonMem(t);renderAttribution(t);renderConvMem(D);if(!LT||Date.now()-LT_AT>30000){LT_AT=Date.now();fetchLongterm()}else renderLongTerm();
   const B=P.map(p=>({p,b:timeBudget(t.by[p].filter(r=>r.role!=='synthesis'&&!r.running))})).filter(x=>x.b.total>0);
   if(!B.length){host.innerHTML='<div class="empty">No finished runs in this turn yet.</div>';return}
   const max=d3.max(B,x=>x.b.total),w=v=>(100*v/max).toFixed(2)+'%',sec=v=>dur(v*1000);
@@ -1530,7 +1711,9 @@ function renderEvalTree(D){
   const t=turns.find(t=>t.id===(TREE.follow?turns.at(-1)?.id:TREE.turn))||turns.at(-1);
   if(!t){document.getElementById('railSummary').innerHTML='';host.innerHTML='<div class="empty" style="padding:100px 20px">Execution tracks start with your first task.<br>Agent bars and tool branches appear here as Duo works.</div>';document.getElementById('treePosition').textContent='Waiting for a task';return}
   TREE.turn=t.id;sel.value=t.id;
-  document.getElementById('railSummary').innerHTML=P.map(p=>{const rs=t.by[p],tools=rs.flatMap(r=>r.tools),fail=tools.filter(l=>l.passed===false).length,j=t.judge[p];
+  const present=P.filter(p=>t.by[p].some(r=>r.role!=='synthesis')),solo=present.length===1;
+  document.getElementById('evalTreeSec').classList.toggle('solo',solo);document.getElementById('railSummary').classList.toggle('one',solo);
+  document.getElementById('railSummary').innerHTML=(solo?present:P).map(p=>{const rs=t.by[p],tools=rs.flatMap(r=>r.tools),fail=tools.filter(l=>l.passed===false).length,j=t.judge[p];
     const runMs=d3.sum(rs,r=>r.dur),toolMs=Math.min(runMs,d3.sum(tools,l=>l.dur||0)),slow=tools.filter(l=>l.dur!=null).sort((a,b)=>b.dur-a.dur)[0];
     // Where the time went: tool time vs the rest of the run (model thinking + orchestration). Tool time is summed, so overlapping calls can overstate it.
     const compo=runMs?`<div class="rail-compo" data-tip="Where the time went: <b>${dur(toolMs)}</b> in tools · <b>${dur(runMs-toolMs)}</b> model thinking"><i style="width:${Math.round(100*toolMs/runMs)}%;background:var(--model)"></i></div><div class="rail-compo-key">${pct(toolMs/runMs)} in tools · ${pct(1-toolMs/runMs)} thinking${slow&&slow.dur>0?` · slowest: ${esc(short(slow.tool))} ${dur(slow.dur)}`:''}</div>`:'';
@@ -1613,7 +1796,8 @@ function treeMarks(t){
   const al=S.A.align.filter(a=>a.turn_id===t.id).at(-1)?.data;
   const div=al&&al.divergence!=null&&al.pairs[al.divergence]?al.pairs[al.divergence]:null;
   const checks=new Map();for(const p in lr)for(const c of lr[p].checks)checks.set(c.ref,c);
-  return {roots,crit,lr,div,checks};
+  const mc=S.A.memctx.filter(e=>e.span_id===t.id).at(-1);
+  return {roots,crit,lr,div,checks,hist:mc?mc.count||0:0};
 }
 function maxLenFor(laneH){return laneH/2-22}
 function renderGrowthTree(t,span,cutoff,host){
@@ -1627,7 +1811,7 @@ function renderGrowthTree(t,span,cutoff,host){
   let lx=w-430;for(const ph of LAB_PHASES){svg.append('circle').attr('cx',lx).attr('cy',h-16).attr('r',4).attr('fill',LAB_COLORS[ph]);svg.append('text').attr('x',lx+8).attr('y',h-12).attr('class','mut').text(ph);lx+=ph.length*7+30}
   svg.append('text').attr('x',lx+6).attr('y',h-12).attr('class','mut').text('✗ failed · ◆ reasoning · ★ winner');
   {let bx=14;const BL=[['progress','✓ progress burst'],['loop','↻ loop'],['failing','! failing burst'],['filler','quiet burst']];for(const [k,l] of BL){svg.append('rect').attr('x',bx).attr('y',h-62).attr('width',14).attr('height',5).attr('rx',2).attr('fill',LR_C[k]);svg.append('text').attr('x',bx+18).attr('y',h-57).attr('class','mut').text(l);bx+=l.length*6.4+34}
-   svg.append('text').attr('x',bx).attr('y',h-57).attr('class','mut').text('● check fruit (big = progress) · ┄ withered = failed or repeated call · ◎ root cause · ▼ look first · ┆ graft = first divergence');}
+   svg.append('text').attr('x',bx).attr('y',h-57).attr('class','mut').text('● check fruit (big = progress) · ┄ withered = failed or repeated call · ◎ root cause · ▼ look first · ┆ graft = first divergence · roots = memory carried in');}
   if(!runs.length){svg.append('text').attr('x',w/2).attr('y',h/2).attr('text-anchor','middle').attr('class','mut').text('Trees grow once the agents start running.');host.replaceChildren(svg.node());return 0}
   // --- shared gap-constricted scale, built from the FULL turn (stable during replay) ---
   const x0=150,W=w-x0-150,relDur=r=>Math.max(.001,r.end-r.start);
@@ -1669,7 +1853,13 @@ function renderGrowthTree(t,span,cutoff,host){
     trunk.append('path').attr('d',area(pts)).attr('fill',c).attr('opacity',.82);
     trunk.append('path').attr('d',area.y0(d=>ty-d.th*.35).y1(d=>ty-d.th*.05)(pts)).attr('fill','#fff').attr('opacity',.25);
     area.y0(d=>ty-d.th).y1(d=>ty+d.th);
-    trunk.append('path').attr('d',`M${x0},${ty-3} q-8,-8 -10,-16 M${x0},${ty+3} q-8,8 -10,16 M${x0},${ty} q-12,0 -18,4`).attr('stroke',c).attr('fill','none').attr('stroke-width',1.5).attr('opacity',.5);
+    {const nl=r.s.lessons||0,hist=M.hist,nRoots=nl+(hist?1:0);
+     const rg=target(svg.append('g'),nRoots?`Roots = long-term memory carried in: ${nl} playbook lesson${nl===1?'':'s'}${hist?` and ${hist} earlier turn${hist===1?'':'s'} of conversation`:''}`:'No long-term memory carried in: no lessons, no earlier turns',()=>showRun(r.id));
+     if(!nRoots)rg.append('path').attr('d',`M${x0},${ty} q-8,0 -12,3`).attr('stroke',c).attr('fill','none').attr('stroke-width',1.2).attr('opacity',.35);
+     for(let k=0;k<nRoots;k++){const isHist=hist&&k===nRoots-1,a=(k-(nRoots-1)/2)*Math.min(14,40/Math.max(1,nRoots)),len=16+(isHist?8:4)+((k*7)%3)*3;
+       rg.append('path').attr('d',`M${x0},${ty} q${-len*.5},${a*.3} ${-len},${a}`).attr('stroke',isHist?'var(--text-2)':c).attr('fill','none').attr('stroke-width',isHist?2.2:1.6).attr('opacity',.7);
+       rg.append('circle').attr('cx',x0-len).attr('cy',ty+a).attr('r',2.2).attr('fill',isHist?'var(--text-2)':c)}
+     if(nRoots)svg.append('text').attr('x',x0-26).attr('y',ty+26).attr('text-anchor','end').attr('class','mut').text(`memory: ${nl} lesson${nl===1?'':'s'}${hist?' · '+hist+' turns':''}`)}
     const R=M.lr[p],rel=a=>Math.max(0,Math.min(finRel,a-r.start)),mine=(a,b)=>b>=r.start-1&&a<=r.end+1&&a<=cutoff;
     if(R){
       for(const b of R.bursts.filter(b=>mine(b.start,b.end))){const xa=X(rel(b.start)),xb=Math.max(xa+3,X(rel(b.end)));
@@ -1731,7 +1921,7 @@ function renderGrowthTree(t,span,cutoff,host){
     if(pa&&pb){const g=target(svg.append('g'),'First divergence: the runs stop doing the same thing here',()=>openRef(a));
       g.append('path').attr('d',`M${pa.x},${pa.y+14} C${pa.x},${(pa.y+pb.y)/2} ${pb.x},${(pa.y+pb.y)/2} ${pb.x},${pb.y-14}`).attr('fill','none').attr('stroke','var(--critical)').attr('stroke-width',1.4).attr('stroke-dasharray','4 4').attr('opacity',.8);
       g.append('text').attr('x',(pa.x+pb.x)/2+6).attr('y',(pa.y+pb.y)/2).attr('class','mut').text('first divergence')}}
-  for(const p of P)if(!ordered.some(r=>r.provider===p))svg.append('text').attr('x',w/2).attr('y',h-62).attr('text-anchor','middle').attr('class','mut').text(NAME[p]+' made no run on this turn');
+  if(ordered.some(r=>P.includes(r.provider)&&r.provider!==ordered[0].provider))for(const p of P)if(!ordered.some(r=>r.provider===p))svg.append('text').attr('x',w/2).attr('y',h-62).attr('text-anchor','middle').attr('class','mut').text(NAME[p]+' made no run on this turn');
   host.replaceChildren(svg.node());
   return visible;
 }
@@ -2002,7 +2192,7 @@ let current=null,DEFAULT_SESSION=null;
 async function sessions(){
   const sel=document.getElementById('session');
   try{const r=await (await fetch('/sessions')).json();current=r.current;
-    const fmt=s=>new Date(s.started*1000).toLocaleString([], {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})+` · ${s.turns} turns`;
+    const fmt=s=>new Date(s.started*1000).toLocaleString([], {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})+` · ${s.turns} turns`+(/^(chat|Claude Code|Codex CLI):/.test(s.cwd||'')?' · '+String(s.cwd).slice(0,48):'');
     sel.innerHTML=`<option value="__follow">Follow latest (live)</option><option value="">This server's session</option>`+r.sessions.filter(s=>s.id!==r.current).map(s=>`<option value="${esc(s.id)}">${esc(fmt(s))}</option>`).join('');
     // the standalone viewer's own session is empty: open the newest session that has turns (still streams live)
     const curTurns=(r.sessions.find(s=>s.id===r.current)||{}).turns||0;const best=r.sessions.find(s=>s.id!==r.current&&s.turns>0);

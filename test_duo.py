@@ -537,4 +537,26 @@ class Tests(unittest.TestCase):
   self.assertFalse([f for f in noise['findings'] if f['metric']=='seconds'])
   few=longterm.insight(recs(lambda i:i)[:5]);self.assertEqual(few['findings'],[])
   self.assertEqual([round(q,3) for q in longterm.bh([0.01,0.04,0.03])],[0.03,0.04,0.04])
+ def test_chat_import_formats(self):
+  import chatimport,tracestore,json as _j
+  claude=[{'name':'Retry design','uuid':'u1','chat_messages':[
+    {'sender':'human','text':'How should I add retries?','created_at':'2026-11-01T10:00:00Z'},
+    {'sender':'assistant','text':'Use exponential backoff.','content':[{'type':'thinking','thinking':'They want retries. Backoff with jitter.'},{'type':'text','text':'Use exponential backoff.'}],'created_at':'2026-11-01T10:00:20Z'},
+    {'sender':'human','text':'And for timeouts?','created_at':'2026-11-01T10:02:00Z'},
+    {'sender':'assistant','text':'Set a per-attempt timeout.','created_at':'2026-11-01T10:02:10Z'}]}]
+  gpt=[{'title':'Caching','current_node':'c','mapping':{'r':{'message':None,'parent':None},'a':{'parent':'r','message':{'author':{'role':'user'},'content':{'content_type':'text','parts':['Cache or not?']},'create_time':1762000000}},
+    'b':{'parent':'a','message':{'author':{'role':'assistant'},'content':{'content_type':'thoughts','thoughts':[{'content':'Consider staleness.'}]},'create_time':1762000005}},
+    'c':{'parent':'b','message':{'author':{'role':'assistant'},'content':{'content_type':'text','parts':['Cache with a TTL.']},'create_time':1762000010,'metadata':{'model_slug':'gpt-x'}}}}}]
+  with tempfile.TemporaryDirectory() as tmp:
+   for name,data,prov in (('c.json',claude,'claude'),('g.json',gpt,'codex')):
+    f=Path(tmp)/name;f.write_text(_j.dumps(data))
+    store=tracestore.TraceStore(Path(tmp)/('db'+name))
+    done=chatimport.import_file(store,f)
+    self.assertEqual(len(done),1);sid=done[0][1]
+    ev=store.snapshot(sid)['events'];kinds=[e['type'] for e in ev]
+    self.assertEqual(kinds.count('prompt'),done[0][2]);self.assertIn('reasoning',kinds);self.assertIn('answer',kinds)
+    self.assertTrue(all(e['provider']==prov for e in ev if e['type']=='answer'))
+    mem=[e for e in ev if e['type']=='memory.context']
+    self.assertEqual([m['count'] for m in mem],list(range(len(mem))))
+   self.assertEqual(len(chatimport.load(Path(tmp)/'c.json')[0][2]),4)
 if __name__=='__main__':unittest.main()
