@@ -157,7 +157,17 @@ section:not(.open){padding-top:9px;padding-bottom:9px}
 .rail-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:16px}
 .rail-summary>div{border:1px solid var(--line);border-left:3px solid var(--model);padding:10px 14px;border-radius:10px;background:var(--panel)}
 .rail-summary b{color:var(--model);font-size:15px}.rail-summary .rail-values{display:flex;gap:8px 18px;flex-wrap:wrap;color:var(--text-2);font-size:12px;margin-top:6px}.rail-values strong{font-weight:600;color:var(--text)}
-@media(max-width:600px){.rail-summary{grid-template-columns:1fr}.focus-view #evalTreeSec{min-height:0}}
+.vcard{margin-top:14px;border:1px solid var(--line);border-left:3px solid var(--text);border-radius:10px;background:var(--panel);padding:10px 14px;display:grid;grid-template-columns:auto 1fr;gap:5px 14px;font-size:13px}
+.vcard:empty{display:none}.vcard .vk{font:700 10.5px/1.9 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.08em;color:var(--muted)}.vcard .vt{min-width:0;overflow-wrap:anywhere}
+.vchip{font:inherit;font-size:11.5px;border:1px solid var(--line);border-radius:5px;padding:0 6px;margin:0 2px;background:var(--surface);color:var(--text);cursor:pointer}.vchip:hover,.vchip:focus{border-color:var(--text)}
+.tw-head{display:flex;gap:6px 12px;align-items:baseline;flex-wrap:wrap;margin-top:18px}.tw-head h3{margin:0;font-size:14px}
+.tw-row{display:grid;grid-template-columns:70px 1fr auto;gap:10px;align-items:center;margin-top:8px;font-size:12px}
+.tw-bar{display:flex;height:16px;border-radius:4px;overflow:hidden;background:var(--grid)}.tw-bar>span{height:100%;min-width:0}
+.tw-hatch{background:repeating-linear-gradient(135deg,var(--c) 0 3px,transparent 3px 6px)}
+.tw-legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:11.5px;color:var(--text-2);margin-top:8px}.tw-legend i{display:inline-block;width:12px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+.tw-tools{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:12px}.tw-tools table{width:100%;font-size:12px}.tw-tools td{padding:2px 4px}.tw-tools tr[data-goto-tool]{cursor:pointer}.tw-tools tr[data-goto-tool]:hover{background:var(--hover)}
+.tw-why{font-size:12px;color:var(--text-2);margin-top:8px;line-height:1.5}
+@media(max-width:600px){.rail-summary{grid-template-columns:1fr}.tw-tools{grid-template-columns:1fr}.focus-view #evalTreeSec{min-height:0}}
 </style>
 </head>
 <body class="focus-view">
@@ -182,6 +192,7 @@ section:not(.open){padding-top:9px;padding-bottom:9px}
   <section class="c12" id="evalTreeSec" data-open="1">
     <h2>Duo · one task, two execution tracks</h2>
     <p class="sub">Long runs stay on a shared timeline. Tool calls split off as railway tracks, with nearby calls clustered until you zoom in.</p>
+    <div id="verdictCard" class="vcard" aria-live="polite"></div>
     <div id="railSummary" class="rail-summary"></div>
     <div class="tree-toolbar">
       <select id="treeTurn" aria-label="Execution timeline turn"></select>
@@ -193,6 +204,8 @@ section:not(.open){padding-top:9px;padding-bottom:9px}
     </div>
     <div id="evalTree" aria-label="Execution railway timeline"></div>
     <div class="tree-caption"><span>━ Task bar</span><span style="color:var(--codex)">● Codex</span><span style="color:var(--claude)">● Claude</span><span>◆ Reasoning</span><span class="ok">✓ Passed</span><span class="bad">✗ Failed</span><span>Branches = tool calls · clustered calls expand with zoom · click for evidence</span></div>
+    <div class="tw-head"><h3>Where the time went</h3><span class="sub">Each bar is a model's run time on one shared scale. Hatched time went to failed or repeated tool calls.</span></div>
+    <div id="timeWent"></div>
   </section>
   <section class="c12" id="labSec" data-open="1"><h2 id="labTitle">Model observatory</h2>
 <div class="lab-top"><div><div class="lab-kicker">TRACES → PATTERNS → EVIDENCE</div><h3>Understand how the models work.</h3><p class="sub">Ten lenses on the same recorded runs. Click a mark to inspect its evidence.</p></div><div class="lab-controls"><select id="labScope" aria-label="Observatory scope"><option value="session">Filtered session</option><option value="turn">Timeline turn</option></select><select id="labProvider" aria-label="Observatory model"><option value="all">Both models</option><option value="codex">Codex</option><option value="claude">Claude</option></select><select id="labArea" aria-label="Tool terrain metric"><option value="duration">Terrain: duration</option><option value="calls">Terrain: calls</option></select></div></div>
@@ -348,7 +361,7 @@ const DIML={correctness:'Correctness',completeness:'Completeness',groundedness:'
 const KIND_L={respond:'Answer',read:'Read',write:'Write'};
 const qs=new URLSearchParams(location.search);
 let S;
-function reset(){S={events:[],maxId:0,started:null,session:'',spans:new Map(),order:[],J:{results:[],scores:[],verdicts:[],agree:[],errors:[],raw:[],steps:[],roots:[],actions:[]},feedback:[],byEvent:new Map(),A:{behaviour:[],flags:[],hacks:[],align:[],claims:[],hackFinal:[],override:[],rootAgree:[],conflicts:[],rewards:[],usage:[],evolve:[]},live:false,stored:false}}
+function reset(){S={events:[],maxId:0,started:null,session:'',spans:new Map(),order:[],J:{results:[],scores:[],verdicts:[],agree:[],errors:[],raw:[],steps:[],roots:[],actions:[]},feedback:[],byEvent:new Map(),A:{behaviour:[],flags:[],hacks:[],align:[],claims:[],hackFinal:[],override:[],rootAgree:[],conflicts:[],rewards:[],usage:[],evolve:[],fork:[]},live:false,stored:false}}
 reset();
 const PROC=['planning','tool_selection','error_recovery','verification'];
 const PROCL={planning:'Planning',tool_selection:'Tool choice',error_recovery:'Error recovery',verification:'Verification'};
@@ -373,7 +386,7 @@ function ingest(e){
   if(e.type==='judge.root'){J.roots.push(e);return}
   if(e.type==='judge.action'){J.actions.push(e);return}
   if(e.type==='feedback'){S.feedback.push(e);return}
-  const AM={'analysis.behaviour':'behaviour','analysis.flag':'flags','analysis.hack':'hacks','analysis.align':'align','judge.claim':'claims','judge.hack_final':'hackFinal','judge.verdict_override':'override','judge.root_agreement':'rootAgree','judge.conflict':'conflicts','policy.reward':'rewards','usage':'usage','evolve.result':'evolve'};
+  const AM={'analysis.behaviour':'behaviour','analysis.flag':'flags','analysis.hack':'hacks','analysis.align':'align','judge.claim':'claims','judge.hack_final':'hackFinal','judge.verdict_override':'override','judge.root_agreement':'rootAgree','judge.conflict':'conflicts','policy.reward':'rewards','usage':'usage','evolve.result':'evolve','fork.result':'fork'};
   if(AM[e.type]){S.A[AM[e.type]].push(e);if(e.type!=='usage')return}
   const s=e.span_id&&S.spans.get(e.span_id);
   if(e.type==='judge.raw'){if(s)s.answerId=e.id;return}
@@ -1303,6 +1316,7 @@ function report(){
     row('Runtime evals passed',pct(M.codex.evalPass),pct(M.claude.evalPass)),row('Tool calls succeeded',pct(M.codex.toolOk),pct(M.claude.toolOk)),
     row('Median time',dur(M.codex.latency),dur(M.claude.latency)),row('Runs failed',pct(M.codex.failRate),pct(M.claude.failRate)),row('Blind retries',M.codex.retries,M.claude.retries),``,
     `Sign test p = ${W.decisive?W.p.toFixed(3):'–'} over ${W.decisive} decisive turns${W.decisive<20?' (inconclusive: <20)':''}. Judge agreement ${pct(W.agree)}; same verdict in both orders ${pct(W.consistency)}.`,``,
+    ...(()=>{const t=D.turns.find(t=>t.id===TREE.turn);return t?[`## Turn ${t.no} verdict card`,``,...verdictCard(t).map(l=>{let s=l.text;(l.chips||[]).forEach((c,i)=>s=s.replace('{'+i+'}',c.label));return `- **${l.k}** ${s}`}),``]:[]})(),
     `## Failure cases`,``,`| Category | Codex | Claude |`,`|---|---|---|`,...cats.map(k=>row(k,C.filter(c=>c.cat===k&&c.p==='codex').length,C.filter(c=>c.cat===k&&c.p==='claude').length))].join('\n');
 }
 document.getElementById('copyMd').onclick=async e=>{try{await navigator.clipboard.writeText(report());e.target.textContent='Copied ✓'}catch(_){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([report()],{type:'text/markdown'}));a.download='duo-compare.md';a.click();e.target.textContent='Downloaded ✓'}setTimeout(()=>e.target.textContent='Copy report',1600)};
@@ -1317,6 +1331,104 @@ function railClusters(tools,x,cutoff){
     else clusters.push({tool:l.tool,start:l.t,end,failed:l.passed===false,items:[{l,i}]});
   });return clusters;
 }
+
+/* ================= verdict card + where the time went =================
+   Two ideas borrowed from AgentDiff's report page:
+   - The verdict card: up to five lines (VERDICT, CAUSE, COST, FIX, CONF) for the timeline's turn. Each line
+     restates evidence already in the trace (judge verdicts, root causes, usage, fork reruns). A line with nothing
+     to say is left out. A single turn is n=1, so confidence never goes above "medium". The decisive step stays
+     "hypothesized" until `duo --fork` reruns test it.
+   - Where the time went: run time split into productive tool time, model time between calls, and wasted time
+     (failed calls, or repeats of a call that already succeeded), on one scale for both models; tools ranked by seconds. */
+function runTokens(r){const u=S.A.usage.filter(e=>e.span_id===r.id).at(-1)?.data;if(!u)return null;return (u.input_tokens||0)+(u.output_tokens||0)+(u.cache_read_input_tokens||0)+(u.cache_creation_input_tokens||0)}
+function stepLabel(t,ref){const x=S.byEvent.get(+ref);if(!x)return null;const r=t.runs.find(r=>r.id===x.span);if(!r)return null;
+  if(x.tool){const i=r.tools.indexOf(x.tool);return i<0?null:{ref:+ref,label:`call ${i+1}`,detail:short(x.tool.tool)+(x.tool.detail?' '+x.tool.detail:'')}}
+  return {ref:+ref,label:'reasoning',detail:'reasoning step'}}
+function joinParts(a){return a.length<2?a.join(''):a.slice(0,-1).join(', ')+' and '+a.at(-1)}
+function verdictCard(t){
+  const L=[],has=p=>t.by[p].some(r=>r.role!=='synthesis'),both=has('codex')&&has('claude');
+  if(t.running)return [{k:'VERDICT',text:`Turn ${t.no} is running…`}];
+  const ok=p=>t.by[p].length&&!t.by[p].some(r=>r.failed);
+  const w=t.winner,loser=P.includes(w)?P.find(p=>p!==w):null;
+  // VERDICT
+  if(t.overridden&&P.includes(w))L.push({k:'VERDICT',text:`${NAME[w]} wins turn ${t.no}: ${NAME[loser]} was confirmed reward hacking.`});
+  else if(P.includes(w)){const s=t.judge[w]&&t.judge[loser]?` (${f1(t.judge[w].overall)} vs ${f1(t.judge[loser].overall)}/5)`:'';
+    const nj=new Set(t.verdicts.map(v=>v.judge)).size;L.push({k:'VERDICT',text:`${NAME[w]} won turn ${t.no}${s}${nj>1?' · both judges agree':''}.`})}
+  else if(w==='tie')L.push({k:'VERDICT',text:`Tie on turn ${t.no}: no verdict held in both answer orders.`});
+  else if(w==='split')L.push({k:'VERDICT',text:`Judges split on turn ${t.no}.`});
+  else if(both&&ok('codex')!==ok('claude')){const g=ok('codex')?'codex':'claude';L.push({k:'VERDICT',text:`${NAME[g]} completed; ${NAME[P.find(p=>p!==g)]}'s run failed. No judge verdict.`})}
+  else if(Object.keys(t.judge).length)L.push({k:'VERDICT',text:'Judged: '+P.filter(p=>t.judge[p]).map(p=>`${NAME[p]} ${f1(t.judge[p].overall)}/5`).join(' · ')+'.'});
+  else if(t.runs.length)L.push({k:'VERDICT',text:t.judges.some(j=>j.status==='running')?`Turn ${t.no} finished; judging…`:`Turn ${t.no} finished. No judge verdict (judge off).`});
+  // the side to explain: the loser, else the lower-scored side with a root cause
+  let subj=loser;
+  if(!subj){const c=P.filter(p=>t.ann[p].roots.length).sort((a,b)=>(t.judge[a]?.overall??9)-(t.judge[b]?.overall??9));subj=c[0]||null}
+  // CAUSE
+  let root=null;
+  if(subj){const rs=t.ann[subj].roots;if(rs.length){const cnt={};rs.forEach(r=>cnt[r.name]=(cnt[r.name]||0)+1);root=rs.find(r=>r.name===Object.entries(cnt).sort((a,b)=>b[1]-a[1])[0][0])}}
+  if(root){const st=stepLabel(t,root.item_id),why=String(root.rationale||'').split(' → fix:')[0];
+    L.push({k:'CAUSE',chips:st?[st]:[],text:`${st?'at '+NAME[subj]+"'s ":NAME[subj]+': '}${st?'{0}':''}${st?' ':''}(${String(root.name).replace(/_/g,' ')}): ${why}`})}
+  else{const al=S.A.align.filter(a=>a.turn_id===t.id).at(-1)?.data;
+    if(al&&al.divergence!=null&&al.pairs[al.divergence]){const [a,b]=al.pairs[al.divergence],ca=a!=null&&stepLabel(t,a),cb=b!=null&&stepLabel(t,b);
+      const chips=[ca,cb].filter(Boolean);
+      L.push({k:'CAUSE',chips,text:`Runs first diverged at aligned step ${al.divergence+1}: Codex ${ca?'{0} '+ca.detail:'had no matching step'} · Claude ${cb?'{'+(ca?1:0)+'} '+cb.detail:'had no matching step'}. ${Math.round(100*al.similarity)}% of the action sequence is similar.`})}}
+  // COST
+  if(both){const tot=p=>{const rs=t.by[p].filter(r=>r.role!=='synthesis');const tk=rs.map(runTokens);return {ms:d3.sum(rs,r=>r.dur),tools:d3.sum(rs,r=>r.tools.length),tok:tk.every(v=>v!=null)?d3.sum(tk):null}};
+    const A=tot('codex'),B=tot('claude'),cheap=A.ms<=B.ms?'codex':'claude',dear=P.find(p=>p!==cheap),C=cheap==='codex'?A:B,E=cheap==='codex'?B:A,parts=[];
+    if(E.ms-C.ms>=100)parts.push(dur(E.ms-C.ms)+' less time');
+    if(C.tok!=null&&E.tok!=null&&E.tok!==C.tok)parts.push(Math.abs(E.tok-C.tok).toLocaleString()+(E.tok>C.tok?' fewer':' more')+' tokens');
+    if(E.tools!==C.tools){const n=Math.abs(E.tools-C.tools);parts.push(n+(E.tools>C.tools?' fewer':' more')+(n===1?' tool call':' tool calls'))}
+    if(parts.length){let s=`${NAME[cheap]} used ${joinParts(parts)} than ${NAME[dear]}`;
+      if(w===dear)s+=': faster, but it lost';else if(w===cheap)s+=', and it won';else if(w==='tie')s+=' for the same result';
+      L.push({k:'COST',text:s+'.'})}}
+  // FIX: the root's minimal fix, else the first judge action for that side
+  if(subj){const fx=root&&String(root.rationale||'').split(' → fix: ')[1],act=t.ann[subj].actions[0];
+    if(fx)L.push({k:'FIX',text:`${NAME[subj]}: ${fx}`});else if(act)L.push({k:'FIX',text:`${NAME[subj]} (${TGT[act.role]||act.role||'rule'}): ${act.rationale}`})}
+  // CONF: AgentDiff's shared vocabulary {level, n, basis, verified}; one turn never earns "high"
+  if(L.length>1||Object.keys(t.judge).length){const basis=[];let level='low';
+    const nj=new Set(t.verdicts.map(v=>v.judge)).size,agree=nj>1&&new Set(t.verdicts.map(v=>v.verdict)).size===1;
+    if(agree&&t.consistent!==false){level='medium';basis.push('both judges agree in both answer orders')}
+    else if(nj>1)basis.push(agree?'judges agree, but not in both orders':'judges disagree');
+    else if(nj===1)basis.push('one judge');else basis.push('no judge verdict');
+    const ra=subj&&S.A.rootAgree.filter(e=>e.turn_id===t.id&&e.provider===subj).at(-1);
+    if(ra)basis.push(ra.passed?'judges place the root cause on the same step':'judges place the root cause on different steps');
+    let text=`${level} (n=1): ${basis.join('; ')}`;
+    if(root){const fk=S.A.fork.filter(e=>e.turn_id===t.id&&e.provider===subj),n=d3.sum(fk,e=>e.count||0),k=d3.sum(fk,e=>e.data?.improved||0);
+      if(n)text+=`; the root cause is ${k*2>n?'replay-verified':k===0?'replay-refuted':'replay-mixed'} (${k}/${n} reruns with the fix improved)`;
+      else text+=t.kind==='write'?'; the root cause is a hypothesis (write turns cannot be rerun yet)':`; the root cause is a hypothesis: test it with duo --fork ${t.id.slice(0,8)}`}
+    L.push({k:'CONF',text})}
+  return L;
+}
+function cardHtml(L){return L.map(l=>{let h=esc(l.text);(l.chips||[]).forEach((c,i)=>{h=h.replace('{'+i+'}',`<button class="vchip" data-vref="${c.ref}" title="${esc(c.detail)}">${esc(c.label)}</button>`)});return `<div class="vk">${l.k}</div><div class="vt">${h}</div>`}).join('')}
+function intervalsUnion(iv){iv=iv.filter(x=>x[1]>x[0]).sort((a,b)=>a[0]-b[0]);let s=0,cs=null,ce=null;for(const [a,b] of iv){if(ce==null||a>ce){if(ce!=null)s+=ce-cs;cs=a;ce=b}else ce=Math.max(ce,b)}if(ce!=null)s+=ce-cs;return s}
+function timeBudget(rs){
+  // sweep every run's tool intervals: a slice of time counts as productive tool time if any useful call covers it,
+  // else failed, else repeat; uncovered run time is the model's own time (thinking, writing, waiting on the API)
+  const out={total:0,tool:0,failed:0,repeat:0,model:0,tools:new Map()};
+  for(const r of rs){const s0=r.start,s1=r.start+r.dur/1000,seen=new Set(),iv={tool:[],failed:[],repeat:[]};
+    r.tools.forEach((l,i)=>{if(l.dur==null)return;const a=Math.max(s0,l.t),b=Math.min(s1,l.t+l.dur/1000),key=l.tool+'|'+l.detail;
+      const kind=l.passed===false?'failed':seen.has(key)&&l.detail?'repeat':'tool';if(l.passed!==false)seen.add(key);iv[kind].push([a,b]);
+      const g=out.tools.get(short(l.tool))||{name:short(l.tool),sec:0,wasted:0,calls:0,fails:0,run:r.id,i};g.sec+=l.dur/1000;g.calls++;if(kind!=='tool')g.wasted+=l.dur/1000;if(l.passed===false)g.fails++;out.tools.set(g.name,g)});
+    const u=intervalsUnion,all=u([...iv.tool,...iv.failed,...iv.repeat]),tool=u(iv.tool),tf=u([...iv.tool,...iv.failed]);
+    out.total+=r.dur/1000;out.tool+=tool;out.failed+=tf-tool;out.repeat+=all-tf;out.model+=Math.max(0,r.dur/1000-all)}
+  return out}
+function renderTurnReading(D){
+  const t=D.turns.find(t=>t.id===TREE.turn),card=document.getElementById('verdictCard'),host=document.getElementById('timeWent');
+  if(!t){card.innerHTML='';host.innerHTML='<div class="empty">Time budgets appear once a turn finishes.</div>';return}
+  card.innerHTML=cardHtml(verdictCard(t));
+  const B=P.map(p=>({p,b:timeBudget(t.by[p].filter(r=>r.role!=='synthesis'&&!r.running))})).filter(x=>x.b.total>0);
+  if(!B.length){host.innerHTML='<div class="empty">No finished runs in this turn yet.</div>';return}
+  const max=d3.max(B,x=>x.b.total),w=v=>(100*v/max).toFixed(2)+'%',sec=v=>dur(v*1000);
+  const seg=(v,style,label)=>v>0?`<span style="width:${w(v)};${style}" data-tip="${esc(label)}: ${sec(v)}"></span>`:'';
+  let h=B.map(({p,b})=>`<div class="tw-row"><b style="color:var(--${p})">${NAME[p]}</b><div class="tw-bar" style="background:none">${seg(b.tool,`background:var(--${p})`,'Productive tool time')}${seg(b.model,`background:color-mix(in srgb,var(--${p}) 35%,transparent)`,'Model time between calls')}${seg(b.failed,'--c:var(--critical)','Failed calls').replace('<span','<span class="tw-hatch"')}${seg(b.repeat,'--c:var(--muted)','Repeated calls').replace('<span','<span class="tw-hatch"')}</div><span class="sub">${sec(b.total)}</span></div>`).join('');
+  h+=`<div class="tw-legend"><span><i style="background:var(--text-2)"></i>tool calls</span><span><i style="background:color-mix(in srgb,var(--text-2) 35%,transparent)"></i>model time between calls</span><span><i class="tw-hatch" style="--c:var(--critical)"></i>failed calls</span><span><i class="tw-hatch" style="--c:var(--muted)"></i>repeat of a call that already succeeded</span></div>`;
+  h+='<div class="tw-tools">'+B.map(({p,b})=>{const top=[...b.tools.values()].sort((x,y)=>y.sec-x.sec).slice(0,5);
+    return `<div><table><thead><tr><th>${NAME[p]} · tool</th><th>calls</th><th>time</th><th>wasted</th></tr></thead><tbody>${top.map(g=>`<tr data-goto-tool="${g.run}:${g.i}"><td>${esc(g.name)}${g.fails?` <span class="bad">${g.fails}✗</span>`:''}</td><td>${g.calls}</td><td>${sec(g.sec)}</td><td class="${g.wasted?'bad':'muted'}">${g.wasted?sec(g.wasted):'–'}</td></tr>`).join('')||'<tr><td colspan="4" class="muted">no tool calls</td></tr>'}</tbody></table></div>`}).join('')+'</div>';
+  const why=B.map(({p,b})=>{const waste=b.failed+b.repeat,top=[...b.tools.values()].sort((x,y)=>y.wasted-x.wasted)[0];
+    return `${NAME[p]} spent ${pct(b.tool/b.total)} of ${sec(b.total)} in useful tool calls and ${pct(b.model/b.total)} between calls`+(waste>=.05?`; ${sec(waste)} (${pct(waste/b.total)}) went to failed or repeated calls${top&&top.wasted?', most of it in '+top.name:''}`:'; no time was lost to failed or repeated calls')+'.'}).join(' ');
+  host.innerHTML=h+`<div class="tw-why">${esc(why)}</div>`;
+}
+document.getElementById('verdictCard').addEventListener('click',e=>{const b=e.target.closest('[data-vref]');if(b)openRef(+b.dataset.vref)});
+document.getElementById('timeWent').addEventListener('click',e=>{const tr=e.target.closest('[data-goto-tool]');if(!tr)return;const [r,i]=tr.dataset.gotoTool.split(':');showTool(r,+i)});
 function renderEvalTree(D){
   if(TREE.session!==S.session){TREE.session=S.session;TREE.turn=null;TREE.progress=100;clearInterval(TREE.timer);TREE.timer=null;document.getElementById('treePlay').textContent='Replay growth';}
   const turns=D.turns,sel=document.getElementById('treeTurn'),host=document.getElementById('evalTree');
@@ -1512,7 +1624,7 @@ try{const t=localStorage.getItem('duo-theme');if(t)document.documentElement.data
 let pending=false;function schedule(){if(pending)return;pending=true;requestAnimationFrame(()=>{pending=false;render()})}
 function render(){
   const D=derive(),K=metrics(D);
-  renderEvalTree(D);renderObservatory(D);renderLive(D);renderPlain(D,K);renderVerdict(D,K);renderCurve(D);renderBandit();renderActions(D);renderChecks(D,K);renderPRs();renderClaims(D);renderFingerprint(D);renderFilm(D);renderPhase(D);renderScoreboard(D,K);renderRubric(D);renderDuel(D);renderTimeline(D);renderTools(D);renderFailures(D);
+  renderEvalTree(D);renderTurnReading(D);renderObservatory(D);renderLive(D);renderPlain(D,K);renderVerdict(D,K);renderCurve(D);renderBandit();renderActions(D);renderChecks(D,K);renderPRs();renderClaims(D);renderFingerprint(D);renderFilm(D);renderPhase(D);renderScoreboard(D,K);renderRubric(D);renderDuel(D);renderTimeline(D);renderTools(D);renderFailures(D);
 }
 let rz;addEventListener('resize',()=>{clearTimeout(rz);rz=setTimeout(schedule,120)});
 function setLive(on,text){document.getElementById('live').classList.toggle('on',on);document.getElementById('liveText').textContent=text}

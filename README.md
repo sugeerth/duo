@@ -32,6 +32,15 @@ Latency: no preliminary model-routing call; read-only agents start together. Fir
 
 Use **Exit tracing** in the viewer header to disconnect live updates while keeping the last trace available. **Resume tracing** reconnects; the Duo task continues running. Use `/exit` in the terminal to quit Duo.
 
+The focused view opens with a **verdict card** for the timeline's turn (an idea taken from AgentDiff). It has up to five lines, and each one restates evidence already in the trace:
+- VERDICT: who won and the scores.
+- CAUSE: the root-cause step, as a chip that opens that exact call. Without a root cause, the first step where the two runs diverged.
+- COST: the difference in time, tokens and tool calls, and whether the cheaper side won or lost.
+- FIX: the judges' minimal fix.
+- CONF: low or medium, never high, because one turn is a single observation. The root cause is marked a hypothesis until `duo --fork` reruns verify or refute it.
+
+A line with nothing to say is left out. Under the timeline, **Where the time went** puts both models' run time on one scale, split into useful tool calls, model time between calls, and wasted time (failed calls, or repeats of a call that already succeeded). It ranks tools by seconds and wasted seconds; click a tool to open its first call. "Copy report" includes the card.
+
 The viewer defaults to one focused view: paired model summaries combined with execution tracks. **Explore charts** reveals the full observatory and earlier detailed panels; **Focus timeline** returns to the concise view.
 
 The viewer opens with execution tracks on a shared elapsed-time axis. Agent runs are long bars; tool calls branch off and rejoin like railway tracks. Nearby repeated successful calls cluster at overview scale; zoom up to 8× to separate them. Overlapping calls use separate tracks. Reasoning and evaluation evidence remain clickable. Select a turn, follow the latest task, or replay and scrub elapsed time.
