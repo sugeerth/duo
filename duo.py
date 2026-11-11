@@ -21,6 +21,8 @@ import time
 from traces import HUB,emit
 import judge as evaljudge
 import analysis
+import longrun
+import longterm
 from tracestore import open_default as open_store
 import lessons
 import learning
@@ -46,6 +48,7 @@ def analyse_turn(turn_id):
         emit('analysis.behaviour',p,turn_id=turn_id,data=f['metrics'])
         for x in f['flags']:emit('analysis.flag',p,turn_id=turn_id,name=x['flag'],rationale=x['detail'])
         for h in f['hacks']:emit('analysis.hack',p,turn_id=turn_id,item_id=str(h['ref']),name=h['signal'],detail=h['target'])
+        if f.get('longrun'):emit('analysis.longrun',p,turn_id=turn_id,data=f['longrun'],rationale=longrun.summary(f['longrun']))
     al=findings.get('align')
     if al and al['pairs']:emit('analysis.align','duo',turn_id=turn_id,data={'pairs':al['pairs'][:600],'divergence':al['divergence'],'similarity':al['similarity']})
     emit('analysis.done','duo',turn_id=turn_id,duration_ms=int((time.monotonic()-t0)*1000))
@@ -773,6 +776,7 @@ def chat():
     EVAL['auto']=os.environ.get('DUO_AUTO_LESSONS','1')!='0'
     HUB.routes['/learning']=lambda q=None:learning.snapshot(HUB.store,list(HUB.events))
     HUB.routes['/policy']=lambda q=None:policy.summary()
+    HUB.routes['/longterm']=lambda q=None:longterm.snapshot(HUB.store)
     HUB.routes['/next']=next_preview
     HUB.post_routes['/lessons']=lessons_update
     HUB.routes['/filemap']=lambda q=None:file_map_data()

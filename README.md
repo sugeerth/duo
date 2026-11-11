@@ -41,6 +41,16 @@ The focused view opens with a **verdict card** for the timeline's turn (an idea 
 
 A line with nothing to say is left out. Under the timeline, **Where the time went** puts both models' run time on one scale, split into useful tool calls, model time between calls, and wasted time (failed calls, or repeats of a call that already succeeded). It ranks tools by seconds and wasted seconds; click a tool to open its first call. "Copy report" includes the card.
 
+Long runs and long-term change (`longrun.py`, `longterm.py`; rules from AgentDiff's long-run reading):
+- **Long run** (per turn, deterministic, after each turn): each model's calls split into sessions (idle ≥ 30 min) and bursts. The burst gap is set by the run itself: Otsu's split of its log gaps, clamped to 20 s to 30 min.
+  - Progress is a check (test/lint/typecheck) newly passing or passing more cases. A regression is a check failing after it passed.
+  - The stall is the longest stretch without progress. A loop is two or more bursts that each repeat at least 60% of earlier calls without progress.
+  - The block draws the run on one line, with idle compressed, and gives a **Look first** step.
+- **Over time** (every session in the trace DB): per-model trends in judge score, time per turn, tool failure rate and calls.
+  - Tests: Mann-Kendall and Theil-Sen over turn order, the last 10 turns vs everything before (Mann-Whitney), and head-to-head drift.
+  - All tests in a response are corrected with Benjamini-Hochberg. A change is stated only at q < 0.05 with n ≥ 8 per model; otherwise the block says no clear change.
+  - It also shows rolling-median small multiples, a weekday × hour grid, and long-run habits (how often each model loops, and its median stall). Served at `/longterm`.
+
 The viewer defaults to one focused view: paired model summaries combined with execution tracks. **Explore charts** reveals the full observatory and earlier detailed panels; **Focus timeline** returns to the concise view.
 
 The viewer opens with execution tracks on a shared elapsed-time axis. Agent runs are long bars; tool calls branch off and rejoin like railway tracks. Nearby repeated successful calls cluster at overview scale; zoom up to 8× to separate them. Overlapping calls use separate tracks. Reasoning and evaluation evidence remain clickable. Select a turn, follow the latest task, or replay and scrub elapsed time. Below the tracks, a **step diff** aligns the two models' tool sequences (Needleman–Wunsch over tool + phase) and pins the first divergence in plain language — gray links join identical steps, amber marks a different tool at the same position, dashed boxes have no counterpart in the other run; every step opens its evidence. The summary cards show where each model's time went (tools vs thinking, summed tool time so overlaps can overstate it) and the slowest call. Tool-less lanes (judges, pure-answer runs) stay compact.

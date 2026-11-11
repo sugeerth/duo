@@ -166,6 +166,11 @@ section:not(.open){padding-top:9px;padding-bottom:9px}
 .tw-hatch{background:repeating-linear-gradient(135deg,var(--c) 0 3px,transparent 3px 6px)}
 .tw-legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:11.5px;color:var(--text-2);margin-top:8px}.tw-legend i{display:inline-block;width:12px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
 .tw-tools{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:12px}.tw-tools table{width:100%;font-size:12px}.tw-tools td{padding:2px 4px}.tw-tools tr[data-goto-tool]{cursor:pointer}.tw-tools tr[data-goto-tool]:hover{background:var(--hover)}
+.lr-row{margin-top:10px}.lr-row h4{margin:0 0 2px;font-size:12.5px}.lr-row svg{display:block}.lr-why{font-size:12px;color:var(--text-2);line-height:1.5}
+.lt-find{list-style:none;padding:0;margin:8px 0 0;font-size:12.5px}.lt-find li{padding:4px 0;border-bottom:1px solid var(--line)}.lt-find .q{color:var(--muted);font-size:11px;margin-left:6px}
+.lt-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:10px}.lt-card{border:1px solid var(--line);border-radius:10px;padding:10px;background:var(--panel);min-width:0}.lt-card h4{margin:0 0 4px;font-size:12.5px}.lt-card svg{display:block;width:100%}
+.lt-meta{font-size:12px;color:var(--text-2);margin-top:6px}
+@media(max-width:700px){.lt-grid{grid-template-columns:1fr}}
 .tw-why{font-size:12px;color:var(--text-2);margin-top:8px;line-height:1.5}
 .rail-compo{display:flex;height:8px;border-radius:4px;overflow:hidden;margin-top:9px;background:var(--grid)}.rail-compo i{display:block;height:100%}
 .rail-compo-key{font-size:11.5px;color:var(--text-2);margin-top:4px}
@@ -213,6 +218,10 @@ section:not(.open){padding-top:9px;padding-bottom:9px}
     <div class="tree-caption"><span>━ Task bar</span><span style="color:var(--codex)">● Codex</span><span style="color:var(--claude)">● Claude</span><span>◆ Reasoning</span><span class="ok">✓ Passed</span><span class="bad">✗ Failed</span><span>Branches = tool calls · clustered calls expand with zoom · click for evidence</span></div>
     <div class="tw-head"><h3>Where the time went</h3><span class="sub">Each bar is a model's run time on one shared scale. Hatched time went to failed or repeated tool calls.</span></div>
     <div id="timeWent"></div>
+    <div class="tw-head"><h3>Long run: phases, loops and stalls</h3><span class="sub">The run read at the scale it ran: bursts of calls, with idle between them compressed. ✓ a check newly passing, ↻ a burst repeating earlier calls without progress, ! a failing check. Brackets mark the longest loop and the longest stall.</span></div>
+    <div id="longRun"></div>
+    <div class="tw-head"><h3>Over time: every stored session</h3><span class="sub">Each model across all turns in the trace DB. A change is stated only when it survives a significance test corrected for every test shown (Benjamini-Hochberg, q &lt; 0.05).</span></div>
+    <div id="longTerm"></div>
   </section>
   <section class="c12" id="labSec" data-open="1"><h2 id="labTitle">Model observatory</h2>
 <div class="lab-top"><div><div class="lab-kicker">TRACES → PATTERNS → EVIDENCE</div><h3>Understand how the models work.</h3><p class="sub">Ten lenses on the same recorded runs. Click a mark to inspect its evidence.</p></div><div class="lab-controls"><select id="labScope" aria-label="Observatory scope"><option value="session">Filtered session</option><option value="turn">Timeline turn</option></select><select id="labProvider" aria-label="Observatory model"><option value="all">Both models</option><option value="codex">Codex</option><option value="claude">Claude</option></select><select id="labArea" aria-label="Tool terrain metric"><option value="duration">Terrain: duration</option><option value="calls">Terrain: calls</option></select></div></div>
@@ -368,7 +377,7 @@ const DIML={correctness:'Correctness',completeness:'Completeness',groundedness:'
 const KIND_L={respond:'Answer',read:'Read',write:'Write'};
 const qs=new URLSearchParams(location.search);
 let S;
-function reset(){S={events:[],maxId:0,started:null,session:'',spans:new Map(),order:[],J:{results:[],scores:[],verdicts:[],agree:[],errors:[],raw:[],steps:[],roots:[],actions:[]},feedback:[],byEvent:new Map(),A:{behaviour:[],flags:[],hacks:[],align:[],claims:[],hackFinal:[],override:[],rootAgree:[],conflicts:[],rewards:[],usage:[],evolve:[],fork:[]},live:false,stored:false}}
+function reset(){S={events:[],maxId:0,started:null,session:'',spans:new Map(),order:[],J:{results:[],scores:[],verdicts:[],agree:[],errors:[],raw:[],steps:[],roots:[],actions:[]},feedback:[],byEvent:new Map(),A:{behaviour:[],flags:[],hacks:[],align:[],claims:[],hackFinal:[],override:[],rootAgree:[],conflicts:[],rewards:[],usage:[],evolve:[],fork:[],longrun:[]},live:false,stored:false}}
 reset();
 const PROC=['planning','tool_selection','error_recovery','verification'];
 const PROCL={planning:'Planning',tool_selection:'Tool choice',error_recovery:'Error recovery',verification:'Verification'};
@@ -393,7 +402,7 @@ function ingest(e){
   if(e.type==='judge.root'){J.roots.push(e);return}
   if(e.type==='judge.action'){J.actions.push(e);return}
   if(e.type==='feedback'){S.feedback.push(e);return}
-  const AM={'analysis.behaviour':'behaviour','analysis.flag':'flags','analysis.hack':'hacks','analysis.align':'align','judge.claim':'claims','judge.hack_final':'hackFinal','judge.verdict_override':'override','judge.root_agreement':'rootAgree','judge.conflict':'conflicts','policy.reward':'rewards','usage':'usage','evolve.result':'evolve','fork.result':'fork'};
+  const AM={'analysis.behaviour':'behaviour','analysis.flag':'flags','analysis.hack':'hacks','analysis.align':'align','judge.claim':'claims','judge.hack_final':'hackFinal','judge.verdict_override':'override','judge.root_agreement':'rootAgree','judge.conflict':'conflicts','policy.reward':'rewards','usage':'usage','evolve.result':'evolve','fork.result':'fork','analysis.longrun':'longrun'};
   if(AM[e.type]){S.A[AM[e.type]].push(e);if(e.type!=='usage')return}
   const s=e.span_id&&S.spans.get(e.span_id);
   if(e.type==='judge.raw'){if(s)s.answerId=e.id;return}
@@ -1419,10 +1428,87 @@ function timeBudget(rs){
     out.total+=r.dur/1000;out.tool+=tool;out.failed+=tf-tool;out.repeat+=all-tf;out.model+=Math.max(0,r.dur/1000-all)}
   return out}
 
+
+/* ================= long run + over time (from AgentDiff's longrun reading; statistics in longterm.py) ================= */
+const LR_C={progress:'var(--good)',loop:'var(--warn)',failing:'var(--critical)',filler:'var(--base)'},LR_G={progress:'✓',loop:'↻',failing:'!',filler:''};
+function lrAxis(r,W,L){
+  // true clock inside bursts; idle between bursts longer than the burst gap compressed to a fixed break
+  const gap=r.basis.burst_gap,BRK=26,segs=[];let pos=0;
+  r.bursts.forEach((b,i)=>{if(i){const idle=b.start-r.bursts[i-1].end;if(idle>gap){segs.push({brk:true,t0:r.bursts[i-1].end,t1:b.start,x0:pos,w:BRK,idle});pos+=BRK}else{segs.push({t0:r.bursts[i-1].end,t1:b.start,x0:pos,w:idle});pos+=idle}}
+    segs.push({t0:b.start,t1:b.end,x0:pos,w:Math.max(.5,b.end-b.start)});pos+=Math.max(.5,b.end-b.start)});
+  const brk=segs.filter(s=>s.brk).length*BRK,live=pos-brk,k=live>0?(W-L-10-brk)/live:1;
+  let x=L;for(const s of segs){s.px=x;s.pw=s.brk?BRK:s.w*k;x+=s.pw}
+  const at=t=>{const s=segs.find(s=>t>=s.t0&&t<=s.t1)||(t<r.start?segs[0]:segs.at(-1));if(!s)return L;return s.brk?s.px+s.pw/2:s.px+(s.t1>s.t0?(t-s.t0)/(s.t1-s.t0):0)*s.pw};
+  return {at,segs};
+}
+function renderLongRun(t){
+  const host=document.getElementById('longRun');
+  const reads=t?P.map(p=>({p,e:S.A.longrun.filter(e=>e.turn_id===t.id&&e.provider===p).at(-1)})).filter(x=>x.e&&x.e.data):[];
+  if(!reads.length){host.innerHTML=`<div class="empty">${t&&t.running?'The reading arrives when the turn ends.':'No long-run reading for this turn yet (it needs tool calls).'}</div>`;return}
+  const W=Math.max(560,host.clientWidth),L=70;
+  host.innerHTML=reads.map(({p,e})=>{const r=e.data,ax=lrAxis(r,W,L),rs=t.by[p].filter(x=>x.role!=='synthesis');
+    let svg=`<svg width="${W}" height="104" role="img" aria-label="${esc(NAME[p])} long-run reading">`;
+    const lab=(y,s)=>`<text x="4" y="${y}" class="mut" style="font-size:10.5px">${s}</text>`;
+    svg+=lab(20,'bursts')+lab(46,'calls')+lab(68,'checks');
+    for(const s of ax.segs)if(s.brk)svg+=`<g><line x1="${s.px+s.pw/2}" x2="${s.px+s.pw/2}" y1="6" y2="74" stroke="var(--line)" stroke-dasharray="2 3"/><text x="${s.px+s.pw/2}" y="86" text-anchor="middle" class="mut" style="font-size:9.5px">⋯${dur(s.idle*1000)}</text><title>idle ${dur(s.idle*1000)}, compressed</title></g>`;
+    r.bursts.forEach(b=>{const x0=ax.at(b.start),x1=Math.max(x0+3,ax.at(b.end));svg+=`<g class="lr-b" data-lref="${b.ref}" style="cursor:pointer"><rect x="${x0}" y="10" width="${x1-x0}" height="16" rx="3" fill="${LR_C[b.status]}" opacity="${b.status==='filler'?.55:.85}"/>${x1-x0>12?`<text x="${(x0+x1)/2}" y="22" text-anchor="middle" style="font-size:10px;fill:#fff;font-weight:700">${LR_G[b.status]}</text>`:''}<title>${b.status} burst: ${b.calls} calls, ${dur((b.end-b.start)*1000)}${b.repeat_share!=null?`, ${Math.round(100*b.repeat_share)}% repeats earlier calls`:''}${b.idle_before?` · after ${dur(b.idle_before*1000)} idle`:''}</title></g>`});
+    rs.flatMap(r=>r.tools).forEach(l=>{const x=ax.at(l.t);svg+=`<line x1="${x}" x2="${x}" y1="38" y2="52" stroke="${l.passed===false?'var(--critical)':`var(--${p})`}" stroke-width="1.2" opacity=".7"/>`});
+    r.checks.forEach(c=>{const x=ax.at(c.at);svg+=`<g data-lref="${c.ref}" style="cursor:pointer"><circle cx="${x}" cy="64" r="${c.progress?5:3.5}" fill="${c.ok?'var(--good)':'var(--critical)'}" stroke="${c.progress||c.regression?'var(--text)':'none'}"/><title>${esc(c.key)}: ${c.ok?'passed':'failed'}${c.passed!=null?` (${c.passed} passed)`:''}${c.progress?' · progress':''}${c.regression?' · regression':''}</title></g>`});
+    const brk=(a,b,y,col,txt)=>{const x0=ax.at(a),x1=Math.max(x0+4,ax.at(b));return `<path d="M${x0},${y-4}V${y}H${x1}V${y-4}" fill="none" stroke="${col}" stroke-width="1.5"/><text x="${x0}" y="${y+11}" style="font-size:10px;fill:${col}">${esc(txt)}</text>`};
+    const loop=r.loops.slice().sort((a,b)=>b.wall-a.wall)[0];
+    if(loop)svg+=brk(loop.start,loop.end,90,'var(--warn)',`loop ${dur(loop.wall*1000)} · ${loop.bursts} bursts`);
+    else if(r.stall&&r.checks.length&&r.stall.calls>=5)svg+=brk(r.stall.start,r.stall.end,90,'var(--muted)',`stall ${dur(r.stall.wall*1000)}${r.stall.open?' (open)':''}`);
+    svg+='</svg>';
+    const lf=r.look_first?` <button class="vchip" data-lref="${r.look_first.ref}">Look first</button> ${esc(r.look_first.why)}.`:'';
+    return `<div class="lr-row"><h4 style="color:var(--${p})">${NAME[p]}</h4><div style="overflow-x:auto">${svg}</div><div class="lr-why">${esc(e.rationale||'')}${lf} <span class="muted">Bursts split at ${dur(r.basis.burst_gap*1000)} idle (${esc(r.basis.burst_rule)}); sessions at ${dur(r.basis.session_gap*1000)}.</span></div></div>`}).join('');
+}
+document.getElementById('longRun').addEventListener('click',e=>{const b=e.target.closest('[data-lref]');if(b)openRef(+b.dataset.lref)});
+let LT=null,LT_AT=0;
+async function fetchLongterm(){try{const r=await fetch('/longterm');if(r.ok){LT=await r.json();LT_AT=Date.now();renderLongTerm()}}catch(e){}}
+function renderLongTerm(){
+  const host=document.getElementById('longTerm');
+  if(!LT){host.innerHTML='<div class="empty">Loading the trace DB…</div>';return}
+  const R=LT.records||[],I=LT.insight||{};
+  if(!R.length){host.innerHTML='<div class="empty">No stored turns yet. Long-term insight reads the trace DB (DUO_TRACE_DB), so it appears once turns are recorded.</div>';return}
+  const day=t=>new Date(t*1000).toLocaleDateString(undefined,{month:'short',day:'numeric'});
+  let h=`<div class="lt-meta">${I.turns} turns in ${I.sessions} session${I.sessions===1?'':'s'} over ${I.days} day${I.days===1?'':'s'} (${day(I.first)} to ${day(I.last)}). ${I.tested} change tests run.</div>`;
+  const F=I.findings||[];
+  h+=F.length?`<ul class="lt-find">${F.map(f=>`<li><span class="${f.good===true?'ok':f.good===false?'bad':''}">${f.up?'▲':'▼'}</span> ${sw(f.provider)} ${esc(f.text)}.<span class="q">${f.kind==='trend'?'Mann-Kendall':'Mann-Whitney'} q=${f.q<0.001?'<0.001':(+f.q).toPrecision(2)==='0.050'?(+f.q).toPrecision(3):(+f.q).toPrecision(2)}</span></li>`).join('')}</ul>`
+    :`<p class="sub" style="margin:8px 0 0">No clear change yet: none of the ${I.tested} tests survives correction${I.tested?'':` (each needs at least ${I.rules?.min_n||8} turns per model)`}. That is a result, not a gap: the models are steady at this sample size.</p>`;
+  // small multiples: one point per (turn, model) in turn order, rolling median line, session boundaries
+  const MET=[['score','Judge score','/5'],['seconds','Time per turn','s'],['fail_rate','Tool failure rate','%'],['calls','Tool calls per turn','']];
+  const order=[...new Set(R.map(r=>r.turn))],ix=new Map(order.map((t,i)=>[t,i]));
+  const bounds=[];R.forEach((r,i)=>{if(i&&r.session!==R[i-1].session)bounds.push(ix.get(r.turn))});
+  h+='<div class="lt-grid">'+MET.map(([k,label,unit])=>{const pts=R.filter(r=>r[k]!=null);if(pts.length<2)return `<div class="lt-card"><h4>${label}</h4><div class="empty">Not enough data.</div></div>`;
+    const W=460,H=120,ml=34,mr=8,mt=8,mb=18,log=k==='seconds',vals=pts.map(r=>r[k]);
+    const x=d3.scaleLinear().domain([0,Math.max(1,order.length-1)]).range([ml,W-mr]);
+    const y=(log?d3.scaleLog().domain([Math.max(.1,d3.min(vals.filter(v=>v>0))||1),Math.max(1,d3.max(vals))]):d3.scaleLinear().domain(k==='score'?[1,5]:[0,Math.max(k==='fail_rate'?.05:1,d3.max(vals))]));if(!log)y.nice();y.range([H-mb,mt]);
+    const fmt=v=>k==='fail_rate'?Math.round(100*v)+'%':k==='seconds'?dur(v*1000):d3.format('~g')(v);
+    let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${label} over time">`;
+    (log?(([a,b])=>[a,Math.sqrt(a*b),b])(y.domain()):y.ticks(3)).forEach(v=>{s+=`<line x1="${ml}" x2="${W-mr}" y1="${y(v)}" y2="${y(v)}" stroke="var(--grid)"/><text x="${ml-4}" y="${y(v)+3}" text-anchor="end" class="mut" style="font-size:9.5px">${fmt(v)}</text>`});
+    bounds.forEach(b=>{s+=`<line x1="${x(b)-.5}" x2="${x(b)-.5}" y1="${mt}" y2="${H-mb}" stroke="var(--line)" stroke-dasharray="2 2"/>`});
+    for(const p of P){const ps=pts.filter(r=>r.provider===p);if(!ps.length)continue;
+      ps.forEach(r=>{const v=log?Math.max(y.domain()[0],r[k]):r[k];s+=`<circle cx="${x(ix.get(r.turn))}" cy="${y(v)}" r="2.2" fill="var(--${p})" opacity=".45"><title>${NAME[p]} · ${day(r.ts)} · ${fmt(r[k])}</title></circle>`});
+      const win=Math.max(3,Math.round(ps.length/8)),line=ps.map((r,i)=>{const w=ps.slice(Math.max(0,i-win+1),i+1).map(q=>q[k]);return [x(ix.get(r.turn)),y(Math.max(log?y.domain()[0]:-Infinity,median(w)))]});
+      s+=`<path d="${d3.line()(line)}" fill="none" stroke="var(--${p})" stroke-width="2"/>`}
+    s+=`<text x="${ml}" y="${H-4}" class="mut" style="font-size:9.5px">${day(R[0].ts)}</text><text x="${W-mr}" y="${H-4}" text-anchor="end" class="mut" style="font-size:9.5px">${day(R.at(-1).ts)}</text></svg>`;
+    const f=F.find(f=>f.metric===k);
+    return `<div class="lt-card"><h4>${label}</h4>${s}<div class="lt-meta">${f?esc(f.text)+'.':'Line = rolling median; dashed = new session.'}</div></div>`}).join('');
+  // when they work: weekday x hour, local time
+  const grid=Array.from({length:7},()=>Array(24).fill(0));new Set(R.map(r=>r.turn+'|'+r.ts)).forEach(k=>{const d=new Date(+k.split('|')[1]*1000);grid[(d.getDay()+6)%7][d.getHours()]++});
+  const mx=d3.max(grid.flat())||1,DN=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  let g=`<svg viewBox="0 0 460 128" role="img" aria-label="Turns by weekday and hour">`;
+  grid.forEach((row,di)=>{g+=`<text x="26" y="${di*15+19}" text-anchor="end" class="mut" style="font-size:9.5px">${DN[di]}</text>`;row.forEach((n,hi)=>{g+=`<rect x="${30+hi*17.5}" y="${di*15+9}" width="16" height="13" rx="2" fill="var(--text)" opacity="${n?.12+.78*n/mx:.04}"><title>${DN[di]} ${hi}:00 · ${n} turn${n===1?'':'s'}</title></rect>`})});
+  [0,6,12,18].forEach(hi=>{g+=`<text x="${30+hi*17.5}" y="124" class="mut" style="font-size:9.5px">${hi}:00</text>`});g+='</svg>';
+  const H=I.habits||{};
+  const hab=P.filter(p=>H[p]).map(p=>{const x=H[p];return `${sw(p)} <b>${NAME[p]}</b>: looped in ${x.loop_turns} of ${x.turns} turns (${pct(x.loop_turns/x.turns)})${x.loop_s?`, ${dur(x.loop_s*1000)} in loops`:''}${x.stall_s?`; median longest stall ${dur(x.stall_s*1000)}`:''}.`}).join('<br>');
+  h+=`<div class="lt-card"><h4>When they work (local time)</h4>${g}</div><div class="lt-card"><h4>Long-run habits</h4><div class="lt-meta" style="font-size:12.5px;line-height:1.7">${hab||'Long-run readings start with this version; older turns have none.'}</div></div></div>`;
+  host.innerHTML=h;
+}
 function renderTurnReading(D){
   const t=D.turns.find(t=>t.id===TREE.turn),card=document.getElementById('verdictCard'),host=document.getElementById('timeWent');
-  if(!t){card.innerHTML='';host.innerHTML='<div class="empty">Time budgets appear once a turn finishes.</div>';return}
-  card.innerHTML=cardHtml(verdictCard(t));
+  if(!t){card.innerHTML='';renderLongRun(null);if(!LT)fetchLongterm();else renderLongTerm();host.innerHTML='<div class="empty">Time budgets appear once a turn finishes.</div>';return}
+  card.innerHTML=cardHtml(verdictCard(t));renderLongRun(t);if(!LT||Date.now()-LT_AT>30000){LT_AT=Date.now();fetchLongterm()}else renderLongTerm();
   const B=P.map(p=>({p,b:timeBudget(t.by[p].filter(r=>r.role!=='synthesis'&&!r.running))})).filter(x=>x.b.total>0);
   if(!B.length){host.innerHTML='<div class="empty">No finished runs in this turn yet.</div>';return}
   const max=d3.max(B,x=>x.b.total),w=v=>(100*v/max).toFixed(2)+'%',sec=v=>dur(v*1000);

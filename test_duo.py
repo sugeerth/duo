@@ -508,4 +508,33 @@ class Tests(unittest.TestCase):
    _t.sleep(0.3);writer.emit('judge.verdict','duo',turn_id='t',verdict='codex');writer.store.flush()  # arrives while the stream is open
    th.join(6);viewer.close()
    self.assertEqual(got,['prompt','judge.verdict'])
+ def test_longrun_finds_loop_progress_and_sessions(self):
+  import longrun
+  st=[];c={'t':1000.0,'ref':0}
+  def add(tool,target,dur,ok=True,out='',gap=2):
+   c['t']+=gap;c['ref']+=1;st.append({'ref':c['ref'],'tool':tool,'target':target,'ok':ok,'at':c['t'],'seconds':dur,'output':out});c['t']+=dur
+  for i in range(5):add('Read',f'src/m{i}.py',1)
+  add('Bash','cd repo && pytest -q 2>&1 | tail -5',5,False,'2 failed, 4 passed')
+  for k in range(4):add('Read','src/m1.py',1,gap=600);add('Edit','src/m1.py',1);add('Bash','pytest -q',5,False,'2 failed, 4 passed')
+  add('Read','docs/guide.md',2,gap=3600);add('Edit','src/m2.py',1);add('Bash','pytest -q',5,True,'6 passed')
+  r=longrun.read(st)
+  self.assertEqual(len(r['sessions']),2);self.assertEqual(r['progress'],1);self.assertEqual(r['bursts'][-1]['status'],'progress')
+  self.assertEqual(len(r['loops']),1);self.assertGreaterEqual(r['loops'][0]['bursts'],3)
+  self.assertTrue(r['look_first']['why'].startswith('start of a loop'))
+  self.assertEqual(longrun.check_key('cd repo && pytest -q 2>&1 | tail -5'),'pytest -q')
+  self.assertIsNone(longrun.read([]))
+ def test_longrun_short_run_has_no_loops(self):
+  import longrun
+  st=[{'ref':i,'tool':'Read','target':f'f{i}.py','ok':True,'at':100+i*3,'seconds':1} for i in range(6)]
+  r=longrun.read(st);self.assertEqual(len(r['bursts']),1);self.assertEqual(r['loops'],[]);self.assertIsNone(r['look_first'])
+ def test_longterm_trend_needs_evidence(self):
+  import longterm,random
+  rng=random.Random(7)
+  def recs(fn):return [{'turn':f't{i}','session':'s','ts':i*60.0,'kind':'read','provider':'claude','seconds':fn(i),'calls':5,'fails':0,'fail_rate':0.0,'score':None,'result':None,'loops':0,'loop_s':0,'stall_s':None,'progress':None} for i in range(30)]
+  rising=longterm.insight(recs(lambda i:10+i+rng.random()))
+  self.assertTrue(any(f['metric']=='seconds' and f['kind']=='trend' and f['up'] and f['good'] is False for f in rising['findings']))
+  noise=longterm.insight(recs(lambda i:10+rng.random()))
+  self.assertFalse([f for f in noise['findings'] if f['metric']=='seconds'])
+  few=longterm.insight(recs(lambda i:i)[:5]);self.assertEqual(few['findings'],[])
+  self.assertEqual([round(q,3) for q in longterm.bh([0.01,0.04,0.03])],[0.03,0.04,0.04])
 if __name__=='__main__':unittest.main()

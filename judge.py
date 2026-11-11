@@ -91,14 +91,14 @@ def trajectory(turn_id,raw=False):
         if kind=='reasoning':run['steps'].append({'kind':'think','ref':e['id'],'text':text(e) if raw else _clip(text(e),420),'chars':e.get('chars') or 0})
         elif kind=='tool.started':
             step={'kind':'tool','ref':e['id'],'tool':e.get('tool'),'target':_clip(e.get('detail'),120),'t':e['timestamp']}
-            if raw:step['input']=text(e)[:6000]
+            if raw:step['input']=text(e)[:6000];step['at']=e['timestamp']
             run['steps'].append(step);run['pending'][e.get('item_id') or e.get('tool')]=step
         elif kind=='tool.completed':
             step=run['pending'].pop(e.get('item_id') or e.get('tool'),None)
             if step:
                 step['ok']=e.get('passed') is not False;step['seconds']=round(e['timestamp']-step.pop('t'),1)
                 if not step['ok']:step['error']=_clip(text(e),300)
-                elif raw:step['output']=text(e)[:600]
+                elif raw:o=text(e);step['output']=o[:600]+('…'+o[-300:] if len(o)>600 else '')  # the tail keeps test summaries
         elif kind=='approval.resolved' and str(e.get('status','')).startswith('declin'):
             run['steps'].append({'kind':'declined','ref':e['id'],'tool':e.get('tool') or e.get('method')})
         elif kind=='span.end':
