@@ -56,6 +56,6 @@ DUO_TRACE_DB=/tmp/duo-demo.db python3 tools/serve_viewer.py 8790   # open http:/
 
 ## Tests
 
-`python3 test_duo.py` runs 52 unit tests with no API calls. `smoke_live.py` and `smoke_action.py` call the real CLIs and use quota.
+`python3 test_duo.py` runs 53 unit tests with no API calls. `smoke_live.py` and `smoke_action.py` call the real CLIs and use quota.
 
 **More:** every command, the judge rubric, the learning loop, eval sets and exports are in [docs/REFERENCE.md](docs/REFERENCE.md).

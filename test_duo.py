@@ -3,6 +3,7 @@ import contextlib
 import importlib.util
 import io
 from pathlib import Path
+import sqlite3
 import tempfile
 import threading
 import unittest
@@ -29,12 +30,12 @@ class Tests(unittest.TestCase):
   with tempfile.TemporaryDirectory() as tmp,patch.object(duo.shutil,'which',return_value='/mock/codex'),patch.object(duo.subprocess,'Popen') as popen:
    proc=popen.return_value;proc.communicate.return_value=('{"type":"item.completed","item":{"type":"agent_message","text":"answer"}}','');proc.returncode=0
    result=duo.call('codex','q',Path(tmp),1);self.assertEqual(result['answer'],'answer');self.assertNotIn('-o',popen.call_args.args[0]);self.assertEqual(list(Path(tmp).iterdir()),[])
- def test_command_center_attached_and_shared(self):
+ def test_auto_context_attached_and_shared(self):
   captured=[]
   def fake(provider,prompt,*args):captured.append(prompt);return {'ok':True,'answer':'answer'}
   with tempfile.TemporaryDirectory() as tmp:
    board=Path(tmp)/'board.html';board.write_text('<h1>Plan</h1><p>Ship the recommender first.</p><script>secret()</script>')
-   with patch.object(duo,'COMMAND_CENTER',board):
+   with patch.object(duo,'AUTO_CONTEXT_FILE',board):
     result,n,out=self.run_case(fake)  # unrelated question stays uncluttered
     self.assertNotIn(str(board),captured[0])
     with patch.object(duo,'call',side_effect=fake),contextlib.redirect_stdout(io.StringIO()),contextlib.redirect_stderr(io.StringIO()):
@@ -42,8 +43,23 @@ class Tests(unittest.TestCase):
     self.assertTrue(all(str(board.resolve()) in prompt for prompt in captured[-3:]))
     self.assertTrue(all('secret()' not in prompt for prompt in captured[-3:]))
   self.assertTrue(all('recommender' in prompt.lower() for prompt in captured[-3:]))
- def test_no_auto_context(self):
-  self.assertEqual(duo.resolve_context('command center',[],[],False),[])
+ def test_auto_context_off_or_already_attached(self):
+  with tempfile.TemporaryDirectory() as tmp:
+   board=Path(tmp)/'board.html';board.write_text('<p>plan</p>')
+   with patch.object(duo,'AUTO_CONTEXT_FILE',board):
+    self.assertEqual(duo.resolve_context('command center',[],[],False),[])  # --no-auto-context
+    self.assertEqual(len(duo.resolve_context('command center',[duo.context_file(board)],[])),1)  # attached by hand: not twice
+  with patch.object(duo,'AUTO_CONTEXT_FILE',None):
+   self.assertEqual(duo.resolve_context('command center',[],[]),[])  # DUO_AUTO_CONTEXT unset
+ def test_demo_trace_writes_complete_judged_session(self):
+  spec=importlib.util.spec_from_file_location('demo_trace',Path(__file__).with_name('tools')/'demo_trace.py');demo=importlib.util.module_from_spec(spec);spec.loader.exec_module(demo)
+  with tempfile.TemporaryDirectory() as tmp:
+   sid,n=demo.build(Path(tmp)/'demo.db');con=sqlite3.connect(Path(tmp)/'demo.db')
+   self.assertEqual(con.execute('select count(*) from events').fetchone()[0],n)
+   self.assertEqual(con.execute("select count(*) from spans where kind='turn'").fetchone()[0],len(demo.TURNS))
+   self.assertEqual(con.execute('select count(*) from spans where end is null').fetchone()[0],0)
+   self.assertEqual({r[0] for r in con.execute('select distinct provider from judge_scores')},{'codex','claude'})
+   self.assertEqual(demo.build(Path(tmp)/'again.db'),(sid,n))  # seeded: reruns match the README screenshots
  def test_unified_readonly_runs_both_concurrently(self):
   barrier=threading.Barrier(2)
   def fake(provider,prompt,readonly=False,*args,**kwargs):
