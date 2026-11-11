@@ -185,10 +185,11 @@ section:not(.open){padding-top:9px;padding-bottom:9px}
 <main>
   <section class="c12" id="evalTreeSec" data-open="1">
     <h2>Duo · one task, two execution tracks</h2>
-    <p class="sub">Long runs stay on a shared timeline. Tool calls split off as railway tracks, with nearby calls clustered until you zoom in.</p>
+    <p class="sub">Long runs stay on a shared timeline. Tool calls split off as railway tracks, with nearby calls clustered until you zoom in. The Tree view regrows each run as a tree: trunk = run time, branches = tool calls, canopy = judge score.</p>
     <div id="railSummary" class="rail-summary"></div>
     <div class="tree-toolbar">
       <select id="treeTurn" aria-label="Execution timeline turn"></select>
+      <span class="seg" id="treeView" role="group" aria-label="Timeline view"><button data-v="rail" aria-pressed="true">Railway</button><button data-v="tree" aria-pressed="false">Tree</button></span>
       <button id="treeFollow" aria-pressed="true">Follow latest</button>
       <button id="treePlay">Replay growth</button>
       <select id="railZoom" aria-label="Timeline zoom"><option value="1">Fit timeline</option><option value="2">Zoom 2×</option><option value="4">Zoom 4×</option><option value="8">Zoom 8×</option></select>
@@ -366,7 +367,7 @@ function ingest(e){
   if(e.id<=S.maxId)return;S.maxId=e.id;S.events.push(e);
   if(S.started===null)S.started=e.timestamp;
   if(e.type==='span.start'){
-    const s={id:e.span_id,parent:e.parent_id,kind:e.span_kind,provider:e.provider,role:e.role,mode:e.mode,turnId:e.turn_id,start:e.timestamp,end:null,status:'running',duration:null,children:[],tools:[],reasoning:[],evals:[],answerId:null,promptId:null};
+    const s={id:e.span_id,parent:e.parent_id,kind:e.span_kind,provider:e.provider,role:e.role,mode:e.mode,model:e.model&&e.model!=='default'?e.model:null,turnId:e.turn_id,start:e.timestamp,end:null,status:'running',duration:null,children:[],tools:[],reasoning:[],evals:[],answerId:null,promptId:null};
     S.spans.set(s.id,s);S.order.push(s.id);const p=s.parent&&S.spans.get(s.parent);if(p)p.children.push(s.id);return;
   }
   const J=S.J;
@@ -427,7 +428,7 @@ function derive(){
     const failedTools=s.tools.filter(l=>l.passed===false&&!l.declined);
     const retries=[];for(let i=1;i<s.tools.length;i++){const a=s.tools[i-1],b=s.tools[i];if(a.passed===false&&b.tool===a.tool)retries.push(b)}
     const failedEval=s.evals.some(e=>/backend_success|nonempty_successful_response/.test(e.name)&&e.passed===false);
-    runs.push({id:s.id,s,provider:s.provider,role:s.role||'run',turn:t?.id,turnNo:t?turnNo.get(t.id):0,kind:kindOf(t?.mode),start:s.start,end:s.end||now,running:s.status==='running',
+    runs.push({id:s.id,s,provider:s.provider,role:s.role||'run',model:s.model,turn:t?.id,turnNo:t?turnNo.get(t.id):0,kind:kindOf(t?.mode),start:s.start,end:s.end||now,running:s.status==='running',
       dur:s.duration??(now-s.start)*1000,tools:s.tools.filter(l=>!l.declined),failedTools,declined:s.tools.filter(l=>l.declined),retries,
       failed:s.status==='failed'||failedEval,reasoning:s.reasoning,evals:s.evals});
   }
@@ -1314,7 +1315,7 @@ function report(){
 document.getElementById('copyMd').onclick=async e=>{try{await navigator.clipboard.writeText(report());e.target.textContent='Copied ✓'}catch(_){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([report()],{type:'text/markdown'}));a.download='duo-compare.md';a.click();e.target.textContent='Downloaded ✓'}setTimeout(()=>e.target.textContent='Copy report',1600)};
 
 /* ================= growing evaluation tree ================= */
-const TREE={turn:null,follow:true,progress:100,timer:null,seen:new Set(),session:null};
+const TREE={turn:null,follow:true,progress:100,timer:null,seen:new Set(),session:null,view:'rail'};
 
 function railClusters(tools,x,cutoff){
   const clusters=[];
@@ -1334,11 +1335,16 @@ function renderEvalTree(D){
     const runMs=d3.sum(rs,r=>r.dur),toolMs=Math.min(runMs,d3.sum(tools,l=>l.dur||0)),slow=tools.filter(l=>l.dur!=null).sort((a,b)=>b.dur-a.dur)[0];
     // Where the time went: tool time vs the rest of the run (model thinking + orchestration). Tool time is summed, so overlapping calls can overstate it.
     const compo=runMs?`<div class="rail-compo" data-tip="Where the time went: <b>${dur(toolMs)}</b> in tools · <b>${dur(runMs-toolMs)}</b> model thinking"><i style="width:${Math.round(100*toolMs/runMs)}%;background:var(--model)"></i></div><div class="rail-compo-key">${pct(toolMs/runMs)} in tools · ${pct(1-toolMs/runMs)} thinking${slow&&slow.dur>0?` · slowest: ${esc(short(slow.tool))} ${dur(slow.dur)}`:''}</div>`:'';
-    return `<div style="--model:var(--${p})"><b>${NAME[p]}</b><div class="rail-values"><span><strong>${rs.length?dur(runMs):'–'}</strong> run time</span><span><strong>${tools.length}</strong> tool calls</span><span class="${fail?'bad':''}"><strong>${fail}</strong> failures</span><span><strong>${j?f1(j.overall)+'/5':'Pending'}</strong> judge score</span></div>${compo}</div>`}).join('');
+    const mdl=[...new Set(rs.map(r=>r.model).filter(Boolean))].join(', ');
+    return `<div style="--model:var(--${p})"><b>${NAME[p]}</b>${mdl?` <span class="sub" data-tip="The model this provider ran on this turn — comparisons are between these models, not just the two providers">${esc(mdl)}</span>`:''}<div class="rail-values"><span><strong>${rs.length?dur(runMs):'–'}</strong> run time</span><span><strong>${tools.length}</strong> tool calls</span><span class="${fail?'bad':''}"><strong>${fail}</strong> failures</span><span><strong>${j?f1(j.overall)+'/5':'Pending'}</strong> judge score</span></div>${compo}</div>`}).join('');
   const runs=[...t.runs,...t.judges.map(j=>({id:j.id,s:j,provider:j.provider,role:'judge',start:j.start,end:j.end,running:j.status==='running',tools:j.tools,reasoning:j.reasoning,evals:j.evals}))];
   const runIds=new Set(runs.map(r=>r.id));
   const findings=S.events.filter(e=>(e.turn_id===t.id||runIds.has(e.span_id))&&/^(evaluation$|judge\.|analysis\.|policy\.reward|evolve\.result)/.test(e.type)&&(F.judge==='all'||!e.judge||String(e.judge).startsWith(F.judge)));
   const start=t.start,end=Math.max(t.end,...runs.map(r=>r.end),...findings.map(e=>e.timestamp)),span=Math.max(1,end-start),cutoff=start+span*TREE.progress/100;
+  if(TREE.view==='tree'){const n=renderGrowthTree(t,span,cutoff,host);
+    document.getElementById('treeProgress').value=TREE.progress;
+    document.getElementById('treePosition').textContent=dur(Math.max(0,cutoff-start)*1000)+' / '+dur(span*1000)+' · '+n+' tool calls';
+    renderStepDiff(t);return}
   const zoom=+document.getElementById('railZoom').value,w=Math.max(760,host.clientWidth)*zoom,L=170,R=35;
   const x=d3.scaleLinear().domain([start,start+span]).range([L,w-R]);
   const svg=d3.create('svg').attr('width',w).attr('role','group').attr('aria-label','Turn '+t.no+' execution railway timeline');
@@ -1355,7 +1361,7 @@ function renderEvalTree(D){
     const run=target(svg.append('g'),(NAME[r.provider]||r.provider)+' '+r.role+' · '+dur((finish-r.start)*1000),()=>r.role==='judge'?showTurn(t.id):showRun(r.id));
     run.append('rect').attr('x',a).attr('y',ry-7).attr('width',Math.max(3,b-a)).attr('height',14).attr('rx',5).attr('fill',c).attr('opacity',.3);
     run.append('line').attr('x1',a).attr('x2',b).attr('y1',ry).attr('y2',ry).attr('stroke',c).attr('stroke-width',3);
-    text(ry-2,(NAME[r.provider]||r.provider||'Panel')+' · '+r.role,(r.running&&TREE.progress===100?'Running · ':'')+dur((finish-r.start)*1000));
+    text(ry-2,(NAME[r.provider]||r.provider||'Panel')+' · '+r.role,(r.running&&TREE.progress===100?'Running · ':'')+dur((finish-r.start)*1000)+(r.model?' · '+r.model:''));
     if(r.running&&TREE.progress===100)run.append('circle').attr('cx',b).attr('cy',ry).attr('r',5).attr('fill',c).attr('class','current');
     const occupied=[];let tracks=1;
     for(const cl of railClusters(r.tools,x,cutoff)){
@@ -1394,6 +1400,59 @@ function renderEvalTree(D){
   document.getElementById('treePosition').textContent=dur(Math.max(0,cutoff-start)*1000)+' / '+dur(span*1000)+' · '+visibleCalls+' tool calls';
   renderStepDiff(t);
 }
+/* Execution tree: each agent run is a tree. Trunk height = run time (one shared scale per turn),
+   branches = tool calls at their moment on the trunk (length = call time, colour = phase, red = failed),
+   diamonds on the trunk = reasoning, canopy = judge score (★ = turn winner). Grows with the replay slider. */
+function renderGrowthTree(t,span,cutoff,host){
+  const runs=t.runs.filter(r=>r.start<=cutoff);
+  const w=Math.max(760,host.clientWidth),h=520;
+  const svg=d3.create('svg').attr('width',w).attr('height',h).attr('role','group').attr('aria-label','Turn '+t.no+' execution trees: trunks are agent runs, branches are tool calls');
+  const ground=h-66,top=100;
+  function target(g,label,action){g.attr('class','tree-node rail-target').attr('tabindex',0).attr('role','button').attr('aria-label',label).on('click',action).on('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();action()}});g.append('title').text(label);return g}
+  svg.append('line').attr('x1',30).attr('x2',w-30).attr('y1',ground).attr('y2',ground).attr('stroke','var(--line)').attr('stroke-width',2);
+  svg.append('text').attr('x',30).attr('y',ground+26).attr('class','ink b').text('TASK '+t.no+' · '+KIND_L[t.kind]);
+  svg.append('text').attr('x',30).attr('y',24).attr('class','mut').text(dur(span*1000)+' total · trunk height = run time · branch length = call time · colour = phase');
+  let lx=w-430;for(const ph of LAB_PHASES){svg.append('circle').attr('cx',lx).attr('cy',ground+48).attr('r',4).attr('fill',LAB_COLORS[ph]);svg.append('text').attr('x',lx+8).attr('y',ground+52).attr('class','mut').text(ph);lx+=ph.length*7+30}
+  svg.append('text').attr('x',lx+6).attr('y',ground+52).attr('class','mut').text('✗ failed · ◆ reasoning · ★ winner');
+  if(!runs.length){svg.append('text').attr('x',w/2).attr('y',(ground+top)/2).attr('text-anchor','middle').attr('class','mut').text('Trees grow once the agents start running.');host.replaceChildren(svg.node());return 0}
+  const maxDur=Math.max(.001,...runs.map(r=>Math.min(r.end,cutoff)-r.start)),kh=(ground-top)/maxDur;
+  const byP={codex:runs.filter(r=>r.provider==='codex'),claude:runs.filter(r=>r.provider==='claude')};
+  const zones={codex:[70,w/2-40],claude:[w/2+40,w-70]};
+  let visible=0;
+  for(const p of P){const rs=byP[p],[z0,z1]=zones[p];
+    rs.forEach((r,k)=>{
+      const cx=z0+(z1-z0)*(k+1)/(rs.length+1),fin=Math.min(r.end,cutoff),topY=ground-(fin-r.start)*kh,c=`var(--${p})`;
+      const trunk=target(svg.append('g'),NAME[p]+' '+r.role+' · '+dur((fin-r.start)*1000)+(r.running&&TREE.progress===100?' · running':''),()=>showRun(r.id));
+      trunk.append('path').attr('d',`M${cx-4.5},${ground} C${cx-5.5},${(ground+topY)/2} ${cx-2.5},${topY+14} ${cx},${topY} C${cx+2.5},${topY+14} ${cx+5.5},${(ground+topY)/2} ${cx+4.5},${ground} Z`).attr('fill',c).attr('opacity',.8);
+      trunk.append('path').attr('d',`M${cx-4},${ground} q-9,7 -16,9 M${cx+4},${ground} q9,7 16,9`).attr('stroke',c).attr('fill','none').attr('stroke-width',1.5).attr('opacity',.5);
+      const tools=r.tools.filter(l=>l.t<=cutoff);visible+=tools.length;
+      tools.forEach((l,i)=>{
+        const by=Math.max(topY+4,ground-(l.t-r.start)*kh),side=i%2?1:-1;
+        const len=24+56*Math.sqrt(Math.min(l.dur||120,20000)/20000),ex=cx+side*len,ey=by-len*.55;
+        const col=l.passed===false?'var(--critical)':(LAB_COLORS[phaseOf(l)]||'var(--judge)');
+        const g=target(svg.append('g'),short(l.tool)+(l.detail?' · '+l.detail:'')+' · '+dur(l.dur)+(l.passed===false?' · failed':''),()=>showTool(r.id,r.tools.indexOf(l)));
+        g.append('path').attr('d',`M${cx},${by} Q${cx+side*len*.5},${by-len*.12} ${ex},${ey}`).attr('fill','none').attr('stroke',col).attr('stroke-width',2.5).attr('stroke-linecap','round');
+        g.append('circle').attr('cx',ex).attr('cy',ey).attr('r',l.passed===false?4.5:3.5).attr('fill',col);
+        if(l.passed===false)g.append('text').attr('x',ex+side*6-3).attr('y',ey-6).attr('fill','var(--critical)').attr('class','b').text('✗');
+      });
+      for(const q of r.reasoning.filter(q=>q.t<=cutoff)){const qy=Math.max(topY+4,ground-(q.t-r.start)*kh);
+        const g=target(svg.append('g'),'Reasoning · '+q.chars+' characters',()=>showRun(r.id,q.id));
+        g.append('path').attr('d',`M${cx},${qy-5}l4.5,5l-4.5,5l-4.5,-5Z`).attr('fill','var(--text)')}
+      const j=t.judge[p],won=t.winner===p;
+      const crown=target(svg.append('g'),NAME[p]+(j?' · judge score '+f1(j.overall)+'/5':' · judge pending')+(won?' · turn winner':''),()=>showTurn(t.id));
+      crown.append('ellipse').attr('cx',cx).attr('cy',topY-28).attr('rx',Math.min(70,34+tools.length)).attr('ry',Math.min(42,20+tools.length*.5)).attr('fill',c).attr('opacity',won?.3:.14).attr('stroke',won?c:'none').attr('stroke-width',2);
+      crown.append('text').attr('x',cx).attr('y',topY-24).attr('text-anchor','middle').attr('class','ink b').text(j?f1(j.overall)+'/5':'…');
+      if(won)crown.append('text').attr('x',cx).attr('y',topY-50).attr('text-anchor','middle').text('★');
+      if(r.running&&TREE.progress===100)trunk.append('circle').attr('cx',cx).attr('cy',topY).attr('r',5).attr('fill',c).attr('class','current');
+      svg.append('text').attr('x',cx).attr('y',ground+26).attr('text-anchor','middle').attr('class','b').attr('fill',c).text(NAME[p]+(rs.length>1?' · '+r.role:''));
+      if(r.model)svg.append('text').attr('x',cx).attr('y',ground+41).attr('text-anchor','middle').attr('class','mut').text(r.model);
+    });
+    if(!rs.length)svg.append('text').attr('x',(z0+z1)/2).attr('y',ground-14).attr('text-anchor','middle').attr('class','mut').text(NAME[p]+' made no run on this turn');
+  }
+  host.replaceChildren(svg.node());
+  return visible;
+}
+document.getElementById('treeView').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;TREE.view=b.dataset.v;document.querySelectorAll('#treeView button').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));schedule()});
 /* Step-aligned diff: Needleman–Wunsch over tool sequences, first divergence pinned. */
 function renderStepDiff(t){
   const host=document.getElementById('stepDiff'),note=document.getElementById('diffSentence');

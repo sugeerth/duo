@@ -74,7 +74,7 @@ class TraceHub:
         # kept in a bounded memory cache + the trace DB, and fetched by the viewer on demand.
         allowed={'status','tool','method','duration_ms','name','passed','phase','count','request_id','turn_id','item_id','reason_code',
                  'span_id','parent_id','span_kind','role','mode','round','verdict','findings','score','tools','tool_errors','approvals','declined',
-                 'judge','tags','rationale','confidence','detail','chars','payload_kind','data'}  # judge.py caps rationale length
+                 'judge','tags','rationale','confidence','detail','chars','payload_kind','data','model'}  # judge.py caps rationale length
         if 'detail' in fields:fields['detail']=str(fields['detail'])[:100]
         event={'id':None,'timestamp':time.time(),'session_id':self.session_id,'provider':provider,'type':kind}
         event.update({k:v for k,v in fields.items() if k in allowed})
