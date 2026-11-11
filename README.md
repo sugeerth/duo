@@ -41,6 +41,17 @@ The focused view opens with a **verdict card** for the timeline's turn (an idea 
 
 A line with nothing to say is left out. Under the timeline, **Where the time went** puts both models' run time on one scale, split into useful tool calls, model time between calls, and wasted time (failed calls, or repeats of a call that already succeeded). It ranks tools by seconds and wasted seconds; click a tool to open its first call. "Copy report" includes the card.
 
+**Tree view (default).** Each model's run grows as a tree on a shared start line, with idle stretches pinched. Branches are tool calls colored by phase, and the canopy is the judge score. It also draws the analysis:
+- bark bands under the trunk show each burst's outcome: progress, loop, failing or quiet;
+- an amber vine wraps the trunk where the run looped, and a shaded band marks the longest stall;
+- tests grow as fruit: green ✓ or red ✗, larger when a check newly passes;
+- failed or repeated calls are withered (dashed) branches;
+- a ring and "root cause" mark the judges' root-cause call, and a thinner ring marks a critical error;
+- a ▼ pin marks the "look first" step, and a dashed graft line joins the two trunks at their first divergence;
+- on long runs, nearby calls of the same tool merge into one thicker ×N branch.
+
+Every mark opens its evidence. Railway shows the real wall-clock overlap instead.
+
 Long runs and long-term change (`longrun.py`, `longterm.py`; rules from AgentDiff's long-run reading):
 - **Long run** (per turn, deterministic, after each turn): each model's calls split into sessions (idle ≥ 30 min) and bursts. The burst gap is set by the run itself: Otsu's split of its log gaps, clamped to 20 s to 30 min.
   - Progress is a check (test/lint/typecheck) newly passing or passing more cases. A regression is a check failing after it passed.
