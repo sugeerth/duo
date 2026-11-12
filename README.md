@@ -107,8 +107,8 @@ When only one agent ran, the viewer drops the comparison-only panels (step diff,
 - Tool-call health: calls, failures classified (not found, permission, timeout, bad usage, network, crash), repeated failing calls, latency and the largest output per tool.
 
 Where it shows up:
-- the tree: severity-coloured `!` badges and purple dashed lines from an injected output to the action it led to;
-- a **Security & tool calls** panel;
+- the tree: small severity dots on risky branches and faint injection → action lines by default. A quiet **lens** at the end of the timeline toolbar (All steps · Security · Security high+ · Critical · Failures) dims everything else and brings forward full labels; the choice is remembered per browser;
+- a **Security & tool calls** panel: a risk map (risk categories × every tool call, sized and coloured by severity, injection arcs), a tool-reliability chart (failures by cause), and the full findings table on demand. It follows the lens;
 - a SECURITY line in the verdict card, with critical findings counted as suspects;
 - a Security row in the failure-mode heatmap;
 - a `risky` facet in the patterns map.

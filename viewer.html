@@ -193,6 +193,11 @@ section:not(.open){padding-top:9px;padding-bottom:9px}
 .pc b{display:block;font-size:12.5px}.pc span{display:block;color:var(--text-2)}.pc.on{border-color:var(--c);box-shadow:0 0 0 1px var(--c)}.pc .tag{font-style:normal;font-size:10px;font-weight:700;letter-spacing:.05em;background:var(--hover);border-radius:4px;padding:0 5px;margin-right:4px}.pc .tag.warn{color:var(--critical)}
 .sev{color:#fff;font-weight:700;font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;border-radius:4px;padding:1px 6px}.fm.sec td{vertical-align:top}.fm.sec code{font-size:11.5px;word-break:break-all}
 .kind{display:inline-block;font-size:10.5px;border:1px solid var(--line);border-radius:4px;padding:0 5px;margin:1px 2px 1px 0;background:var(--surface)}.kind.bad{color:var(--critical);border-color:var(--critical)}
+.lens{margin-left:auto;border:none;background:transparent;color:var(--muted);font:inherit;font-size:12px;padding:2px 4px;cursor:pointer;border-radius:6px}.lens:hover,.lens:focus{color:var(--text);background:var(--hover);outline:none}.lens.on{color:var(--text)}
+.tr-grid{display:grid;gap:3px;margin-top:6px}.tr-model{font-size:12px;font-weight:700;margin-top:4px}.tr-row{display:grid;grid-template-columns:96px minmax(80px,1fr) auto;gap:10px;align-items:center;font-size:12px}.tr-name{color:var(--text-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tr-bar{display:flex;height:10px;border-radius:5px;overflow:hidden;background:var(--grid)}.tr-bar span{height:100%}.tr-meta{color:var(--text-2);white-space:nowrap}
+.sec-more{margin-top:10px;font-size:12.5px}.sec-more summary{cursor:pointer;color:var(--text-2)}.sec-more summary:hover{color:var(--text)}
+@media(max-width:600px){.tr-row{grid-template-columns:70px 1fr;}.tr-meta{grid-column:1/-1}}
 .tw-why{font-size:12px;color:var(--text-2);margin-top:8px;line-height:1.5}
 .rail-compo{display:flex;height:8px;border-radius:4px;overflow:hidden;margin-top:9px;background:var(--grid)}.rail-compo i{display:block;height:100%}
 .rail-compo-key{font-size:11.5px;color:var(--text-2);margin-top:4px}
@@ -233,6 +238,7 @@ section:not(.open){padding-top:9px;padding-bottom:9px}
       <select id="railZoom" aria-label="Timeline zoom"><option value="1">Fit timeline</option><option value="2">Zoom 2×</option><option value="4">Zoom 4×</option><option value="8">Zoom 8×</option></select>
       <input id="treeProgress" type="range" min="0" max="100" value="100" aria-label="Elapsed time replay">
       <span id="treePosition" class="sub"></span>
+      <select id="lens" class="lens" aria-label="Lens: what to bring forward" title="Lens"><option value="all">◌ All steps</option><option value="sec">◌ Security</option><option value="sec_high">◌ Security · high+</option><option value="sec_crit">◌ Security · critical</option><option value="fail">◌ Failures</option></select>
     </div>
     <div id="evalTree" aria-label="Execution railway timeline"></div>
     <div class="tw-head"><h3>Progress lane</h3><span class="sub">Per step, how close each run is to done: from step scores when a scorer provides them, else rewards, else checks passing, else the judges' step labels. ▼ marks a sudden drop, the likeliest decisive moment (most agent failures are sudden, not gradual).</span></div>
@@ -1942,26 +1948,49 @@ function openRunAnywhere(sid,tid){
 const SEVR={critical:4,high:3,medium:2,low:1},SEVC={critical:'#c0392b',high:'#e67e22',medium:'#d4a017',low:'#7f8c8d'};
 const SECL={destructive:'destructive',secret_exposure:'secret exposure',exfiltration:'exfiltration',supply_chain:'supply chain',privilege:'privilege',persistence:'persistence',prompt_injection:'prompt injection',injection_followed:'injection followed'};
 const ERRL={not_found:'not found',permission:'permission',timeout:'timeout',usage:'bad usage',network:'network',crash:'crash',other:'other'};
+const LENS={mode:(()=>{try{return localStorage.getItem('duo-lens')||'all'}catch(e){return 'all'}})()};
+function lensMin(){return {sec:1,sec_high:3,sec_crit:4}[LENS.mode]||0}
+function lensKeep(l,M){if(LENS.mode==='fail')return l.passed===false;const f=M.sec.get(l.eid);return !!f&&SEVR[f.severity]>=lensMin()}
 function renderSecurity(t){
   const host=document.getElementById('secPanel');if(!t){host.innerHTML='';return}
-  const evs=S.A.security.filter(e=>e.turn_id===t.id&&P.concat(['claude','codex']).includes(e.provider));
+  const evs=S.A.security.filter(e=>e.turn_id===t.id);
   if(!evs.length){host.innerHTML=`<div class="empty">${t.runs.some(r=>r.tools.length)?'No security review for this turn yet (it is computed when the turn ends).':'No tool calls on this turn, so nothing to review.'}</div>`;return}
-  const F=evs.flatMap(e=>(e.data.findings||[]).map(f=>({...f,provider:e.provider}))).sort((a,b)=>SEVR[b.severity]-SEVR[a.severity]);
+  const min=lensMin(),All=evs.flatMap(e=>(e.data.findings||[]).map(f=>({...f,provider:e.provider}))),F=All.filter(f=>SEVR[f.severity]>=min).sort((a,b)=>SEVR[b.severity]-SEVR[a.severity]);
   const C=evs.flatMap(e=>(e.data.chains||[]).map(c=>({...c,provider:e.provider})));
-  const cnt=k=>F.filter(f=>f.severity===k).length;
-  const runOf=e=>t.runs.find(r=>r.provider===e.provider&&r.role!=='synthesis');
+  const cnt=k=>All.filter(f=>f.severity===k).length;
   const tiles=[[cnt('critical'),'critical','#c0392b'],[cnt('high'),'high','#e67e22'],[cnt('medium'),'medium','#d4a017'],[C.length,'injection → action','#8e44ad'],[evs.reduce((a,e)=>a+(e.data.errors||[]).length,0),'failed tool calls','var(--text-2)']];
   let h=`<div class="at-card"><div class="rm-tiles">${tiles.map(([v,l,c])=>`<div style="border-top:3px solid ${c}"><b style="color:${v?c:'var(--text)'}">${v}</b><span>${l}</span></div>`).join('')}</div>`;
-  h+=F.length?`<div class="rm-scroll"><table class="fm sec" style="min-width:720px"><thead><tr><th>Severity</th><th>Model · step</th><th>What</th><th>Evidence</th><th>OWASP LLM</th></tr></thead><tbody>${F.map(f=>{const st=stepLabel(t,f.ref);return `<tr><td><span class="sev" style="background:${SEVC[f.severity]}">${f.severity}</span></td><td>${NAME[f.provider]} ${st?`<button class="vchip" data-vref="${f.ref}">${esc(st.label)}</button>`:''}</td><td><b>${esc(SECL[f.category]||f.category)}</b> · ${esc(f.why)}</td><td><code>${esc(f.evidence)}</code></td><td class="muted">${esc(f.owasp)}</td></tr>`}).join('')}</tbody></table></div>`
-    :'<div class="lr-why" style="margin:6px 0">No risky tool use found: no destructive commands, secret reads, uploads, code fetched at run time, privilege changes, persistence or injected outputs.</div>';
-  if(C.length)h+=`<div class="lr-why" style="margin-top:8px"><b style="color:#8e44ad">Injection → action:</b> `+C.map(c=>{const a=stepLabel(t,c.source_ref),b=stepLabel(t,c.action_ref);return `${NAME[c.provider]} read instructions in ${a?`<button class="vchip" data-vref="${c.source_ref}">${esc(a.label)}</button>`:'a tool output'} and ${c.steps_after} step(s) later ran ${b?`<button class="vchip" data-vref="${c.action_ref}">${esc(b.label)}</button>`:'a risky call'} (${(c.categories||[]).map(x=>esc(SECL[x]||x)).join(', ')})`}).join('; ')+'.</div>';
-  // tool-call health
-  h+='<div class="tw-tools" style="margin-top:12px">'+evs.map(e=>{const T=Object.entries(e.data.tools||{}).sort((a,b)=>b[1].calls-a[1].calls);
-    return `<div class="rm-scroll"><table style="min-width:520px"><thead><tr><th>${NAME[e.provider]} · tool</th><th>calls</th><th>failed</th><th>why it failed</th><th>mean</th><th>largest output</th></tr></thead><tbody>${T.map(([k,d])=>`<tr><td>${esc(short(k))}</td><td>${d.calls}</td><td class="${d.failed?'bad':'muted'}">${d.failed?`${d.failed} (${pct(d.failed/d.calls)})`:'–'}</td><td>${Object.entries(d.kinds).map(([x,n])=>`<span class="kind">${ERRL[x]||x}${n>1?' ×'+n:''}</span>`).join(' ')}${d.repeat_failures?` <span class="kind bad">same call failed again ×${d.repeat_failures}</span>`:''}</td><td>${d.mean_seconds}s</td><td class="${d.max_output>40000?'bad':''}">${d.max_output?'≈'+tk(d.max_output)+' tok':'–'}</td></tr>`).join('')}</tbody></table></div>`}).join('')+'</div>';
-  h+=`<div class="lr-why" style="margin-top:6px">Rules are deterministic and conservative: benign look-alikes (rm -rf build/, GETs to package registries, .env.example, a normal git push, chmod +x) are not flagged. A finding is a reason to look, not proof of harm; open the step to check. Scored on the duo-bench security cases (T12).</div></div>`;
+  // risk map: one panel per model; rows = categories found, columns = every tool call in order
+  const ORDER=['injection_followed','prompt_injection','exfiltration','secret_exposure','destructive','supply_chain','privilege','persistence'];
+  for(const e of evs){const run=t.runs.find(r=>r.provider===e.provider&&r.role!=='synthesis');if(!run||!run.tools.length)continue;
+    const fs=(e.data.findings||[]).filter(f=>SEVR[f.severity]>=min);const rows=ORDER.filter(c=>fs.some(f=>f.category===c));
+    const n=run.tools.length,W=Math.max(520,(host.clientWidth||900)-40),L=128,R=14,top=26,rowH=20,H=top+rowH*(rows.length+1)+18,x=i=>L+(W-L-R)*(i+.5)/n,idx=new Map(run.tools.map((l,i)=>[l.eid,i]));
+    let sv=`<svg width="${W}" height="${H}" role="img" aria-label="${esc(NAME[e.provider])} risk map">`;
+    sv+=`<text x="0" y="14" class="rm-lab" style="font-weight:700;fill:var(--${e.provider})">${esc(run.model||NAME[e.provider])}</text><text x="${L}" y="14" class="rm-lab">every tool call, in order →</text>`;
+    // anchor row: all calls, failures in red
+    sv+=`<text x="${L-8}" y="${top+rowH*.65}" text-anchor="end" class="rm-lab">tool calls</text>`;
+    run.tools.forEach((l,i)=>{sv+=`<g data-gotool="${run.id}:${i}" class="rm-hit"><rect x="${x(i)-2.5}" y="${top+4}" width="5" height="${rowH-8}" rx="1.5" fill="${l.passed===false?'var(--critical)':'var(--base)'}"/><title>call ${i+1}: ${esc(short(l.tool))} ${esc(l.detail||'')}${l.passed===false?' · failed':''}</title></g>`});
+    rows.forEach((c,ri)=>{const y=top+rowH*(ri+1)+rowH/2;sv+=`<line x1="${L}" x2="${W-R}" y1="${y}" y2="${y}" stroke="var(--grid)"/><text x="${L-8}" y="${y+4}" text-anchor="end" class="rm-lab">${esc(SECL[c])}</text>`;
+      fs.filter(f=>f.category===c).forEach(f=>{const i=idx.get(f.ref);if(i==null)return;sv+=`<g data-vref="${f.ref}" class="rm-hit"><circle cx="${x(i)}" cy="${y}" r="${4+SEVR[f.severity]}" fill="${SEVC[f.severity]}" opacity=".9"/><title>${f.severity} · ${esc(SECL[c])} at call ${i+1}: ${esc(f.why)}\n${esc(f.evidence)}\n${esc(f.owasp)}</title></g>`})});
+    (e.data.chains||[]).forEach(ch=>{const i=idx.get(ch.source_ref),j=idx.get(ch.action_ref),r0=rows.indexOf('prompt_injection'),r1=rows.indexOf('injection_followed');if(i==null||j==null||r0<0||r1<0)return;
+      const y0=top+rowH*(r0+1)+rowH/2,y1=top+rowH*(r1+1)+rowH/2;sv+=`<path d="M${x(i)},${y0} C${x(i)},${y1-14} ${x(j)},${y1-14} ${x(j)},${y1}" fill="none" stroke="#8e44ad" stroke-width="1.6" stroke-dasharray="4 3"><title>injected at call ${i+1}, acted on at call ${j+1}</title></path>`});
+    if(!rows.length)sv+=`<text x="${L}" y="${top+rowH*1.6}" class="rm-lab">no findings at this lens</text>`;
+    sv+='</svg>';h+=`<div class="rm-scroll" style="margin-top:6px">${sv}</div>`}
+  // tool reliability: one bar per tool, failures split by why
+  const KC={not_found:'#8e44ad',permission:'#c0392b',timeout:'#e67e22',usage:'#d4a017',network:'#2980b9',crash:'#7f1d1d',other:'#95a5a6'};
+  h+='<div class="tw-head" style="margin-top:12px"><h3 style="font-size:13px">Tool reliability</h3><span class="sub">bar = calls; coloured part = failures by cause</span></div>';
+  for(const e of evs){const T=Object.entries(e.data.tools||{}).sort((a,b)=>b[1].calls-a[1].calls),mx=d3.max(T,([,d])=>d.calls)||1;
+    h+=`<div class="tr-grid"><div class="tr-model" style="color:var(--${e.provider})">${esc(NAME[e.provider])}</div>`+T.map(([k,d])=>{const segs=Object.entries(d.kinds).map(([x,v])=>`<span style="width:${100*v/mx}%;background:${KC[x]||KC.other}" title="${ERRL[x]||x}: ${v}"></span>`).join('');
+      return `<div class="tr-row"><span class="tr-name">${esc(short(k))}</span><div class="tr-bar"><span style="width:${100*(d.calls-d.failed)/mx}%;background:var(--base)" title="${d.calls-d.failed} ok"></span>${segs}</div><span class="tr-meta">${d.failed?`<b class="bad">${d.failed}</b>/${d.calls} failed`:`${d.calls} ok`} · ${d.mean_seconds}s${d.repeat_failures?' · <span class="bad">retried a failing call</span>':''}${d.max_output>40000?' · <span class="bad">floods context</span>':''}</span></div>`}).join('')+'</div>'}
+  h+=`<div class="rm-key" style="margin-top:4px">${Object.entries(KC).map(([k,c])=>`<span><i style="background:${c}"></i>${ERRL[k]}</span>`).join('')}</div>`;
+  // details on demand
+  if(F.length)h+=`<details class="sec-more"><summary>All findings (${F.length}) with evidence and OWASP LLM Top 10</summary><div class="rm-scroll"><table class="fm sec" style="min-width:720px"><tbody>${F.map(f=>{const st=stepLabel(t,f.ref);return `<tr><td><span class="sev" style="background:${SEVC[f.severity]}">${f.severity}</span></td><td>${NAME[f.provider]} ${st?`<button class="vchip" data-vref="${f.ref}">${esc(st.label)}</button>`:''}</td><td><b>${esc(SECL[f.category]||f.category)}</b> · ${esc(f.why)}</td><td><code>${esc(f.evidence)}</code></td><td class="muted">${esc(f.owasp)}</td></tr>`}).join('')}</tbody></table></div></details>`;
+  if(C.length)h+=`<div class="lr-why" style="margin-top:6px"><b style="color:#8e44ad">Injection → action:</b> `+C.map(c=>{const a=stepLabel(t,c.source_ref),b=stepLabel(t,c.action_ref);return `${NAME[c.provider]} read instructions at ${a?`<button class="vchip" data-vref="${c.source_ref}">${esc(a.label)}</button>`:'a tool output'} and ${c.steps_after} step(s) later ran ${b?`<button class="vchip" data-vref="${c.action_ref}">${esc(b.label)}</button>`:'a risky call'}`}).join('; ')+'.</div>';
+  h+=`<div class="lr-why" style="margin-top:4px">A finding is a reason to look, not proof of harm. Benign look-alikes (rm -rf build/, registry downloads, .env.example, a normal push) are not flagged.</div></div>`;
   host.innerHTML=h;
 }
-document.getElementById('secPanel').addEventListener('click',e=>{const b=e.target.closest('[data-vref]');if(b)openRef(+b.dataset.vref)});
+document.getElementById('secPanel').addEventListener('click',e=>{const b=e.target.closest('[data-vref]');if(b){openRef(+b.dataset.vref);return}const g=e.target.closest('[data-gotool]');if(g){const [r,i]=g.dataset.gotool.split(':');showTool(r,+i)}});
+{const el=document.getElementById('lens');el.value=LENS.mode;el.classList.toggle('on',LENS.mode!=='all');el.onchange=()=>{LENS.mode=el.value;el.classList.toggle('on',LENS.mode!=='all');try{localStorage.setItem('duo-lens',LENS.mode)}catch(e){}schedule()}}
 function renderTurnReading(D){renderTitle(D);
   if(PENDING_TURN&&D.allTurns.some(u=>u.id===PENDING_TURN)){TREE.follow=false;TREE.turn=PENDING_TURN;PENDING_TURN=null;document.getElementById('treeFollow').setAttribute('aria-pressed','false');setTimeout(schedule,0)}
   renderFailModes(D);if(!FC||Date.now()-FC_AT>60000){FC_AT=Date.now();fetchFacets()}else renderPatterns();
@@ -2092,7 +2121,7 @@ function renderGrowthTree(t,span,cutoff,host){
   svg.append('text').attr('x',lx+6).attr('y',h-12).attr('class','mut').text('✗ failed · ◆ reasoning · ★ winner');
   {let bx=14;const BL=[['progress','✓ progress burst'],['loop','↻ loop'],['failing','! failing burst'],['filler','quiet burst']];for(const [k,l] of BL){svg.append('rect').attr('x',bx).attr('y',h-94).attr('width',14).attr('height',5).attr('rx',2).attr('fill',LR_C[k]);svg.append('text').attr('x',bx+18).attr('y',h-89).attr('class','mut').text(l);bx+=l.length*6.4+34}
    svg.append('text').attr('x',14).attr('y',h-71).attr('class','mut').text('● check fruit (big = progress) · ┄ withered = failed or repeated call · ◎ root cause · ▼ look first · ┆ graft = first divergence · roots = memory carried in');
-   svg.append('text').attr('x',bx).attr('y',h-89).attr('class','mut').text('! security (red critical · orange high · amber medium) · purple dashes = injection → action');}
+   svg.append('text').attr('x',bx).attr('y',h-89).attr('class','mut').text('● security dot (red critical · orange high · amber medium) · purple dashes = injection → action');}
   if(!runs.length){svg.append('text').attr('x',w/2).attr('y',h/2).attr('text-anchor','middle').attr('class','mut').text('Trees grow once the agents start running.');host.replaceChildren(svg.node());return 0}
   // --- shared gap-constricted scale, built from the FULL turn (stable during replay) ---
   const x0=150,W=w-x0-150,relDur=r=>Math.max(.001,r.end-r.start);
@@ -2191,7 +2220,11 @@ function renderGrowthTree(t,span,cutoff,host){
       if(root||crit){g.append('circle').attr('cx',ex).attr('cy',ey).attr('r',root?10.5:8.5).attr('fill','none').attr('stroke','var(--critical)').attr('stroke-width',root?2:1.2);
         if(root)g.append('text').attr('x',ex+13).attr('y',ey+4).attr('class','b').attr('fill','var(--critical)').text('root cause')}
       if(M.hacks.has(l.eid)){g.append('text').attr('x',ex-6).attr('y',ey-9).style('font-size','15px').style('fill','var(--warn)').text('⚠');g.append('text').attr('x',ex+10).attr('y',ey-9).attr('class','b').attr('fill','var(--warn)').text(String(M.hacks.get(l.eid)).replace(/_/g,' '))}
-      if(M.sec.has(l.eid)){const f=M.sec.get(l.eid),cc=SEVC[f.severity],bx2=ex+(side>0?10:10),by2=ey+(side>0?-16:16),cats=[...new Set(f.all.map(x=>x.category))];
+      const secLens=LENS.mode.startsWith('sec');
+      if(LENS.mode!=='all'&&!lensKeep(l,M))g.attr('opacity',.1);
+      if(M.sec.has(l.eid)&&!secLens){const f=M.sec.get(l.eid);g.append('circle').attr('cx',ex+(side>0?7:7)).attr('cy',ey+(side>0?-7:7)).attr('r',3.4).attr('fill',SEVC[f.severity]).attr('stroke','var(--panel)').attr('stroke-width',1);
+        g.select('title').text(g.select('title').text()+'\nSECURITY: '+f.all.map(x=>`${x.severity} ${SECL[x.category]||x.category}: ${x.why}`).join('\n'))}
+      if(M.sec.has(l.eid)&&secLens){const f=M.sec.get(l.eid),cc=SEVC[f.severity],bx2=ex+(side>0?10:10),by2=ey+(side>0?-16:16),cats=[...new Set(f.all.map(x=>x.category))];
         g.append('rect').attr('x',bx2-2).attr('y',by2-9).attr('width',14).attr('height',14).attr('rx',3).attr('fill',cc);
         g.append('text').attr('x',bx2+5).attr('y',by2+2).attr('text-anchor','middle').style('font-size','10px').style('font-weight','800').style('fill','#fff').text(f.category==='prompt_injection'?'i':'!');
         const main=cats.find(c=>c!=='injection_followed')||cats[0];
@@ -2210,10 +2243,11 @@ function renderGrowthTree(t,span,cutoff,host){
     if(r.running&&TREE.progress===100)trunk.append('circle').attr('cx',endX).attr('cy',ty).attr('r',5).attr('fill',c).attr('class','current');
   });
   const labelled=new Set();
-  M.chains.forEach(c=>{const a=tips.get(c.source_ref),b=tips.get(c.action_ref);if(!a||!b)return;
+  const loud=LENS.mode.startsWith('sec');
+  M.chains.forEach(c=>{const a=tips.get(c.source_ref),b=tips.get(c.action_ref);if(!a||!b)return;if(LENS.mode==='fail')return;
     const g=target(svg.append('g'),`Prompt injection followed: the tool output at the first mark carried instructions, and ${c.steps_after} step(s) later the agent did something risky (${(c.categories||[]).map(x=>SECL[x]||x).join(', ')})`,()=>openRef(c.action_ref));
-    g.append('path').attr('d',`M${a.ex},${a.ey} C${a.ex},${a.ey-40} ${b.ex},${b.ey-40} ${b.ex},${b.ey}`).attr('fill','none').attr('stroke','#8e44ad').attr('stroke-width',2.2).attr('stroke-dasharray','5 3');
-    if(!labelled.has(c.source_ref)){labelled.add(c.source_ref);const n=M.chains.filter(x=>x.source_ref===c.source_ref).length;
+    g.append('path').attr('d',`M${a.ex},${a.ey} C${a.ex},${a.ey-40} ${b.ex},${b.ey-40} ${b.ex},${b.ey}`).attr('fill','none').attr('stroke','#8e44ad').attr('stroke-width',loud?2.2:1.1).attr('opacity',loud?1:.4).attr('stroke-dasharray','5 3');
+    if(loud&&!labelled.has(c.source_ref)){labelled.add(c.source_ref);const n=M.chains.filter(x=>x.source_ref===c.source_ref).length;
       g.append('text').attr('x',a.ex).attr('y',Math.max(12,a.ey-28)).attr('text-anchor','middle').attr('class','b').style('font-size','10.5px').attr('fill','#8e44ad').text(`injection → ${n} risky action${n===1?'':'s'}`)}});
   if(M.div){const [a,b]=M.div,pa=a!=null&&tips.get(a),pb=b!=null&&tips.get(b);
     if(pa&&pb){const g=target(svg.append('g'),'First divergence: the runs stop doing the same thing here',()=>openRef(a));
