@@ -21,7 +21,7 @@ jobs:
       - name: Validate data, schemas and checksums
         run: python3 bench/validate.py
       - name: Score Duo (fail on target miss or regression)
-        run: python3 bench/evaluate.py --baseline bench/baselines/duo-1.0.0.json --fail-on-regression --md bench-report.md
+        run: python3 bench/evaluate.py --baseline bench/baselines/duo-1.1.0.json --fail-on-regression --md bench-report.md
       - name: Publish report
         if: always()
         run: cat bench-report.md >> "$GITHUB_STEP_SUMMARY"

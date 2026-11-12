@@ -191,6 +191,8 @@ section:not(.open){padding-top:9px;padding-bottom:9px}
 .fm{border-collapse:collapse;font-size:12.5px;width:100%}.fm th,.fm td{padding:6px 10px;border-bottom:1px solid var(--line);text-align:left}.fm td{border-left:1px solid var(--line)}
 .pc-list{display:flex;flex-direction:column;gap:6px;max-height:330px;overflow:auto}.pc{text-align:left;font:inherit;font-size:12px;border:1px solid var(--line);border-left:4px solid var(--c);border-radius:8px;background:var(--surface);color:var(--text);padding:6px 10px;cursor:pointer}
 .pc b{display:block;font-size:12.5px}.pc span{display:block;color:var(--text-2)}.pc.on{border-color:var(--c);box-shadow:0 0 0 1px var(--c)}.pc .tag{font-style:normal;font-size:10px;font-weight:700;letter-spacing:.05em;background:var(--hover);border-radius:4px;padding:0 5px;margin-right:4px}.pc .tag.warn{color:var(--critical)}
+.sev{color:#fff;font-weight:700;font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;border-radius:4px;padding:1px 6px}.fm.sec td{vertical-align:top}.fm.sec code{font-size:11.5px;word-break:break-all}
+.kind{display:inline-block;font-size:10.5px;border:1px solid var(--line);border-radius:4px;padding:0 5px;margin:1px 2px 1px 0;background:var(--surface)}.kind.bad{color:var(--critical);border-color:var(--critical)}
 .tw-why{font-size:12px;color:var(--text-2);margin-top:8px;line-height:1.5}
 .rail-compo{display:flex;height:8px;border-radius:4px;overflow:hidden;margin-top:9px;background:var(--grid)}.rail-compo i{display:block;height:100%}
 .rail-compo-key{font-size:11.5px;color:var(--text-2);margin-top:4px}
@@ -248,6 +250,8 @@ section:not(.open){padding-top:9px;padding-bottom:9px}
     <div id="timeWent"></div>
     <div class="tw-head"><h3>Long run: phases, loops and stalls</h3><span class="sub">The run read at the scale it ran: bursts of calls, with idle between them compressed. ✓ a check newly passing, ↻ a burst repeating earlier calls without progress, ! a failing check. Brackets mark the longest loop and the longest stall.</span></div>
     <div id="longRun"></div>
+    <div class="tw-head"><h3>Security &amp; tool calls</h3><span class="sub">What each run's tool calls could break, leak or be tricked into: destructive commands, secret exposure, data leaving the machine, code fetched at run time, privilege and persistence, and prompt injection in tool outputs followed by a risky action. Every finding names its step, rule and OWASP LLM Top 10 entry. Below: how each tool behaved, with every failure classified.</span></div>
+    <div id="secPanel"></div>
     <div class="tw-head"><h3>Process graph</h3><span class="sub">Every run of this kind of task in the session, merged into one map: nodes are actions (size = how often), edges are what came next (width = how often), colour is the share of runs through that node that succeeded. ↻ counts repeats of the same action. Shows the common path and where failing runs go astray.</span></div>
     <div id="procGraph"></div>
     <div class="tw-head"><h3>Failure modes</h3><span class="sub">Each turn's problems tagged with one vocabulary (TRAIL/MAST style: specification, reasoning, planning, execution, verification) from the judges' root causes and Duo's own detectors. Cells count turns; click one for the evidence.</span></div>
@@ -413,7 +417,7 @@ const DIML={correctness:'Correctness',completeness:'Completeness',groundedness:'
 const KIND_L={respond:'Answer',read:'Read',write:'Write'};
 const qs=new URLSearchParams(location.search);
 let S;
-function reset(){S={events:[],maxId:0,started:null,session:'',spans:new Map(),order:[],J:{results:[],scores:[],verdicts:[],agree:[],errors:[],raw:[],steps:[],roots:[],actions:[]},feedback:[],byEvent:new Map(),A:{behaviour:[],flags:[],hacks:[],align:[],claims:[],hackFinal:[],override:[],rootAgree:[],conflicts:[],rewards:[],usage:[],evolve:[],fork:[],longrun:[],memctx:[],ctxtok:[],envret:[]},live:false,stored:false}}
+function reset(){S={events:[],maxId:0,started:null,session:'',spans:new Map(),order:[],J:{results:[],scores:[],verdicts:[],agree:[],errors:[],raw:[],steps:[],roots:[],actions:[]},feedback:[],byEvent:new Map(),A:{behaviour:[],flags:[],hacks:[],align:[],claims:[],hackFinal:[],override:[],rootAgree:[],conflicts:[],rewards:[],usage:[],evolve:[],fork:[],longrun:[],memctx:[],ctxtok:[],envret:[],security:[]},live:false,stored:false}}
 reset();
 const PROC=['planning','tool_selection','error_recovery','verification'];
 const PROCL={planning:'Planning',tool_selection:'Tool choice',error_recovery:'Error recovery',verification:'Verification'};
@@ -438,7 +442,7 @@ function ingest(e){
   if(e.type==='judge.root'){J.roots.push(e);return}
   if(e.type==='judge.action'){J.actions.push(e);return}
   if(e.type==='feedback'){S.feedback.push(e);return}
-  const AM={'analysis.behaviour':'behaviour','analysis.flag':'flags','analysis.hack':'hacks','analysis.align':'align','judge.claim':'claims','judge.hack_final':'hackFinal','judge.verdict_override':'override','judge.root_agreement':'rootAgree','judge.conflict':'conflicts','policy.reward':'rewards','usage':'usage','evolve.result':'evolve','fork.result':'fork','analysis.longrun':'longrun','memory.context':'memctx','context.tokens':'ctxtok','env.return':'envret'};
+  const AM={'analysis.behaviour':'behaviour','analysis.flag':'flags','analysis.hack':'hacks','analysis.align':'align','judge.claim':'claims','judge.hack_final':'hackFinal','judge.verdict_override':'override','judge.root_agreement':'rootAgree','judge.conflict':'conflicts','policy.reward':'rewards','usage':'usage','evolve.result':'evolve','fork.result':'fork','analysis.longrun':'longrun','memory.context':'memctx','context.tokens':'ctxtok','env.return':'envret','analysis.security':'security'};
   if(AM[e.type]){S.A[AM[e.type]].push(e);if(e.type!=='usage')return}
   const s=e.span_id&&S.spans.get(e.span_id);
   if(e.type==='judge.raw'){if(s)s.answerId=e.id;return}
@@ -1765,7 +1769,7 @@ function renderTitle(D){
    3. process graph across runs (Graphectory / aggregated agent graphs)
    4. patterns map across all stored runs (facets -> embed -> 2-D -> cluster -> label; /facets)
    5. RL behaviour-prevalence overlay (in renderEnv) */
-const FCATS=['Specification','Reasoning','Planning','Execution','Verification'];
+const FCATS=['Security','Specification','Reasoning','Planning','Execution','Verification'];
 const ROOT_CAT={ignored_constraint:'Specification',scope_violation:'Specification',missing_context:'Specification',misread_context:'Reasoning',hallucinated_result:'Reasoning',
   blind_retry_loop:'Planning',premature_stop:'Planning',slow_path:'Planning',ignored_tool_error:'Execution',wrong_tool:'Execution',bad_arguments:'Execution',no_verification:'Verification'};
 const FLAG_CAT={search_loop:'Planning',oscillation:'Planning',write_churn:'Planning',reread_churn:'Planning',rogue_after_error:'Execution',unverified_finish:'Verification'};
@@ -1777,6 +1781,7 @@ function failureTags(t,p){
   if(lr){if(lr.loops.length)add('Planning',`looped ${lr.loops.length}×`,lr.loops[0].ref);if(lr.regressions)add('Verification',`${lr.regressions} regression(s)`);}
   const tools=t.by[p].flatMap(r=>r.tools),bad=tools.filter(l=>l.passed===false);
   if(tools.length&&bad.length/tools.length>=.2)add('Execution',`${bad.length} of ${tools.length} tool calls failed`,bad[0].eid);
+  S.A.security.filter(e=>e.turn_id===t.id&&e.provider===p).forEach(e=>(e.data?.findings||[]).filter(f=>SEVR[f.severity]>=3).forEach(f=>add('Security',`${f.severity} ${SECL[f.category]||f.category}: ${f.why}`,f.ref)));
   S.A.claims.filter(c=>c.turn_id===t.id&&c.provider===p&&c.verdict==='contradicted').forEach(c=>add('Reasoning','claim contradicted by its own steps',c.item_id));
   if(S.A.hackFinal.some(h=>h.turn_id===t.id&&h.provider===p)||S.A.hacks.some(h=>h.turn_id===t.id&&h.provider===p))add('Specification','reward-hacking signal',S.A.hacks.find(h=>h.turn_id===t.id&&h.provider===p)?.item_id);
   return [...out.values()];
@@ -1789,6 +1794,7 @@ function suspects(t,p){
   const lr=S.A.longrun.filter(e=>e.turn_id===t.id&&e.provider===p).at(-1)?.data;
   if(lr){if(lr.look_first)add(lr.look_first.ref,2,'long-run reading: look first');(lr.loops||[]).forEach(L=>add(L.ref,1.5,'start of a loop'));(lr.checks||[]).filter(c=>c.regression).forEach(c=>add(c.ref,1.5,'regression'))}
   S.A.hacks.filter(h=>h.turn_id===t.id&&h.provider===p).forEach(h=>add(h.item_id,3,'reward-hacking signal: '+h.name));
+  S.A.security.filter(e=>e.turn_id===t.id&&e.provider===p).forEach(e=>(e.data?.findings||[]).filter(f=>f.severity==='critical').forEach(f=>add(f.ref,2,'security: '+(SECL[f.category]||f.category))));
   const first=t.by[p].flatMap(r=>r.tools).find(l=>l.passed===false);if(first)add(first.eid,.75,'first failed call');
   // a fixed 'none of these' share (weight 1.5) keeps thin evidence from looking certain: one weak signal reads ~33%, not 100%
   const all=[...W.values()].sort((a,b)=>b.w-a.w),tot=d3.sum(all,e=>e.w)+1.5;
@@ -1809,6 +1815,9 @@ function suspectLines(t){
     const chips=sus.map(s=>{const st=stepLabel(t,s.ref);return st?{...st,detail:s.why.join('; ')}:null}).filter(Boolean);
     if(!chips.length)continue;
     L.push({k:'SUSPECTS',chips,text:`${NAME[p]}: `+chips.map((c,i)=>`{${i}} ${pct(sus[i].conf)}`).join(' · ')+' (ranked evidence, not a verdict)'})}
+  for(const p of ps){const e=S.A.security.filter(x=>x.turn_id===t.id&&x.provider===p).at(-1);const fs=(e?.data?.findings||[]).filter(f=>SEVR[f.severity]>=3);if(!fs.length)continue;
+    const by=d3.rollup(fs,v=>v.length,f=>f.severity),uniq=[...new Map(fs.map(f=>[f.ref,f])).values()],top=uniq.slice(0,3).map(f=>({f,c:stepLabel(t,f.ref)})).filter(x=>x.c).map(x=>({...x.c,detail:x.f.why}));
+    L.push({k:'SECURITY',chips:top,text:`${NAME[p]}: ${[...by].map(([k,v])=>`${v} ${k}`).join(', ')} (${[...new Set(fs.map(f=>SECL[f.category]||f.category))].join(', ')}) at `+top.map((c,i)=>`{${i}}`).join(' ')})}
   const tags=ps.flatMap(p=>failureTags(t,p).map(x=>`${NAME[p]} ${x.c.toLowerCase()}`));
   if(tags.length)L.push({k:'TAGS',text:tags.join(' · ')});
   const tel=telemetry(t);if(tel)L.push({k:'TELEMETRY',text:'insufficient to diagnose with confidence: '+tel.join('; ')});
@@ -1928,12 +1937,37 @@ function openRunAnywhere(sid,tid){
   const sel=document.getElementById('session');if(![...sel.options].some(o=>o.value===sid))return;PENDING_TURN=tid;sel.value=sid;sel.onchange();
 }
 
+
+/* ================= security & tool calls (security.py emits analysis.security per run) ================= */
+const SEVR={critical:4,high:3,medium:2,low:1},SEVC={critical:'#c0392b',high:'#e67e22',medium:'#d4a017',low:'#7f8c8d'};
+const SECL={destructive:'destructive',secret_exposure:'secret exposure',exfiltration:'exfiltration',supply_chain:'supply chain',privilege:'privilege',persistence:'persistence',prompt_injection:'prompt injection',injection_followed:'injection followed'};
+const ERRL={not_found:'not found',permission:'permission',timeout:'timeout',usage:'bad usage',network:'network',crash:'crash',other:'other'};
+function renderSecurity(t){
+  const host=document.getElementById('secPanel');if(!t){host.innerHTML='';return}
+  const evs=S.A.security.filter(e=>e.turn_id===t.id&&P.concat(['claude','codex']).includes(e.provider));
+  if(!evs.length){host.innerHTML=`<div class="empty">${t.runs.some(r=>r.tools.length)?'No security review for this turn yet (it is computed when the turn ends).':'No tool calls on this turn, so nothing to review.'}</div>`;return}
+  const F=evs.flatMap(e=>(e.data.findings||[]).map(f=>({...f,provider:e.provider}))).sort((a,b)=>SEVR[b.severity]-SEVR[a.severity]);
+  const C=evs.flatMap(e=>(e.data.chains||[]).map(c=>({...c,provider:e.provider})));
+  const cnt=k=>F.filter(f=>f.severity===k).length;
+  const runOf=e=>t.runs.find(r=>r.provider===e.provider&&r.role!=='synthesis');
+  const tiles=[[cnt('critical'),'critical','#c0392b'],[cnt('high'),'high','#e67e22'],[cnt('medium'),'medium','#d4a017'],[C.length,'injection → action','#8e44ad'],[evs.reduce((a,e)=>a+(e.data.errors||[]).length,0),'failed tool calls','var(--text-2)']];
+  let h=`<div class="at-card"><div class="rm-tiles">${tiles.map(([v,l,c])=>`<div style="border-top:3px solid ${c}"><b style="color:${v?c:'var(--text)'}">${v}</b><span>${l}</span></div>`).join('')}</div>`;
+  h+=F.length?`<div class="rm-scroll"><table class="fm sec" style="min-width:720px"><thead><tr><th>Severity</th><th>Model · step</th><th>What</th><th>Evidence</th><th>OWASP LLM</th></tr></thead><tbody>${F.map(f=>{const st=stepLabel(t,f.ref);return `<tr><td><span class="sev" style="background:${SEVC[f.severity]}">${f.severity}</span></td><td>${NAME[f.provider]} ${st?`<button class="vchip" data-vref="${f.ref}">${esc(st.label)}</button>`:''}</td><td><b>${esc(SECL[f.category]||f.category)}</b> · ${esc(f.why)}</td><td><code>${esc(f.evidence)}</code></td><td class="muted">${esc(f.owasp)}</td></tr>`}).join('')}</tbody></table></div>`
+    :'<div class="lr-why" style="margin:6px 0">No risky tool use found: no destructive commands, secret reads, uploads, code fetched at run time, privilege changes, persistence or injected outputs.</div>';
+  if(C.length)h+=`<div class="lr-why" style="margin-top:8px"><b style="color:#8e44ad">Injection → action:</b> `+C.map(c=>{const a=stepLabel(t,c.source_ref),b=stepLabel(t,c.action_ref);return `${NAME[c.provider]} read instructions in ${a?`<button class="vchip" data-vref="${c.source_ref}">${esc(a.label)}</button>`:'a tool output'} and ${c.steps_after} step(s) later ran ${b?`<button class="vchip" data-vref="${c.action_ref}">${esc(b.label)}</button>`:'a risky call'} (${(c.categories||[]).map(x=>esc(SECL[x]||x)).join(', ')})`}).join('; ')+'.</div>';
+  // tool-call health
+  h+='<div class="tw-tools" style="margin-top:12px">'+evs.map(e=>{const T=Object.entries(e.data.tools||{}).sort((a,b)=>b[1].calls-a[1].calls);
+    return `<div class="rm-scroll"><table style="min-width:520px"><thead><tr><th>${NAME[e.provider]} · tool</th><th>calls</th><th>failed</th><th>why it failed</th><th>mean</th><th>largest output</th></tr></thead><tbody>${T.map(([k,d])=>`<tr><td>${esc(short(k))}</td><td>${d.calls}</td><td class="${d.failed?'bad':'muted'}">${d.failed?`${d.failed} (${pct(d.failed/d.calls)})`:'–'}</td><td>${Object.entries(d.kinds).map(([x,n])=>`<span class="kind">${ERRL[x]||x}${n>1?' ×'+n:''}</span>`).join(' ')}${d.repeat_failures?` <span class="kind bad">same call failed again ×${d.repeat_failures}</span>`:''}</td><td>${d.mean_seconds}s</td><td class="${d.max_output>40000?'bad':''}">${d.max_output?'≈'+tk(d.max_output)+' tok':'–'}</td></tr>`).join('')}</tbody></table></div>`}).join('')+'</div>';
+  h+=`<div class="lr-why" style="margin-top:6px">Rules are deterministic and conservative: benign look-alikes (rm -rf build/, GETs to package registries, .env.example, a normal git push, chmod +x) are not flagged. A finding is a reason to look, not proof of harm; open the step to check. Scored on the duo-bench security cases (T12).</div></div>`;
+  host.innerHTML=h;
+}
+document.getElementById('secPanel').addEventListener('click',e=>{const b=e.target.closest('[data-vref]');if(b)openRef(+b.dataset.vref)});
 function renderTurnReading(D){renderTitle(D);
   if(PENDING_TURN&&D.allTurns.some(u=>u.id===PENDING_TURN)){TREE.follow=false;TREE.turn=PENDING_TURN;PENDING_TURN=null;document.getElementById('treeFollow').setAttribute('aria-pressed','false');setTimeout(schedule,0)}
   renderFailModes(D);if(!FC||Date.now()-FC_AT>60000){FC_AT=Date.now();fetchFacets()}else renderPatterns();
   const t=D.turns.find(t=>t.id===TREE.turn),card=document.getElementById('verdictCard'),host=document.getElementById('timeWent');
-  if(!t){card.innerHTML='';renderProgressLane(null);renderProcGraph(null,D);renderEnv(null,D);renderLongRun(null);renderReasonMem(null);renderAttribution(null);renderConvMem(D);if(!LT)fetchLongterm();else renderLongTerm();host.innerHTML='<div class="empty">Time budgets appear once a turn finishes.</div>';return}
-  card.innerHTML=cardHtml([...verdictCard(t),...suspectLines(t)]);renderProgressLane(t);renderProcGraph(t,D);renderEnv(t,D);renderLongRun(t);renderReasonMem(t);renderAttribution(t);renderConvMem(D);if(!LT||Date.now()-LT_AT>30000){LT_AT=Date.now();fetchLongterm()}else renderLongTerm();
+  if(!t){card.innerHTML='';renderProgressLane(null);renderSecurity(null);renderProcGraph(null,D);renderEnv(null,D);renderLongRun(null);renderReasonMem(null);renderAttribution(null);renderConvMem(D);if(!LT)fetchLongterm();else renderLongTerm();host.innerHTML='<div class="empty">Time budgets appear once a turn finishes.</div>';return}
+  card.innerHTML=cardHtml([...verdictCard(t),...suspectLines(t)]);renderProgressLane(t);renderSecurity(t);renderProcGraph(t,D);renderEnv(t,D);renderLongRun(t);renderReasonMem(t);renderAttribution(t);renderConvMem(D);if(!LT||Date.now()-LT_AT>30000){LT_AT=Date.now();fetchLongterm()}else renderLongTerm();
   const B=P.map(p=>({p,b:timeBudget(t.by[p].filter(r=>r.role!=='synthesis'&&!r.running))})).filter(x=>x.b.total>0);
   if(!B.length){host.innerHTML='<div class="empty">No finished runs in this turn yet.</div>';return}
   const max=d3.max(B,x=>x.b.total),w=v=>(100*v/max).toFixed(2)+'%',sec=v=>dur(v*1000);
@@ -2042,7 +2076,8 @@ function treeMarks(t){
   const div=al&&al.divergence!=null&&al.pairs[al.divergence]?al.pairs[al.divergence]:null;
   const checks=new Map();for(const p in lr)for(const c of lr[p].checks)checks.set(c.ref,c);
   const mc=S.A.memctx.filter(e=>e.span_id===t.id).at(-1);
-  return {hacks:new Map(S.A.hacks.filter(h=>h.turn_id===t.id).map(h=>[+h.item_id,h.name])),roots,crit,lr,div,checks,hist:mc?mc.count||0:0,envret:S.A.envret.filter(e=>e.turn_id===t.id)};
+  const sec=new Map(),chains=[];S.A.security.filter(e=>e.turn_id===t.id).forEach(e=>{(e.data?.findings||[]).forEach(f=>{const o=sec.get(f.ref);if(!o||SEVR[f.severity]>SEVR[o.severity])sec.set(f.ref,{...f,provider:e.provider,all:[...(o?.all||[]),f]});else o.all.push(f)});(e.data?.chains||[]).forEach(c=>chains.push(c))});
+  return {sec,chains,hacks:new Map(S.A.hacks.filter(h=>h.turn_id===t.id).map(h=>[+h.item_id,h.name])),roots,crit,lr,div,checks,hist:mc?mc.count||0:0,envret:S.A.envret.filter(e=>e.turn_id===t.id)};
 }
 function maxLenFor(laneH){return laneH/2-22}
 function renderGrowthTree(t,span,cutoff,host){
@@ -2056,7 +2091,8 @@ function renderGrowthTree(t,span,cutoff,host){
   let lx=w-430;for(const ph of LAB_PHASES){svg.append('circle').attr('cx',lx).attr('cy',h-16).attr('r',4).attr('fill',LAB_COLORS[ph]);svg.append('text').attr('x',lx+8).attr('y',h-12).attr('class','mut').text(ph);lx+=ph.length*7+30}
   svg.append('text').attr('x',lx+6).attr('y',h-12).attr('class','mut').text('✗ failed · ◆ reasoning · ★ winner');
   {let bx=14;const BL=[['progress','✓ progress burst'],['loop','↻ loop'],['failing','! failing burst'],['filler','quiet burst']];for(const [k,l] of BL){svg.append('rect').attr('x',bx).attr('y',h-94).attr('width',14).attr('height',5).attr('rx',2).attr('fill',LR_C[k]);svg.append('text').attr('x',bx+18).attr('y',h-89).attr('class','mut').text(l);bx+=l.length*6.4+34}
-   svg.append('text').attr('x',14).attr('y',h-71).attr('class','mut').text('● check fruit (big = progress) · ┄ withered = failed or repeated call · ◎ root cause · ▼ look first · ┆ graft = first divergence · roots = memory carried in');}
+   svg.append('text').attr('x',14).attr('y',h-71).attr('class','mut').text('● check fruit (big = progress) · ┄ withered = failed or repeated call · ◎ root cause · ▼ look first · ┆ graft = first divergence · roots = memory carried in');
+   svg.append('text').attr('x',bx).attr('y',h-89).attr('class','mut').text('! security (red critical · orange high · amber medium) · purple dashes = injection → action');}
   if(!runs.length){svg.append('text').attr('x',w/2).attr('y',h/2).attr('text-anchor','middle').attr('class','mut').text('Trees grow once the agents start running.');host.replaceChildren(svg.node());return 0}
   // --- shared gap-constricted scale, built from the FULL turn (stable during replay) ---
   const x0=150,W=w-x0-150,relDur=r=>Math.max(.001,r.end-r.start);
@@ -2133,7 +2169,7 @@ function renderGrowthTree(t,span,cutoff,host){
     // long runs: consecutive calls of one tool closer than 5 px merge into one thicker branch (xN); anything marked stays single
     const seen=new Set(),groups=[];
     tools.forEach(l=>{const key=l.tool+'|'+l.detail,wither=l.passed===false||(!!l.detail&&seen.has(key));if(l.passed!==false)seen.add(key);
-      const marked=M.hacks.has(l.eid)||M.roots.has(l.eid)||M.crit.has(l.eid)||M.checks.has(l.eid)||l.passed===false||!!l.reward,bx=Math.min(endX-2,X(l.t-r.start)),last=groups.at(-1);
+      const marked=M.sec.has(l.eid)||M.hacks.has(l.eid)||M.roots.has(l.eid)||M.crit.has(l.eid)||M.checks.has(l.eid)||l.passed===false||!!l.reward,bx=Math.min(endX-2,X(l.t-r.start)),last=groups.at(-1);
       if(last&&!marked&&!last.marked&&last.tool===l.tool&&bx-last.bx1<5){last.n++;last.bx1=bx;last.dur+=l.dur||0;last.wither+=wither?1:0}
       else groups.push({l,tool:l.tool,n:1,bx,bx1:bx,dur:l.dur||0,wither:wither?1:0,marked})});
     groups.forEach((G,i)=>{const l=G.l,bx=G.bx,side=i%2?1:-1,sway=((i*37)%7-3)/14;
@@ -2155,7 +2191,13 @@ function renderGrowthTree(t,span,cutoff,host){
       if(root||crit){g.append('circle').attr('cx',ex).attr('cy',ey).attr('r',root?10.5:8.5).attr('fill','none').attr('stroke','var(--critical)').attr('stroke-width',root?2:1.2);
         if(root)g.append('text').attr('x',ex+13).attr('y',ey+4).attr('class','b').attr('fill','var(--critical)').text('root cause')}
       if(M.hacks.has(l.eid)){g.append('text').attr('x',ex-6).attr('y',ey-9).style('font-size','15px').style('fill','var(--warn)').text('⚠');g.append('text').attr('x',ex+10).attr('y',ey-9).attr('class','b').attr('fill','var(--warn)').text(String(M.hacks.get(l.eid)).replace(/_/g,' '))}
-      tips.set(l.eid,{x:bx,y:ty});
+      if(M.sec.has(l.eid)){const f=M.sec.get(l.eid),cc=SEVC[f.severity],bx2=ex+(side>0?10:10),by2=ey+(side>0?-16:16),cats=[...new Set(f.all.map(x=>x.category))];
+        g.append('rect').attr('x',bx2-2).attr('y',by2-9).attr('width',14).attr('height',14).attr('rx',3).attr('fill',cc);
+        g.append('text').attr('x',bx2+5).attr('y',by2+2).attr('text-anchor','middle').style('font-size','10px').style('font-weight','800').style('fill','#fff').text(f.category==='prompt_injection'?'i':'!');
+        const main=cats.find(c=>c!=='injection_followed')||cats[0];
+        g.append('text').attr('x',bx2+16).attr('y',by2+2).attr('class','b').style('font-size','10.5px').attr('fill',cc).text((SECL[main]||main)+(cats.length>1?` +${cats.length-1}`:''));
+        g.select('title').text(g.select('title').text()+'\nSECURITY: '+f.all.map(x=>`${x.severity} ${SECL[x.category]||x.category} (${x.rule}): ${x.why}`).join('\n'))}
+      tips.set(l.eid,{x:bx,y:ty,ex,ey});
     });
     for(const q of r.reasoning.filter(q=>q.t<=cutoff)){const qx=Math.min(endX-2,X(q.t-r.start));
       const g=target(svg.append('g'),'Reasoning · '+q.chars+' characters',()=>showRun(r.id,q.id));
@@ -2167,6 +2209,12 @@ function renderGrowthTree(t,span,cutoff,host){
     if(won)crown.append('text').attr('x',endX+42).attr('y',ty-Math.min(laneH/2-10,20+tools.length*.4)-6).attr('text-anchor','middle').text('★');
     if(r.running&&TREE.progress===100)trunk.append('circle').attr('cx',endX).attr('cy',ty).attr('r',5).attr('fill',c).attr('class','current');
   });
+  const labelled=new Set();
+  M.chains.forEach(c=>{const a=tips.get(c.source_ref),b=tips.get(c.action_ref);if(!a||!b)return;
+    const g=target(svg.append('g'),`Prompt injection followed: the tool output at the first mark carried instructions, and ${c.steps_after} step(s) later the agent did something risky (${(c.categories||[]).map(x=>SECL[x]||x).join(', ')})`,()=>openRef(c.action_ref));
+    g.append('path').attr('d',`M${a.ex},${a.ey} C${a.ex},${a.ey-40} ${b.ex},${b.ey-40} ${b.ex},${b.ey}`).attr('fill','none').attr('stroke','#8e44ad').attr('stroke-width',2.2).attr('stroke-dasharray','5 3');
+    if(!labelled.has(c.source_ref)){labelled.add(c.source_ref);const n=M.chains.filter(x=>x.source_ref===c.source_ref).length;
+      g.append('text').attr('x',a.ex).attr('y',Math.max(12,a.ey-28)).attr('text-anchor','middle').attr('class','b').style('font-size','10.5px').attr('fill','#8e44ad').text(`injection → ${n} risky action${n===1?'':'s'}`)}});
   if(M.div){const [a,b]=M.div,pa=a!=null&&tips.get(a),pb=b!=null&&tips.get(b);
     if(pa&&pb){const g=target(svg.append('g'),'First divergence: the runs stop doing the same thing here',()=>openRef(a));
       g.append('path').attr('d',`M${pa.x},${pa.y+14} C${pa.x},${(pa.y+pb.y)/2} ${pb.x},${(pa.y+pb.y)/2} ${pb.x},${pb.y-14}`).attr('fill','none').attr('stroke','var(--critical)').attr('stroke-width',1.4).attr('stroke-dasharray','4 4').attr('opacity',.8);

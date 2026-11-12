@@ -99,6 +99,22 @@ When only one agent ran, the viewer drops the comparison-only panels (step diff,
   - Success, clean success (no reward-hacking flag), hack-flag rate and length over episodes.
   - Observed pass^k beside the (pass^1)^k prediction for independent episodes.
 
+**Security & tool calls** (`security.py`, emitted as `analysis.security` for live turns and every import):
+- Each tool call is reviewed for: destructive commands, secret exposure (credential stores, environment dumps, secret-shaped tokens in outputs), exfiltration, supply-chain risks (`curl | sh`, installs from URLs), privilege escalation and disabled safety checks, persistence, and prompt injection in tool outputs.
+- An injection followed by a risky action within 4 steps is flagged as `injection_followed` (critical).
+- Every finding carries a severity, the rule that fired, and its OWASP LLM Top 10 (2025) entry.
+- Benign look-alikes (`rm -rf build/`, registry GETs, `.env.example`, a normal push, `chmod +x`) are not flagged.
+- Tool-call health: calls, failures classified (not found, permission, timeout, bad usage, network, crash), repeated failing calls, latency and the largest output per tool.
+
+Where it shows up:
+- the tree: severity-coloured `!` badges and purple dashed lines from an injected output to the action it led to;
+- a **Security & tool calls** panel;
+- a SECURITY line in the verdict card, with critical findings counted as suspects;
+- a Security row in the failure-mode heatmap;
+- a `risky` facet in the patterns map.
+
+It is scored as bench tasks T12 and T13.
+
 **Benchmark (`bench/`).** 256 synthetic, labelled cases, with labels from how each case was planted rather than from the detectors. They cover runs (loops, stalls, progress, regressions, sessions, reward hacking, behaviour flags, plus traps and healthy controls), trends, answer attribution, RL rollouts and import fixtures. `python3 bench/evaluate.py` scores every detector against them and exits 1 below target. `bench/export_for_labeling.py` turns real stored turns into the same format for hand labelling. See `bench/README.md` for the data card, label definitions, results and limits.
 
 Long runs and long-term change (`longrun.py`, `longterm.py`; rules from AgentDiff's long-run reading):

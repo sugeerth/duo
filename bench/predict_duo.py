@@ -17,7 +17,7 @@ from pathlib import Path
 
 HERE=Path(__file__).resolve().parent;ROOT=HERE.parent;DATA=HERE/'data'
 sys.path.insert(0,str(ROOT))
-import analysis, attribution, chatimport, longrun, longterm, tracestore  # noqa: E402
+import analysis, attribution, chatimport, longrun, longterm, security, tracestore  # noqa: E402
 
 def analysis_steps(steps):
     out=[]
@@ -36,6 +36,10 @@ def predict_run(case):
             'sessions':max(1,len(rd['sessions'])),'checks':len(rd['checks']),
             'stall':{'open':bool(stall['open']),'start_ref':stall['ref']} if stall else None,
             'hacks':[{'ref':r,'signals':sorted(s)} for r,s in sorted(hacks.items())],'flags':sorted({f['flag'] for f in flags})}
+
+def predict_security(case):
+    r=security.review(case['steps'])
+    return {'security':[{'ref':f['ref'],'category':f['category']} for f in r['findings']],'error_kinds':[{'ref':e['ref'],'kind':e['kind']} for e in r['errors']]}
 
 def predict_trend(case):
     ins=longterm.insight(case['records'])
@@ -80,6 +84,7 @@ def predict_all(extra=()):
         runs=jsonl(DATA/'runs.jsonl')+[r for f in extra for r in jsonl(f) if r.get('reviewed')]
         preds+=[{'id':c['id'],'pred':predict_run(c)} for c in runs]
         preds+=[{'id':c['id'],'pred':predict_trend(c)} for c in jsonl(DATA/'trends.jsonl')]
+        preds+=[{'id':c['id'],'pred':predict_security(c)} for c in jsonl(DATA/'security.jsonl')]
         preds+=[{'id':c['id'],'pred':predict_attribution(c)} for c in jsonl(DATA/'attribution.jsonl')]
         preds+=[{'id':c['id'],'pred':predict_rollout(c,store)} for c in json.loads((DATA/'rollouts.json').read_text())]
         preds+=[{'id':c['id'],'pred':predict_import(c,store)} for c in json.loads((DATA/'imports.json').read_text())]

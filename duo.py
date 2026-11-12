@@ -56,6 +56,7 @@ def analyse_turn(turn_id):
         for x in f['flags']:emit('analysis.flag',p,turn_id=turn_id,name=x['flag'],rationale=x['detail'])
         for h in f['hacks']:emit('analysis.hack',p,turn_id=turn_id,item_id=str(h['ref']),name=h['signal'],detail=h['target'])
         if f.get('longrun'):emit('analysis.longrun',p,turn_id=turn_id,data=f['longrun'],rationale=longrun.summary(f['longrun']))
+        if f.get('security'):sec=f['security'];emit('analysis.security',p,turn_id=turn_id,data=sec,count=len(sec['findings']),verdict=max((x['severity'] for x in sec['findings']),key=lambda v:{'critical':4,'high':3,'medium':2,'low':1}[v],default='none'))
     al=findings.get('align')
     if al and al['pairs']:emit('analysis.align','duo',turn_id=turn_id,data={'pairs':al['pairs'][:600],'divergence':al['divergence'],'similarity':al['similarity']})
     emit('analysis.done','duo',turn_id=turn_id,duration_ms=int((time.monotonic()-t0)*1000))
@@ -739,7 +740,7 @@ def main():
     if args.bench:
         sys.path.insert(0,str(Path(__file__).resolve().parent/'bench'))
         import evaluate as bench_eval
-        base=Path(__file__).resolve().parent/'bench'/'baselines'/'duo-1.0.0.json'
+        base=Path(__file__).resolve().parent/'bench'/'baselines'/'duo-1.1.0.json'
         return bench_eval.main(['--split',args.bench]+(['--baseline',str(base)] if base.exists() else []))
     if args.import_rollouts:
         import chatimport

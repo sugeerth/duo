@@ -157,6 +157,42 @@
     },
     "fixture": {
      "type": "object"
+    },
+    "security": {
+     "type": "array",
+     "items": {
+      "type": "object",
+      "required": [
+       "ref",
+       "category"
+      ],
+      "properties": {
+       "ref": {
+        "type": "integer"
+       },
+       "category": {
+        "type": "string"
+       }
+      }
+     }
+    },
+    "error_kinds": {
+     "type": "array",
+     "items": {
+      "type": "object",
+      "required": [
+       "ref",
+       "kind"
+      ],
+      "properties": {
+       "ref": {
+        "type": "integer"
+       },
+       "kind": {
+        "type": "string"
+       }
+      }
+     }
     }
    }
   }

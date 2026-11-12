@@ -22,12 +22,13 @@ from collections import Counter, defaultdict
 
 import analysis
 import longrun
+import security
 
 TYPES=('FILE_READ','FILE_WRITE','SEARCH','COMMAND','FETCH','OTHER')
-FEATURES=['read','write','search','command','fetch','other','log_steps','fail_rate','repeat_share','loops','stall_log','regressions','progress','hacks']
+FEATURES=['read','write','search','command','fetch','other','log_steps','fail_rate','repeat_share','loops','stall_log','regressions','progress','hacks','risky']
 WORDS={'read':'read-heavy','write':'edit-heavy','search':'search-heavy','command':'command-heavy','fetch':'web-heavy','other':'mixed tools',
        'log_steps':'long','fail_rate':'error-prone','repeat_share':'repetitive','loops':'looping','stall_log':'stalling','regressions':'regressing',
-       'progress':'making progress','hacks':'touching tests/graders'}
+       'progress':'making progress','hacks':'touching tests/graders','risky':'risky tool use'}
 LOW={'log_steps':'short','fail_rate':'clean','repeat_share':'varied','progress':'no progress'}
 
 def facets(steps):
@@ -45,6 +46,7 @@ def facets(steps):
             'fetch':types['FETCH']/max(1,n),'other':types['OTHER']/max(1,n),'log_steps':math.log1p(n),
             'fail_rate':sum(s.get('ok') is False for s in steps)/max(1,n),'repeat_share':rep/max(1,n),'loops':len(rd.get('loops',[])),
             'stall_log':math.log1p(stall),'regressions':rd.get('regressions',0),'progress':rd.get('progress',0),'hacks':len(analysis.hack_signals(st)),
+            'risky':sum(security.SEV_RANK[f['severity']]>=3 for f in security.analyze(steps)['findings']),
             'steps':n}
 
 # ------------------------------------------------------------------ small linear algebra (no numpy)

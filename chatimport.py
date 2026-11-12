@@ -240,7 +240,7 @@ def write_agent_session(store,title,provider,turns,model=None):
         if T['usage']:ev(t1,'usage',provider,aid,data=T['usage'])
         if T['answer']:ev(t1,'answer',provider,aid,T['answer'])
         ev(t1,'span.end',provider,aid,span_id=aid,parent_id=tid,span_kind='agent',role='writer' if writes else 'reader',status='ok',duration_ms=int((t1-t0)*1000),tools=len(steps),tool_errors=fails)
-        _flag_hacks(ev,steps,provider,tid)
+        _flag_hacks(ev,steps,provider,tid);_review_security(ev,steps,provider,tid)
         r=longrun.read(steps)
         if r:ev(t1,'analysis.longrun',provider,turn_id=tid,data=r,rationale=longrun.summary(r))
         ev(t1,'span.end','duo',tid,span_id=tid,span_kind='turn',status='ok',duration_ms=int((t1-t0)*1000))
@@ -264,6 +264,13 @@ def import_session(store,path,provider=None):
     store.flush(10)
     return out
 
+
+def _review_security(ev,steps,provider,tid):
+    """Security review and tool-call health (security.py), as analysis.security, the same event live turns emit."""
+    import security
+    if not steps:return
+    sec=security.review(steps);top=max((f['severity'] for f in sec['findings']),key=lambda v:security.SEV_RANK[v],default='none')
+    ev(steps[-1]['at'],'analysis.security',provider,turn_id=tid,data=sec,count=len(sec['findings']),verdict=top)
 
 def _flag_hacks(ev,steps,provider,tid):
     """Reward-hacking evidence in writes (test/grader edits, skips, removed asserts), as analysis.py flags it live."""
@@ -338,7 +345,7 @@ def import_rollouts(store,path,provider='claude'):
         t1=t+1
         ev(t1,'span.end',provider,aid,span_id=aid,parent_id=tid,span_kind='agent',role='policy',status='ok' if success else 'failed',duration_ms=int((t1-t0)*1000),tools=len(steps),tool_errors=fails)
         ev(t1,'env.return',provider,turn_id=tid,score=round(ret,4),passed=success,name=task,count=len(steps))
-        _flag_hacks(ev,steps,provider,tid)
+        _flag_hacks(ev,steps,provider,tid);_review_security(ev,steps,provider,tid)
         r=longrun.read(steps)
         if r:ev(t1,'analysis.longrun',provider,turn_id=tid,data=r,rationale=longrun.summary(r))
         ev(t1,'span.end','duo',tid,span_id=tid,span_kind='turn',status='ok',duration_ms=int((t1-t0)*1000))

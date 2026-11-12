@@ -27,7 +27,7 @@ Any agent-trace tool can be scored; it does not need Duo.
 3. Validate the file, then score it, comparing against Duo's baseline if you like:
    ```sh
    python3 bench/validate.py --predictions predictions.jsonl
-   python3 bench/score.py predictions.jsonl --system mytool --split test --baseline bench/baselines/duo-1.0.0.json --md mytool.md
+   python3 bench/score.py predictions.jsonl --system mytool --split test --baseline bench/baselines/duo-1.1.0.json --md mytool.md
    ```
 
 `predict_duo.py` is the reference adapter that turns Duo's detectors into this format.
@@ -39,7 +39,7 @@ Any agent-trace tool can be scored; it does not need Duo.
 | `SPEC.md` | formal specification (tasks, format, metrics, targets, versioning) |
 | `CHANGELOG.md` | version history |
 | `REPORT.md` | latest Duo report (`evaluate.py --md bench/REPORT.md`) |
-| `baselines/duo-1.0.0.json` | Duo's full results at 1.0.0, used for regression checks |
+| `baselines/duo-1.1.0.json` | Duo's full results at 1.0.0, used for regression checks |
 | `data/` | the cases, `manifest.json` (ids, families, splits, checksums) and fixture files |
 | `schema/` | JSON Schemas for every data file and for predictions |
 | `generate.py` / `validate.py` | build the data / check schemas and checksums |
@@ -51,7 +51,7 @@ The CI workflow (`.github/workflows/bench.yml`) runs the unit tests, `validate.p
 
 ## What is in it
 
-256 cases, about 1 MB. A stable hash of each case id assigns about 30% to `test` and the rest to `dev`; import fixtures are all `test`.
+343 cases, about 1.2 MB. A stable hash of each case id assigns about 30% to `test` and the rest to `dev`; import fixtures are all `test`.
 
 | Dataset | File | Cases | What is labelled | Detector under test |
 |---|---|---|---|---|
@@ -59,6 +59,7 @@ The CI workflow (`.github/workflows/bench.yml`) runs the unit tests, `validate.p
 | Trends | `data/trends.jsonl` | 80 | which metric carries a planted trend and its direction, or none | `longterm.insight` |
 | Attribution | `data/attribution.jsonl` | 40 | true source of every sentence: codex, claude, both, new; paraphrase and light-edit flags | `attribution.attribute` and the viewer's JS |
 | Rollouts | `data/rollouts.json` + `data/rollouts/*.json` | 10 tasks, 78 episodes | per-episode success and return, hacked episodes, exact pass@k and pass^k | `chatimport.import_rollouts` + hack detector |
+| Security | `data/security.jsonl` | 87 | planted risky tool calls in every category (destructive, secrets, exfiltration, supply chain, privilege, persistence, prompt injection and injection followed), benign look-alikes, injection-in-fixture traps; failed-call error kinds | `security.analyze`, `security.error_kind` |
 | Imports | `data/imports.json` + `data/imports/*` | 6 fixtures | exact turn, tool, failure, reasoning, answer and context-point counts | `chatimport` (chat, session, rollout loaders) |
 
 `data/manifest.json` lists every case with its dataset, family, split, file, size and a one-line note, plus counts per family.
@@ -115,7 +116,7 @@ All `*_ref` values are step `ref`s in the same record.
 
 ## Results
 
-`REPORT.md` is the latest full report: every metric with n, its 95% interval, target, status, per-family results, the trend sensitivity grid and every mismatch. `baselines/duo-1.0.0.json` holds the same results as data. At 1.0.0, Duo passes all 25 targets on every split. Four limits are reported as known: hack precision 0.667 and the `legit_tests` false-positive rate (by design), paraphrase recall 0, and 1 SD trend sensitivity 0.031. Several perfect scores rest on small n (for example 14/14 loops, Wilson lower bound 0.785), so they mean "no failure observed" rather than "proven ≥ 95%".
+`REPORT.md` is the latest full report: every metric with n, its 95% interval, target, status, per-family results, the trend sensitivity grid and every mismatch. `baselines/duo-1.1.0.json` holds the same results as data. At 1.0.0, Duo passes all 25 targets on every split. Four limits are reported as known: hack precision 0.667 and the `legit_tests` false-positive rate (by design), paraphrase recall 0, and 1 SD trend sensitivity 0.031. Several perfect scores rest on small n (for example 14/14 loops, Wilson lower bound 0.785), so they mean "no failure observed" rather than "proven ≥ 95%".
 
 ## What building it fixed
 

@@ -197,11 +197,14 @@ def match_claims(claims,steps):
 def analyse(traj):
     """traj = judge.trajectory(turn_id, raw=True). Returns per-provider findings + alignment."""
     import longrun  # longrun reuses this module's check patterns
+    import security
     per={};steps={}
     for p,runs in traj.items():
         st=steps_of([r for r in runs if r.get('role')!='reviewer']);steps[p]=st
         m,f=behaviour(st)
-        per[p]={'metrics':m,'flags':f,'hacks':hack_signals(st),'longrun':longrun.read([x for x in st if x['type']!='REASON' and x.get('kind')=='tool'])}
+        tools=[x for x in st if x['type']!='REASON' and x.get('kind')=='tool']
+        per[p]={'metrics':m,'flags':f,'hacks':hack_signals(st),'longrun':longrun.read(tools),
+                'security':security.review([{**x,'output':x.get('output') or x.get('error') or ''} for x in tools])}
     acts=lambda p:[x for x in steps.get(p,[]) if x['type']!='REASON']
     al=align(steps['codex'],steps['claude']) if acts('codex') and acts('claude') else None  # only when both did the task (not writer vs reviewer)
     return {'per':per,'align':al,'steps':steps}
