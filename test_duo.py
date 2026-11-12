@@ -572,4 +572,16 @@ class Tests(unittest.TestCase):
    self.assertTrue(any(e['type']=='span.start' and e.get('name')=='maze-3' for e in ev))
    g=Path(tmp)/'s.jsonl';g.write_text('\n'.join(_j.dumps(x) for x in steps));sid2,n2=chatimport.import_rollouts(store,g);self.assertEqual(n2,1)
    r2=[e for e in store.snapshot(sid2)['events'] if e['type']=='env.return'][0];self.assertEqual(r2['score'],1.0);self.assertTrue(r2['passed'])
+ def test_bench_data_is_reproducible(self):
+  import importlib.util as iu,hashlib
+  g=iu.spec_from_file_location('bench_generate',Path(__file__).with_name('bench')/'generate.py');gen=iu.module_from_spec(g);g.loader.exec_module(gen)
+  data=Path(__file__).with_name('bench')/'data'
+  with tempfile.TemporaryDirectory() as tmp:
+   gen.main(out=tmp)
+   for f in sorted(p for p in data.rglob('*') if p.is_file() and 'real' not in p.parts):
+    self.assertEqual(hashlib.sha1(f.read_bytes()).hexdigest(),hashlib.sha1((Path(tmp)/f.relative_to(data)).read_bytes()).hexdigest(),f'{f} differs from a fresh generate')
+ def test_bench_detectors_meet_targets(self):
+  import importlib.util as iu
+  e=iu.spec_from_file_location('bench_evaluate',Path(__file__).with_name('bench')/'evaluate.py');ev=iu.module_from_spec(e);e.loader.exec_module(ev)
+  with contextlib.redirect_stdout(io.StringIO()):self.assertEqual(ev.main(['--quiet']),0)
 if __name__=='__main__':unittest.main()

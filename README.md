@@ -80,6 +80,8 @@ Imports run the same reward-hacking detector as live turns: test or grader edits
 
 When only one agent ran, the viewer drops the comparison-only panels (step diff, attribution) and titles the page as a single-agent session.
 
+**Benchmark (`bench/`).** 256 synthetic, labelled cases, with labels from how each case was planted rather than from the detectors. They cover runs (loops, stalls, progress, regressions, sessions, reward hacking, behaviour flags, plus traps and healthy controls), trends, answer attribution, RL rollouts and import fixtures. `python3 bench/evaluate.py` scores every detector against them and exits 1 below target. `bench/export_for_labeling.py` turns real stored turns into the same format for hand labelling. See `bench/README.md` for the data card, label definitions, results and limits.
+
 Long runs and long-term change (`longrun.py`, `longterm.py`; rules from AgentDiff's long-run reading):
 - **Long run** (per turn, deterministic, after each turn): each model's calls split into sessions (idle ≥ 30 min) and bursts. The burst gap is set by the run itself: Otsu's split of its log gaps, clamped to 20 s to 30 min.
   - Progress is a check (test/lint/typecheck) newly passing or passing more cases. A regression is a check failing after it passed.

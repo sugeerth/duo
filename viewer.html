@@ -975,7 +975,7 @@ function unwrapCmd(c){c=String(c||'').trim();const m=c.match(/^(\/bin\/)?(ba|z)?
 function atype(l){const t=String(l.tool||'').toLowerCase(),d=unwrapCmd(l.detail);
   if(['read','notebookread'].includes(t))return'FILE_READ';if(['edit','write','multiedit','notebookedit','filechange'].includes(t))return'FILE_WRITE';
   if(['grep','glob','ls'].includes(t))return'SEARCH';if(['webfetch','websearch','mcptoolcall'].includes(t))return'FETCH';if(['agent','task'].includes(t))return'AGENT_SPAWN';if(['todowrite','exitplanmode'].includes(t))return'PLAN';
-  if(/^(sed -i|perl -pi|tee|mv|cp|rm|mkdir|touch|apply_patch|git (apply|checkout|restore|commit|add|mv|rm)|patch)\b|>\s*\S/i.test(d))return'FILE_WRITE';
+  if(/^(sed -i|perl -pi|tee|mv|cp|rm|mkdir|touch|apply_patch|git (apply|checkout|restore|commit|add|mv|rm)|patch)\b|>\s*\S/i.test(d.replace(/\d*>&\d+|&>\s*\/dev\/null|\d*>>?\s*\/dev\/null/g,'')))return'FILE_WRITE';
   if(/^(rg|grep|egrep|find|fd|ls|tree|git (grep|log|show|diff|status|blame)|ag)\b/i.test(d))return'SEARCH';
   if(/^(cat|sed -n|nl|head|tail|less|bat|wc)\b/i.test(d))return'FILE_READ';return'COMMAND'}
 function phaseOf(l){const a=atype(l);return a==='FILE_READ'||a==='SEARCH'||a==='FETCH'?'inspect':a==='PLAN'||a==='AGENT_SPAWN'?'plan':a==='FILE_WRITE'?'edit':TEST_RE.test(unwrapCmd(l.detail))?'verify':'run'}
@@ -1625,7 +1625,7 @@ document.getElementById('reasonMem').addEventListener('click',e=>{const th=e.tar
 
 /* ================= answer attribution =================
    For a turn with a combined answer: split it into sentences and match each against the candidate answers by
-   word-trigram containment. >= 0.25 overlap counts as a source; both sources within 60% of each other = both;
+   word-trigram containment. >= 0.5 overlap counts as a source; both sources within 60% of each other = both;
    neither = new wording from the synthesis step. Shares are weighted by sentence length. */
 const ATT={cache:new Map(),pending:new Set()};
 const ATT_C={codex:'var(--codex)',claude:'var(--claude)',both:'#8f7bd0',new:'var(--base)'},ATT_L={codex:'Codex',claude:'Claude',both:'both',new:'new wording'};
@@ -1635,7 +1635,7 @@ function attribute(final,cands){
   const sents=String(final).replace(/\r/g,'').split(/(?<=[.!?])\s+|\n+/).map(x=>x.trim()).filter(x=>x.length>2);
   return sents.map(text=>{const S=shingles(text),sc={};for(const p in C){let k=0;S.forEach(g=>{if(C[p].has(g))k++});sc[p]=S.size?k/S.size:0}
     const ps=Object.keys(sc).sort((a,b)=>sc[b]-sc[a]),top=ps[0],second=ps[1];let src='new';
-    if(top&&sc[top]>=.25)src=second&&sc[second]>=.25&&sc[second]>=.6*sc[top]?'both':top;
+    if(top&&sc[top]>=.5)src=second&&sc[second]>=.5&&sc[second]>=.6*sc[top]?'both':top;  // .5: chosen on the bench dev split (attribution.py)
     return {text,src,sc}})}
 async function loadAttribution(t){
   const syn=t.runs.find(r=>r.role==='synthesis'&&r.s.answerId),cands=t.runs.filter(r=>r.role!=='synthesis'&&r.s.answerId&&P.includes(r.provider));
