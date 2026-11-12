@@ -584,4 +584,38 @@ class Tests(unittest.TestCase):
   import importlib.util as iu
   e=iu.spec_from_file_location('bench_evaluate',Path(__file__).with_name('bench')/'evaluate.py');ev=iu.module_from_spec(e);e.loader.exec_module(ev)
   with contextlib.redirect_stdout(io.StringIO()):self.assertEqual(ev.main(['--quiet']),0)
+ def _bench(self,name):
+  import importlib.util as iu,sys as _s
+  _s.path.insert(0,str(Path(__file__).with_name('bench')))
+  sp=iu.spec_from_file_location('bench_'+name,Path(__file__).with_name('bench')/f'{name}.py');m=iu.module_from_spec(sp);sp.loader.exec_module(m);return m
+ def _oracle(self):
+  import json as _j
+  d=Path(__file__).with_name('bench')/'data';P=[]
+  for l in (d/'runs.jsonl').read_text().splitlines():
+   x=_j.loads(l);L=x['labels'];pr={'loops':[{'start_ref':g['start_ref']} for g in L['loops']],'look_first_ref':L['look_first_ref'],'progress_refs':L['progress_refs'],
+     'regression_refs':L['regression_refs'],'sessions':L['sessions'],'stall':{'open':bool(L['stall_open']),'start_ref':L['stall_start_ref']},'hacks':L['hacks'],'flags':L['flags']}
+   if L['checks'] is not None:pr['checks']=L['checks']
+   P.append({'id':x['id'],'pred':pr})
+  for l in (d/'trends.jsonl').read_text().splitlines():x=_j.loads(l);P.append({'id':x['id'],'pred':{'findings':x['labels']['trends']}})
+  for l in (d/'attribution.jsonl').read_text().splitlines():x=_j.loads(l);P.append({'id':x['id'],'pred':{'sources':[g['src'] for g in x['labels']['sentences']]}})
+  for x in _j.loads((d/'rollouts.json').read_text()):P.append({'id':x['id'],'pred':{'episodes':[{'success':e['success'],'return':e['return'],'hacked':e['hacked']} for e in x['labels']['episodes']]}})
+  for x in _j.loads((d/'imports.json').read_text()):P.append({'id':x['id'],'pred':{'fixture':x['labels']}})
+  return P
+ def test_bench_scorer_oracle_null_and_regression(self):
+  sc=self._bench('score')
+  out,md=sc.report(self._oracle(),'all','oracle')
+  scored=[r for r in out['rows'] if r['value'] is not None and r['metric']!='trends.sensitivity.small' and r['metric']!='attribution.paraphrase.recall']
+  for r in scored:self.assertEqual(r['value'],0.0 if r['metric'].endswith(('false_positive_rate','false_positive_rate_controls','false_positive_rate_legit_tests','wrong_direction')) else 1.0,r['metric'])
+  self.assertFalse(out['mismatches']);self.assertNotIn('FAIL',[r['status'] for r in out['rows']])
+  empty=[{'id':p['id'],'pred':{k:([] if isinstance(v,list) else None) for k,v in p['pred'].items() if k in ('loops','hacks','flags','progress_refs','findings')}} for p in self._oracle()]
+  out2,_=sc.report(empty,'all','nothing');self.assertIn('FAIL',[r['status'] for r in out2['rows']])
+  absent,_=sc.report([],'all','absent');self.assertEqual(absent['coverage']['scored'],0);self.assertTrue(all(r['status'] in ('SKIP','KNOWN','INFO') for r in absent['rows']))
+  worse=[dict(p,pred=dict(p['pred'],loops=[])) if p['id'].startswith('run-loop') else p for p in self._oracle()]
+  base={'metrics':{r['metric']:{'value':r['value']} for r in out['rows']}}
+  out3,_=sc.report(worse,'all','worse',base);reg={r['metric'] for r in out3['rows'] if r['regressed']}
+  self.assertIn('runs.loop.recall',reg);self.assertNotIn('runs.sessions.accuracy',reg)
+ def test_bench_data_validates_against_schemas_and_checksums(self):
+  v=self._bench('validate')
+  with contextlib.redirect_stdout(io.StringIO()):self.assertEqual(v.main([]),0)
+  errs=v.check({'id':'x','pred':{'sources':['martian']}},v.load('prediction.schema.json'));self.assertTrue(errs)
 if __name__=='__main__':unittest.main()

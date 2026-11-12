@@ -1,0 +1,113 @@
+#!/usr/bin/env python3
+"""Run Duo's detectors over the benchmark and write predictions in the public format (bench/SPEC.md).
+
+    python3 bench/predict_duo.py --out preds.jsonl [--extra bench/data/real/*.jsonl]
+
+This is the reference adapter: any other system is scored the same way by writing the same predictions.jsonl
+(one {"id", "pred"} per case, schema bench/schema/prediction.schema.json) and running bench/score.py.
+`system_checks()` adds Duo-specific checks that are not part of the public tasks (viewer JS == Python attribution).
+"""
+import argparse
+import json
+import shutil
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+
+HERE=Path(__file__).resolve().parent;ROOT=HERE.parent;DATA=HERE/'data'
+sys.path.insert(0,str(ROOT))
+import analysis, attribution, chatimport, longrun, longterm, tracestore  # noqa: E402
+
+def analysis_steps(steps):
+    out=[]
+    for s in steps:
+        k=analysis.action_type({'kind':'tool','tool':s['tool'],'target':s['target']})
+        out.append({**s,'kind':'tool','type':k,'key':analysis.target_key(s,k),'input':s.get('input') or ''})
+    return out
+
+def predict_run(case):
+    rd=longrun.read(case['steps']) or {'loops':[],'look_first':None,'checks':[],'sessions':[{}],'stall':None};st=analysis_steps(case['steps'])
+    hacks={}
+    for h in analysis.hack_signals(st):hacks.setdefault(h['ref'],set()).add(h['signal'])
+    _,flags=analysis.behaviour(st);stall=rd.get('stall')
+    return {'loops':[{'start_ref':L['ref']} for L in rd['loops']],'look_first_ref':(rd['look_first'] or {}).get('ref'),
+            'progress_refs':[c['ref'] for c in rd['checks'] if c['progress']],'regression_refs':[c['ref'] for c in rd['checks'] if c['regression']],
+            'sessions':max(1,len(rd['sessions'])),'checks':len(rd['checks']),
+            'stall':{'open':bool(stall['open']),'start_ref':stall['ref']} if stall else None,
+            'hacks':[{'ref':r,'signals':sorted(s)} for r,s in sorted(hacks.items())],'flags':sorted({f['flag'] for f in flags})}
+
+def predict_trend(case):
+    ins=longterm.insight(case['records'])
+    return {'findings':[{'provider':f['provider'],'metric':f['metric'],'direction':'up' if f['up'] else 'down'} for f in ins['findings'] if f['kind'] in ('trend','shift')]}
+
+def predict_attribution(case):
+    """Duo segments the answer itself; the benchmark gives the segmentation, so labels are matched by position."""
+    got=attribution.attribute(case['final'],case['candidates'])
+    if len(got)==len(case['sentences']):return {'sources':[g['src'] for g in got]}
+    return {'sources':[attribution.attribute(s,case['candidates'])[0]['src'] if attribution.sentences(s) else 'new' for s in case['sentences']]}
+
+def predict_rollout(case,store):
+    sid,_=chatimport.import_rollouts(store,DATA/case['file']);ev=store.snapshot(sid)['events']
+    turns=[e['span_id'] for e in ev if e['type']=='span.start' and e.get('span_kind')=='turn']
+    rets={e['turn_id']:e for e in ev if e['type']=='env.return'};hacked={e['turn_id'] for e in ev if e['type']=='analysis.hack'}
+    return {'episodes':[{'success':bool(rets[t]['passed']),'return':rets[t]['score'],'hacked':t in hacked} for t in turns if t in rets]}
+
+def predict_import(case,store):
+    f=DATA/case['file']
+    if case['loader']=='chat':
+        convs=[]
+        for title,sid,n in chatimport.import_file(store,f):
+            ev=store.snapshot(sid)['events'];answers=[store.payload(sid,e['id'])['text'] for e in ev if e['type']=='answer']
+            convs.append({'turns':n,'reasoning':sum(e['type']=='reasoning' for e in ev),'answers':answers})
+        return {'fixture':{'conversations':convs}}
+    if case['loader']=='session':
+        sid,n=chatimport.import_session(store,f);ev=store.snapshot(sid)['events'];turns=[]
+        for a in [e['span_id'] for e in ev if e['type']=='span.start' and e.get('span_kind')=='agent']:
+            mine=[e for e in ev if e.get('span_id')==a];ans=[store.payload(sid,e['id'])['text'] for e in mine if e['type']=='answer']
+            turns.append({'tools':sum(e['type']=='tool.started' for e in mine),'failed':sum(e['type']=='tool.completed' and e.get('passed') is False for e in mine),
+                          'reasoning':sum(e['type']=='reasoning' for e in mine),'ctx_points':sum(e['type']=='context.tokens' for e in mine),'answer':ans[0] if ans else None})
+        return {'fixture':{'turns':turns}}
+    sid,n=chatimport.import_rollouts(store,f)
+    return {'fixture':{'episodes':[{'return':e['score'],'success':bool(e['passed']),'steps':e['count']} for e in store.snapshot(sid)['events'] if e['type']=='env.return']}}
+
+def jsonl(p):return [json.loads(l) for l in Path(p).read_text().splitlines() if l.strip()]
+
+def predict_all(extra=()):
+    preds=[]
+    with tempfile.TemporaryDirectory() as tmp:
+        store=tracestore.TraceStore(Path(tmp)/'bench.db')
+        runs=jsonl(DATA/'runs.jsonl')+[r for f in extra for r in jsonl(f) if r.get('reviewed')]
+        preds+=[{'id':c['id'],'pred':predict_run(c)} for c in runs]
+        preds+=[{'id':c['id'],'pred':predict_trend(c)} for c in jsonl(DATA/'trends.jsonl')]
+        preds+=[{'id':c['id'],'pred':predict_attribution(c)} for c in jsonl(DATA/'attribution.jsonl')]
+        preds+=[{'id':c['id'],'pred':predict_rollout(c,store)} for c in json.loads((DATA/'rollouts.json').read_text())]
+        preds+=[{'id':c['id'],'pred':predict_import(c,store)} for c in json.loads((DATA/'imports.json').read_text())]
+    return preds
+
+JS_DRIVER=r'''
+const fs=require('fs');const src=fs.readFileSync(process.argv[2],'utf8');
+const a=src.indexOf('function shingles(');const b=src.indexOf('async function loadAttribution');
+eval(src.slice(a,b));
+const cases=JSON.parse(fs.readFileSync(0,'utf8'));
+process.stdout.write(JSON.stringify(cases.map(c=>attribute(c.final,c.candidates).map(x=>x.src))));
+'''
+def system_checks():
+    """Duo-only checks: the viewer's JavaScript attribution must agree with attribution.py on every case."""
+    node=shutil.which('node')
+    if not node:return {'attribution.js_parity':None},['node not found: JS parity skipped']
+    cases=jsonl(DATA/'attribution.jsonl')
+    with tempfile.NamedTemporaryFile('w',suffix='.js',delete=False) as f:f.write(JS_DRIVER)
+    out=subprocess.run([node,f.name,str(ROOT/'viewer.html')],input=json.dumps([{'final':c['final'],'candidates':c['candidates']} for c in cases]),capture_output=True,text=True,timeout=60)
+    Path(f.name).unlink()
+    if out.returncode:return {'attribution.js_parity':0.0},['JS driver failed: '+out.stderr[:200]]
+    js=json.loads(out.stdout);py=[[g['src'] for g in attribution.attribute(c['final'],c['candidates'])] for c in cases]
+    diffs=[f"{c['id']}: JS {a} != Python {b}" for c,a,b in zip(cases,js,py) if a!=b]
+    return {'attribution.js_parity':sum(a==b for a,b in zip(js,py))/len(cases)},diffs
+
+def main(argv=None):
+    ap=argparse.ArgumentParser(description=__doc__.split('\n')[0]);ap.add_argument('--out',required=True);ap.add_argument('--extra',nargs='*',default=[])
+    a=ap.parse_args(argv);preds=predict_all(a.extra)
+    Path(a.out).write_text(''.join(json.dumps(p,sort_keys=True)+'\n' for p in preds));print(f'wrote {len(preds)} predictions to {a.out}')
+
+if __name__=='__main__':main()

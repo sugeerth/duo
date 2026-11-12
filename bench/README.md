@@ -1,17 +1,53 @@
-# Duo benchmark: labelled data for every detector
+# duo-bench: labelled data for agent-trace analysis
 
-Synthetic, organised, labelled cases to test Duo's analysis against. Each label comes from how the case was
-**planted** by `generate.py`, never from running a detector. So `evaluate.py` measures the detectors; it does not
-grade them against their own output.
+Synthetic, organised, labelled cases for scoring tools that read agent traces: loops, stalls, progress and regressions, sessions, reward hacking, behaviour flags, trends, answer attribution, RL rollout reliability and import fidelity. Each label comes from how the case was **planted** by `generate.py`, never from a detector's output.
+
+**`SPEC.md` is the formal definition**: the 11 tasks, the prediction format, metric formulas, intervals, targets and versioning. This page is the user guide.
+
+## Quickstart
 
 ```sh
-python3 bench/generate.py                    # rewrite bench/data (deterministic: seed 7, byte-identical)
-python3 bench/evaluate.py                    # score every detector; exit 1 if any target is missed
-python3 bench/evaluate.py --split test       # held-out split only
-python3 bench/evaluate.py --json out.json    # full metrics, per-family results and every mismatch
-python3 bench/export_for_labeling.py --out bench/data/real/todo.jsonl   # real turns, ready to label
-python3 bench/evaluate.py --extra bench/data/real/*.jsonl                # include your reviewed real labels
+python3 duo.py --bench                 # score Duo (all splits) against the committed baseline
+python3 bench/evaluate.py --split test --md report.md     # held-out split, Markdown report
+python3 bench/validate.py              # schemas + SHA-256 checksums
+python3 bench/generate.py              # rebuild bench/data (byte-identical, seed 7)
 ```
+
+## Score your own system
+
+Any agent-trace tool can be scored; it does not need Duo.
+
+1. Read the inputs, never the labels: `data/runs.jsonl` (`steps`), `data/trends.jsonl` (`records`), `data/attribution.jsonl` (`candidates`, `final`, `sentences`), the files named in `data/rollouts.json` and `data/imports.json`.
+2. Write one line per case to `predictions.jsonl`. Leave out the tasks you don't attempt:
+   ```json
+   {"id": "run-loop-03", "pred": {"loops": [{"start_ref": 9}], "look_first_ref": 9, "progress_refs": [21], "sessions": 2, "flags": ["reread_churn"]}}
+   {"id": "trend-seconds-large-n20-0", "pred": {"findings": [{"provider": "claude", "metric": "seconds", "direction": "up"}]}}
+   {"id": "attr-07", "pred": {"sources": ["codex", "new", "both"]}}
+   ```
+3. Validate the file, then score it, comparing against Duo's baseline if you like:
+   ```sh
+   python3 bench/validate.py --predictions predictions.jsonl
+   python3 bench/score.py predictions.jsonl --system mytool --split test --baseline bench/baselines/duo-1.0.0.json --md mytool.md
+   ```
+
+`predict_duo.py` is the reference adapter that turns Duo's detectors into this format.
+
+## Files
+
+| Path | What it is |
+|---|---|
+| `SPEC.md` | formal specification (tasks, format, metrics, targets, versioning) |
+| `CHANGELOG.md` | version history |
+| `REPORT.md` | latest Duo report (`evaluate.py --md bench/REPORT.md`) |
+| `baselines/duo-1.0.0.json` | Duo's full results at 1.0.0, used for regression checks |
+| `data/` | the cases, `manifest.json` (ids, families, splits, checksums) and fixture files |
+| `schema/` | JSON Schemas for every data file and for predictions |
+| `generate.py` / `validate.py` | build the data / check schemas and checksums |
+| `score.py` | score any predictions file (Wilson and bootstrap intervals, targets, baseline Δ, Markdown) |
+| `predict_duo.py` / `evaluate.py` | Duo's adapter / adapter + scorer in one step |
+| `export_for_labeling.py` | real stored turns → run records with suggested labels, for human labelling |
+
+The CI workflow (`.github/workflows/bench.yml`) runs the unit tests, `validate.py` and `evaluate.py --fail-on-regression` on every push and pull request.
 
 ## What is in it
 
@@ -77,28 +113,9 @@ All `*_ref` values are step `ref`s in the same record.
   - a Codex CLI rollout with an `environment_context` wrapper and exit codes;
   - rollouts in step-record form.
 
-## Results (all splits)
+## Results
 
-`bench/results.json` holds the full output of the last run. Summary:
-
-| Detector | Result |
-|---|---|
-| Loops | precision 1.00, recall 1.00, exact start 1.00 |
-| Look-first step | 1.00 |
-| Progress / regressions | F1 1.00 / 1.00 |
-| Sessions, check counting (including traps) | 1.00, 1.00 |
-| Reward hacking (runs) | recall 1.00, signals 1.00, false positives on controls 0 |
-| Behaviour flags | precision 1.00, recall 1.00 |
-| Trends | sensitivity 0.88 for 3 SD drifts with n ≥ 20; false-positive rate 0.008; wrong direction 0 |
-| Attribution | verbatim and light-edit accuracy 0.996; JS ↔ Python parity 1.00 |
-| Rollouts | success, return, hack flags and pass^k all exact |
-| Imports | 6/6 exact |
-
-**Known limits**, reported rather than hidden:
-
-- The hack detector flags 8/8 legitimate new test files. This is deterministic by design; the judges are meant to confirm or dismiss.
-- Attribution recognizes 0 of 14 paraphrases, because word overlap cannot see a paraphrase.
-- A 1 SD drift is almost never detected at n ≤ 40 (1/32). Trend sensitivity rises with n and effect: a 3 SD drift is found 2/8 times at n=8, 4/8 at n=12, and 7/8 at n=20 and n=40.
+`REPORT.md` is the latest full report: every metric with n, its 95% interval, target, status, per-family results, the trend sensitivity grid and every mismatch. `baselines/duo-1.0.0.json` holds the same results as data. At 1.0.0, Duo passes all 25 targets on every split. Four limits are reported as known: hack precision 0.667 and the `legit_tests` false-positive rate (by design), paraphrase recall 0, and 1 SD trend sensitivity 0.031. Several perfect scores rest on small n (for example 14/14 loops, Wilson lower bound 0.785), so they mean "no failure observed" rather than "proven ≥ 95%".
 
 ## What building it fixed
 

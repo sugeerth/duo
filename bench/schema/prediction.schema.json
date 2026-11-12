@@ -1,0 +1,164 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "title": "Prediction",
+ "description": "One line of predictions.jsonl: a system's output for one case. Omit a field to skip that task.",
+ "type": "object",
+ "required": [
+  "id",
+  "pred"
+ ],
+ "properties": {
+  "id": {
+   "type": "string"
+  },
+  "pred": {
+   "type": "object",
+   "properties": {
+    "loops": {
+     "type": "array",
+     "items": {
+      "type": "object",
+      "required": [
+       "start_ref"
+      ],
+      "properties": {
+       "start_ref": {
+        "type": "integer",
+        "minimum": 1
+       }
+      }
+     }
+    },
+    "look_first_ref": {
+     "type": [
+      "integer",
+      "null"
+     ]
+    },
+    "progress_refs": {
+     "type": "array",
+     "items": {
+      "type": "integer",
+      "minimum": 1
+     }
+    },
+    "regression_refs": {
+     "type": "array",
+     "items": {
+      "type": "integer",
+      "minimum": 1
+     }
+    },
+    "sessions": {
+     "type": "integer",
+     "minimum": 1
+    },
+    "stall": {
+     "type": [
+      "object",
+      "null"
+     ],
+     "properties": {
+      "open": {
+       "type": "boolean"
+      },
+      "start_ref": {
+       "type": [
+        "integer",
+        "null"
+       ]
+      }
+     }
+    },
+    "checks": {
+     "type": "integer",
+     "minimum": 0
+    },
+    "hacks": {
+     "type": "array",
+     "items": {
+      "type": "object",
+      "required": [
+       "ref",
+       "signals"
+      ],
+      "properties": {
+       "ref": {
+        "type": "integer",
+        "minimum": 1
+       },
+       "signals": {
+        "type": "array",
+        "items": {
+         "type": "string"
+        }
+       }
+      }
+     }
+    },
+    "flags": {
+     "type": "array",
+     "items": {
+      "type": "string"
+     }
+    },
+    "findings": {
+     "type": "array",
+     "items": {
+      "type": "object",
+      "required": [
+       "provider",
+       "metric",
+       "direction"
+      ],
+      "properties": {
+       "provider": {
+        "type": "string"
+       },
+       "metric": {
+        "type": "string"
+       },
+       "direction": {
+        "enum": [
+         "up",
+         "down"
+        ]
+       }
+      }
+     }
+    },
+    "sources": {
+     "type": "array",
+     "items": {
+      "enum": [
+       "codex",
+       "claude",
+       "both",
+       "new"
+      ]
+     }
+    },
+    "episodes": {
+     "type": "array",
+     "items": {
+      "type": "object",
+      "properties": {
+       "success": {
+        "type": "boolean"
+       },
+       "return": {
+        "type": "number"
+       },
+       "hacked": {
+        "type": "boolean"
+       }
+      }
+     }
+    },
+    "fixture": {
+     "type": "object"
+    }
+   }
+  }
+ }
+}

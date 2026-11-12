@@ -22,6 +22,7 @@ import random
 from pathlib import Path
 
 SEED=7
+VERSION='1.0.0'   # semver: major = label or schema change, minor = new cases, patch = fixes that keep labels (bench/CHANGELOG.md)
 BASE_T=1_767_000_000.0   # fixed epoch so files are stable
 
 # ------------------------------------------------------------------ vocabulary (no accidental overlaps)
@@ -277,7 +278,7 @@ def gen_attribution(rng):
         codex=' '.join([s for s,_ in cx]+[s for s,_ in sh]);claude=' '.join([s for s,_ in cl]+[s for s,_ in sh])
         cid=f'attr-{i:02d}'
         out.append({'id':cid,'family':'attribution_paraphrase' if para else 'attribution_verbatim','split':split_of(cid),
-                    'candidates':{'codex':codex,'claude':claude},'final':' '.join(final),
+                    'candidates':{'codex':codex,'claude':claude},'final':' '.join(final),'sentences':list(final),
                     'labels':{'sentences':[{'text':t,'src':g,'paraphrase':k in para} for k,(t,g) in enumerate(zip(final,gold))],
                               'note':'gold = the true origin; paraphrased sentences keep their true source even though word overlap cannot see it'}})
     return out
@@ -402,7 +403,7 @@ def main(seed=SEED,out=None):
     attr=gen_attribution(random.Random(rng.random()));roll=gen_rollouts(random.Random(rng.random()),out);imps=gen_imports(random.Random(rng.random()),out)
     for name,rows in (('runs',runs),('trends',trends),('attribution',attr)):
         (out/f'{name}.jsonl').write_text(''.join(json.dumps(x,sort_keys=True)+'\n' for x in rows))
-    manifest={'version':1,'seed':seed,'generator':'bench/generate.py','cases':[]}
+    manifest={'name':'duo-bench','version':VERSION,'seed':seed,'generator':'bench/generate.py','spec':'bench/SPEC.md','cases':[]}
     for name,rows in (('runs',runs),('trends',trends),('attribution',attr)):
         for x in rows:manifest['cases'].append({'id':x['id'],'dataset':name,'family':x['family'],'split':x['split'],'file':f'{name}.jsonl',
                                                  'size':len(x.get('steps') or x.get('records') or x['labels'].get('sentences') or []),'note':x['labels'].get('note','')})
@@ -413,6 +414,7 @@ def main(seed=SEED,out=None):
     counts={}
     for c in manifest['cases']:counts.setdefault(c['dataset'],{}).setdefault(c['family'],0);counts[c['dataset']][c['family']]+=1
     manifest['counts']=counts
+    manifest['files']={str(f.relative_to(out)):hashlib.sha256(f.read_bytes()).hexdigest() for f in sorted(out.rglob('*')) if f.is_file() and f.name!='manifest.json' and 'real' not in f.relative_to(out).parts}
     (out/'manifest.json').write_text(json.dumps(manifest,indent=1,sort_keys=True)+'\n')
     return manifest
 

@@ -694,6 +694,7 @@ def main():
     parser.add_argument('--export-otel',metavar='FILE',help='Export traces as OTLP/JSON with OTel GenAI attributes')
     parser.add_argument('--import-chat',metavar='FILE',help='Import a chat export (claude.ai, ChatGPT, or a JSON message list) into the trace DB as chat sessions')
     parser.add_argument('--import-session',metavar='FILE',help='Import a Claude Code or Codex CLI session log (JSONL) as a single-agent session')
+    parser.add_argument('--bench',nargs='?',const='all',choices=('dev','test','all'),help='Score Duo against duo-bench (bench/SPEC.md); prints the report, exits 1 below target')
     parser.add_argument('--import-rollouts',metavar='FILE',help='Import RL environment rollouts (episodes of steps with rewards) as an environment session')
     parser.add_argument('--chat-provider',choices=('claude','codex'),help='With --import-chat: which lane a plain message list belongs to (ChatGPT exports use codex)')
     parser.add_argument('--fork',metavar='TURN',help='Counterfactual rerun: apply the judges\' minimal fix and re-score (answer/read turns)')
@@ -734,6 +735,11 @@ def main():
     if args.export_rl:
         n,skipped=export.export_rl(HUB.store,args.export_rl,args.format);print(f'Wrote {n} {args.format.upper()} rows to {args.export_rl} ({skipped} ties/splits skipped)');return 0
     if args.export_otel:print(f'Wrote {export.export_otel(HUB.store,args.export_otel)} spans to {args.export_otel} (OTLP/JSON, gen_ai.* v1.41)');return 0
+    if args.bench:
+        sys.path.insert(0,str(Path(__file__).resolve().parent/'bench'))
+        import evaluate as bench_eval
+        base=Path(__file__).resolve().parent/'bench'/'baselines'/'duo-1.0.0.json'
+        return bench_eval.main(['--split',args.bench]+(['--baseline',str(base)] if base.exists() else []))
     if args.import_rollouts:
         import chatimport
         if not HUB.store:print('Trace DB is off (DUO_TRACE_DB=off); nothing to import into.');return 1

@@ -1,0 +1,127 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "title": "Trend case",
+ "type": "object",
+ "required": [
+  "id",
+  "family",
+  "split",
+  "n",
+  "records",
+  "labels"
+ ],
+ "properties": {
+  "id": {
+   "type": "string"
+  },
+  "family": {
+   "type": "string"
+  },
+  "split": {
+   "enum": [
+    "dev",
+    "test"
+   ]
+  },
+  "n": {
+   "type": "integer",
+   "minimum": 2
+  },
+  "records": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "required": [
+     "turn",
+     "ts",
+     "provider",
+     "seconds",
+     "calls",
+     "fail_rate",
+     "score"
+    ],
+    "properties": {
+     "turn": {
+      "type": "string"
+     },
+     "ts": {
+      "type": "number"
+     },
+     "provider": {
+      "type": "string"
+     },
+     "seconds": {
+      "type": "number"
+     },
+     "calls": {
+      "type": "integer"
+     },
+     "fail_rate": {
+      "type": [
+       "number",
+       "null"
+      ]
+     },
+     "score": {
+      "type": [
+       "number",
+       "null"
+      ]
+     }
+    }
+   }
+  },
+  "labels": {
+   "type": "object",
+   "required": [
+    "trends",
+    "effect"
+   ],
+   "properties": {
+    "trends": {
+     "type": "array",
+     "items": {
+      "type": "object",
+      "required": [
+       "provider",
+       "metric",
+       "direction"
+      ],
+      "properties": {
+       "provider": {
+        "type": "string"
+       },
+       "metric": {
+        "enum": [
+         "seconds",
+         "score",
+         "fail_rate",
+         "calls"
+        ]
+       },
+       "direction": {
+        "enum": [
+         "up",
+         "down"
+        ]
+       }
+      }
+     }
+    },
+    "effect": {
+     "enum": [
+      "none",
+      "small",
+      "large"
+     ]
+    },
+    "effect_sd_over_series": {
+     "type": "number"
+    },
+    "note": {
+     "type": "string"
+    }
+   }
+  }
+ }
+}

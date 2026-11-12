@@ -2326,7 +2326,32 @@
    "trend_small": 32
   }
  },
+ "files": {
+  "attribution.jsonl": "5e753180323941bbb7a607dbdf248d31790dd4c6e16adc4038f0f051a75517e0",
+  "imports.json": "aaf656518e6977d302fcfd73566b51a474e07479db89911795648709f831173a",
+  "imports/chatgpt_export.json": "fd73048fcd49813d1f76dc3dd87496948306e84bd7fad00cd35cb0fa3eb2806a",
+  "imports/claude_ai_export.json": "eba1a834fab27c179f02469e3a9c55b0aff8dc6e04001810b882bf1736b6230b",
+  "imports/claude_code_session.jsonl": "d70438e631c5232570659a6b65fb44e2538c3bfc485e5276879e42e742c166ff",
+  "imports/codex_rollout.jsonl": "c87c88c7d5fe98f09e66e71f275bc00f70d53d6c9273489f4f250e02409f595d",
+  "imports/plain_messages.jsonl": "343f0324cc22817d94653ee1429ae424c7643148f83956c82449f4c98a4a4b37",
+  "imports/rollout_steps.jsonl": "b1487d712e86345450bd5c34f39a13036ac148ed6b01b4f889f6827f1cefc552",
+  "rollouts.json": "f3d9a6d97deceed78cfb5b245963568d7348fd869a918d4ff35be06543dd7744",
+  "rollouts/task-00.json": "d749a10a4528e6402751047afa6684ce9adbb9e24369947a7f0706c6b7646a2c",
+  "rollouts/task-01.json": "b44eb19070a4d5f1eb41c975146ed829fa336893f522d0aa8f1da3fcdce42c75",
+  "rollouts/task-02.json": "f480921ff37b860c87399265e7a91ec3f84290120bc9856f32414df0abe6c90c",
+  "rollouts/task-03.json": "f7a7ee5a8030b056812bd822559cd95ab9b06857cfb382dd4ea6124db2be21d7",
+  "rollouts/task-04.json": "a6f3a784bc8e176b92690513fb25275319a6a0c624f3c212e1f5f6469693d262",
+  "rollouts/task-05.json": "aee5dda44a747e60221b10f5c968d54cf1978e6db276a8ada49ac4641fbc8ce2",
+  "rollouts/task-06.json": "e5d665da7020fe3e53fb790664361a3790eda62f2e5bbb3f94f825c565e262a7",
+  "rollouts/task-07.json": "2791e35920cc627028c3bc4aa5375b1968d9ba10372df1d91375df040739dd2d",
+  "rollouts/task-08.json": "56adcf5206115b663b3a7f1774cc2a0a9d22346dc1045f6df771d21f696b568d",
+  "rollouts/task-09.json": "f2662016cedd6418c607bad3f3c09f46f1d50cde4d05c3415b4dab053120398c",
+  "runs.jsonl": "7cf6a6babaa18f5369b6ce608e3ea6a8a45ade66cb065bd41cb963421716286d",
+  "trends.jsonl": "9dd8f1ad290fcb83f42bb3825c7901571152f212921f67526d43c91dcff0f6c3"
+ },
  "generator": "bench/generate.py",
+ "name": "duo-bench",
  "seed": 7,
- "version": 1
+ "spec": "bench/SPEC.md",
+ "version": "1.0.0"
 }
