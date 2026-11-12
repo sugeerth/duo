@@ -1803,15 +1803,15 @@ function maxLenFor(laneH){return laneH/2-22}
 function renderGrowthTree(t,span,cutoff,host){
   const runs=t.runs.filter(r=>r.start<=cutoff),M=treeMarks(t),tips=new Map();
   const n=Math.max(1,runs.length),laneH=Math.min(190,Math.max(130,480/n));
-  const w=Math.max(760,host.clientWidth),h=70+laneH*n+86;
+  const w=Math.max(760,host.clientWidth),h=70+laneH*n+104;
   const svg=d3.create('svg').attr('width',w).attr('height',h).attr('role','group').attr('aria-label','Turn '+t.no+' execution trees: trunks are agent runs, branches are tool calls');
   function target(g,label,action){g.attr('class','tree-node rail-target').attr('tabindex',0).attr('role','button').attr('aria-label',label).on('click',action).on('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();action()}});g.append('title').text(label);return g}
   svg.append('text').attr('x',14).attr('y',24).attr('class','ink b').text('TASK '+t.no+' · '+KIND_L[t.kind]);
   svg.append('text').attr('x',14).attr('y',40).attr('class','mut').text(dur(span*1000)+' total · trunk length = run time (idle stretches pinched) · girth = tool activity · branch = call, colour = phase');
   let lx=w-430;for(const ph of LAB_PHASES){svg.append('circle').attr('cx',lx).attr('cy',h-16).attr('r',4).attr('fill',LAB_COLORS[ph]);svg.append('text').attr('x',lx+8).attr('y',h-12).attr('class','mut').text(ph);lx+=ph.length*7+30}
   svg.append('text').attr('x',lx+6).attr('y',h-12).attr('class','mut').text('✗ failed · ◆ reasoning · ★ winner');
-  {let bx=14;const BL=[['progress','✓ progress burst'],['loop','↻ loop'],['failing','! failing burst'],['filler','quiet burst']];for(const [k,l] of BL){svg.append('rect').attr('x',bx).attr('y',h-62).attr('width',14).attr('height',5).attr('rx',2).attr('fill',LR_C[k]);svg.append('text').attr('x',bx+18).attr('y',h-57).attr('class','mut').text(l);bx+=l.length*6.4+34}
-   svg.append('text').attr('x',bx).attr('y',h-57).attr('class','mut').text('● check fruit (big = progress) · ┄ withered = failed or repeated call · ◎ root cause · ▼ look first · ┆ graft = first divergence · roots = memory carried in');}
+  {let bx=14;const BL=[['progress','✓ progress burst'],['loop','↻ loop'],['failing','! failing burst'],['filler','quiet burst']];for(const [k,l] of BL){svg.append('rect').attr('x',bx).attr('y',h-94).attr('width',14).attr('height',5).attr('rx',2).attr('fill',LR_C[k]);svg.append('text').attr('x',bx+18).attr('y',h-89).attr('class','mut').text(l);bx+=l.length*6.4+34}
+   svg.append('text').attr('x',14).attr('y',h-71).attr('class','mut').text('● check fruit (big = progress) · ┄ withered = failed or repeated call · ◎ root cause · ▼ look first · ┆ graft = first divergence · roots = memory carried in');}
   if(!runs.length){svg.append('text').attr('x',w/2).attr('y',h/2).attr('text-anchor','middle').attr('class','mut').text('Trees grow once the agents start running.');host.replaceChildren(svg.node());return 0}
   // --- shared gap-constricted scale, built from the FULL turn (stable during replay) ---
   const x0=150,W=w-x0-150,relDur=r=>Math.max(.001,r.end-r.start);
@@ -1859,7 +1859,7 @@ function renderGrowthTree(t,span,cutoff,host){
      for(let k=0;k<nRoots;k++){const isHist=hist&&k===nRoots-1,a=(k-(nRoots-1)/2)*Math.min(14,40/Math.max(1,nRoots)),len=16+(isHist?8:4)+((k*7)%3)*3;
        rg.append('path').attr('d',`M${x0},${ty} q${-len*.5},${a*.3} ${-len},${a}`).attr('stroke',isHist?'var(--text-2)':c).attr('fill','none').attr('stroke-width',isHist?2.2:1.6).attr('opacity',.7);
        rg.append('circle').attr('cx',x0-len).attr('cy',ty+a).attr('r',2.2).attr('fill',isHist?'var(--text-2)':c)}
-     if(nRoots)svg.append('text').attr('x',x0-26).attr('y',ty+26).attr('text-anchor','end').attr('class','mut').text(`memory: ${nl} lesson${nl===1?'':'s'}${hist?' · '+hist+' turns':''}`)}
+     if(nRoots)svg.append('text').attr('x',x0-26).attr('y',ty+28).attr('text-anchor','end').attr('class','mut').style('font-size','10.5px').text(`${nl} lesson${nl===1?'':'s'}${hist?' · '+hist+' turns':''} in`)}
     const R=M.lr[p],rel=a=>Math.max(0,Math.min(finRel,a-r.start)),mine=(a,b)=>b>=r.start-1&&a<=r.end+1&&a<=cutoff;
     if(R){
       for(const b of R.bursts.filter(b=>mine(b.start,b.end))){const xa=X(rel(b.start)),xb=Math.max(xa+3,X(rel(b.end)));
@@ -1868,7 +1868,7 @@ function renderGrowthTree(t,span,cutoff,host){
       const st=R.stall;if(st&&R.checks.length&&st.calls>=5&&mine(st.start,st.end)){const xa=X(rel(st.start)),xb=X(rel(st.end));
         const g=target(svg.append('g'),`Stall: ${dur(st.wall*1000)} and ${st.calls} calls with no check newly passing${st.open?' (still open)':''}`,()=>openRef(st.ref));
         g.append('rect').attr('x',xa).attr('y',ty-11).attr('width',Math.max(2,xb-xa)).attr('height',22).attr('fill','var(--muted)').attr('opacity',.12);
-        g.append('text').attr('x',xa+3).attr('y',ty+26).attr('class','mut').text('stall '+dur(st.wall*1000)+(st.open?' · open':''))}
+        g.append('path').attr('d',`M${xa},${ty+maxLenFor(laneH)+2}v5H${Math.max(xa+4,xb)}v-5`).attr('fill','none').attr('stroke','var(--muted)').attr('stroke-width',1.3);g.append('text').attr('x',xa).attr('y',ty+maxLenFor(laneH)+19).attr('class','mut').text('stall '+dur(st.wall*1000)+(st.open?' (open)':'')+' · no check newly passing')}
       for(const L of R.loops.filter(L=>mine(L.start,L.end))){const xa=X(rel(L.start)),xb=X(rel(L.end)),k=Math.max(2,Math.round((xb-xa)/14));
         let d=`M${xa},${ty}`;for(let i=1;i<=k;i++){const xm=xa+(xb-xa)*(i-.5)/k,xe=xa+(xb-xa)*i/k;d+=` Q${xm},${ty+(i%2?-12:12)} ${xe},${ty}`}
         const g=target(svg.append('g'),`Loop: ${L.bursts} bursts repeating earlier calls without progress for ${dur(L.wall*1000)} (${L.calls} calls)`,()=>openRef(L.ref));
