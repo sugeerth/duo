@@ -240,6 +240,7 @@ def write_agent_session(store,title,provider,turns,model=None):
         if T['usage']:ev(t1,'usage',provider,aid,data=T['usage'])
         if T['answer']:ev(t1,'answer',provider,aid,T['answer'])
         ev(t1,'span.end',provider,aid,span_id=aid,parent_id=tid,span_kind='agent',role='writer' if writes else 'reader',status='ok',duration_ms=int((t1-t0)*1000),tools=len(steps),tool_errors=fails)
+        _flag_hacks(ev,steps,provider,tid)
         r=longrun.read(steps)
         if r:ev(t1,'analysis.longrun',provider,turn_id=tid,data=r,rationale=longrun.summary(r))
         ev(t1,'span.end','duo',tid,span_id=tid,span_kind='turn',status='ok',duration_ms=int((t1-t0)*1000))
@@ -262,3 +263,85 @@ def import_session(store,path,provider=None):
     out=write_agent_session(store,title,'codex' if codex else 'claude',turns,model)
     store.flush(10)
     return out
+
+
+def _flag_hacks(ev,steps,provider,tid):
+    """Reward-hacking evidence in writes (test/grader edits, skips, removed asserts), as analysis.py flags it live."""
+    import analysis
+    st=[]
+    for x in steps:
+        k=analysis.action_type({'kind':'tool','tool':x.get('tool'),'target':x.get('target')})
+        st.append({**x,'kind':'tool','type':k,'key':analysis.target_key(x,k),'input':x.get('input') or ''})
+    for h in analysis.hack_signals(st):ev(st[0]['at'] if st else 0,'analysis.hack',provider,turn_id=tid,item_id=str(h['ref']),name=h['signal'],detail=h['target'])
+
+# ---------------------------------------------------------------- RL environment rollouts
+"""`duo --import-rollouts FILE`: RL environment rollouts as an environment session. Accepted shapes (JSON or JSONL):
+- one record per episode: {"episode"|"id", "task"|"env_task", "policy"|"model"?, "env"?, "success"?, "return"?,
+  "steps": [{"action"|"tool"|"name", "input"|"args"|"target"?, "observation"|"output"|"obs"?, "reward"?, "ok"|"error"?,
+             "t"|"ts"|"timestamp"?, "thought"|"reasoning"?}]}
+- one record per step: the same step fields plus "episode" (and "task", "policy" on any of them).
+Each episode becomes a turn (mode `env:<env>`, name = task): every step a tool call carrying its reward as `score`,
+`reasoning` for thoughts, `env.return` with the episode return and success, and the long-run reading. Episodes of
+the same task are what the viewer compares (success rate, pass@k, pass^k, reward curves)."""
+
+def _episodes(records):
+    eps={};order=[]
+    for r in records:
+        if not isinstance(r,dict):continue
+        if isinstance(r.get('steps'),list):
+            key=str(r.get('episode',r.get('id',len(order))));eps[key]=dict(r);order.append(key);continue
+        key=str(r.get('episode',r.get('episode_id','0')))
+        if key not in eps:eps[key]={k:v for k,v in r.items() if k in ('episode','task','env_task','policy','model','env')}|{'steps':[]};order.append(key)
+        eps[key]['steps'].append(r)
+        for k in ('success','return'):
+            if k in r:eps[key][k]=r[k]
+    return [eps[k] for k in order]
+
+def import_rollouts(store,path,provider='claude'):
+    raw=Path(path).read_text(encoding='utf-8').strip()
+    try:data=json.loads(raw)
+    except ValueError:data=[json.loads(l) for l in raw.splitlines() if l.strip()]
+    if isinstance(data,dict):data=data.get('episodes') or data.get('rollouts') or [data]
+    eps=_episodes(data)
+    if not eps:return None,0
+    import longrun
+    env=str(eps[0].get('env') or Path(path).stem)
+    base=datetime.now().timestamp()-60*sum(len(e['steps'])+5 for e in eps)
+    sid='env-'+hashlib.sha1((env+raw[:2000]).encode()).hexdigest()[:12]
+    store.session(sid,base,f'env: {env[:80]}');n={'id':0}
+    def ev(ts,kind,prov='duo',span=None,payload=None,**f):
+        n['id']+=1;e={'session_id':sid,'id':n['id'],'timestamp':ts,'type':kind,'provider':prov,**({'span_id':span} if span else {}),**f}
+        if payload:e['chars']=len(payload)
+        store.event(e,payload,kind if payload else None);return e
+    clock=base
+    for k,E in enumerate(eps,1):
+        task=str(E.get('task') or E.get('env_task') or 'task');policy=E.get('policy') or E.get('model')
+        tid=f'{sid}-e{k}';aid=tid+'-'+provider;t0=clock
+        ev(t0,'span.start','duo',tid,span_id=tid,span_kind='turn',mode='env:'+env,name=task)
+        ev(t0,'prompt','duo',tid,f'[{env}] {task} · episode {E.get("episode",E.get("id",k))}')
+        ev(t0,'span.start',provider,aid,span_id=aid,parent_id=tid,span_kind='agent',role='policy',mode='env:'+env,**({'model':str(policy)} if policy else {}))
+        steps=[];ret=0.0;fails=0;t=t0
+        for j,s in enumerate(E['steps']):
+            ts=_ts(s.get('t',s.get('ts',s.get('timestamp'))),None);t=ts if ts is not None else t+2
+            th=s.get('thought') or s.get('reasoning')
+            if th:ev(t,'reasoning',provider,aid,str(th))
+            name=str(s.get('action') or s.get('tool') or s.get('name') or 'act')
+            tgt=s.get('target') or s.get('input') or s.get('args') or ''
+            tgt=tgt if isinstance(tgt,str) else json.dumps(tgt)
+            obs=s.get('observation',s.get('output',s.get('obs','')));obs=obs if isinstance(obs,str) else json.dumps(obs)
+            ok=not s.get('error') and s.get('ok',True) is not False
+            r=float(s.get('reward') or 0);ret+=r;fails+=not ok
+            e=ev(t,'tool.started',provider,aid,tgt or None,tool=name,detail=tgt[:200],item_id=f'{aid}-{j}')
+            d=float(s.get('duration') or 1);ev(t+d,'tool.completed',provider,aid,obs or None,tool=name,item_id=f'{aid}-{j}',passed=ok,score=r)
+            steps.append({'ref':e['id'],'tool':name,'target':tgt,'ok':ok,'at':t,'seconds':d,'output':obs[-900:]});t+=d
+        ret=float(E.get('return',ret));success=E.get('success');success=bool(success) if success is not None else ret>0
+        t1=t+1
+        ev(t1,'span.end',provider,aid,span_id=aid,parent_id=tid,span_kind='agent',role='policy',status='ok' if success else 'failed',duration_ms=int((t1-t0)*1000),tools=len(steps),tool_errors=fails)
+        ev(t1,'env.return',provider,turn_id=tid,score=round(ret,4),passed=success,name=task,count=len(steps))
+        _flag_hacks(ev,steps,provider,tid)
+        r=longrun.read(steps)
+        if r:ev(t1,'analysis.longrun',provider,turn_id=tid,data=r,rationale=longrun.summary(r))
+        ev(t1,'span.end','duo',tid,span_id=tid,span_kind='turn',status='ok',duration_ms=int((t1-t0)*1000))
+        clock=t1+30
+    store.flush(10)
+    return sid,len(eps)

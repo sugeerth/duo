@@ -67,6 +67,17 @@ Answer-only (chat) turns get the same card.
 - `duo --import-chat FILE`: claude.ai and ChatGPT exports, or a plain JSON message list, as chat sessions. Thinking becomes reasoning, and the whole conversation so far counts as carried context.
 - `duo --import-session FILE`: a Claude Code (`~/.claude/projects/…/*.jsonl`) or Codex CLI (`~/.codex/sessions/…/rollout-*.jsonl`) log, as a single-agent session with every tool call, reasoning, the measured context per model call, and the long-run reading.
 
+- `duo --import-rollouts FILE`: RL environment rollouts (one record per episode with `steps`, or one per step with `episode`). Each episode becomes a turn named by its task. Step rewards ride on the tool calls, and each episode records its return and success.
+
+**RL environments.** For an environment session, the tree shows step rewards as fruit (green positive, red negative, sized by magnitude) and the episode return as the canopy. The title names the policy. **Rewards & rollouts** compares every episode of the selected task:
+- cumulative reward curves (green success, red failure, dashed ⚠ when reward hacking is flagged);
+- success rate, plus the rate without flagged episodes;
+- mean return ± sd;
+- pass@k (at least one of k succeeds) and pass^k (all k succeed), using unbiased estimators;
+- where reward is earned or lost, by action.
+
+Imports run the same reward-hacking detector as live turns: test or grader edits, added skips, removed asserts. Over time gains an episode-return trend.
+
 When only one agent ran, the viewer drops the comparison-only panels (step diff, attribution) and titles the page as a single-agent session.
 
 Long runs and long-term change (`longrun.py`, `longterm.py`; rules from AgentDiff's long-run reading):

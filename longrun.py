@@ -22,7 +22,7 @@ Every number carries the rule that produced it in `basis`.
 import math
 import re
 
-from analysis import TEST_CMD, unwrap
+from analysis import TEST_CMD, action_type, unwrap
 
 SESSION_GAP=1800.0
 BURST_MIN,BURST_MAX=20.0,1800.0
@@ -77,6 +77,7 @@ def read(steps,now=None):
     last={};best={};checks=[];progress=[];regressions=[]
     for i,c in enumerate(calls):
         if not TEST_CMD.search(unwrap(c.get('target'))):continue
+        if action_type({'kind':'tool','tool':c.get('tool'),'target':c.get('target')}) in ('FILE_READ','FILE_WRITE','SEARCH'):continue  # editing or reading a test file is not running a check
         key=check_key(c.get('target'));ok=c.get('ok') is not False
         m=PASSED.search(str(c.get('output') or ''));n=int(m.group(1)) if m else None
         ev={'ref':c['ref'],'at':c['at'],'key':key,'ok':ok,'passed':n,'index':i}

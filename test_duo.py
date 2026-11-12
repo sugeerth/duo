@@ -559,4 +559,17 @@ class Tests(unittest.TestCase):
     mem=[e for e in ev if e['type']=='memory.context']
     self.assertEqual([m['count'] for m in mem],list(range(len(mem))))
    self.assertEqual(len(chatimport.load(Path(tmp)/'c.json')[0][2]),4)
+ def test_rollout_import_rewards_and_pass_k(self):
+  import chatimport,tracestore,json as _j
+  eps=[{'episode':i,'task':'maze-3','policy':'pi-v2','env':'gridworld','steps':[{'action':'move','input':'north','reward':0},{'action':'move','input':'east','reward':-0.1},{'action':'open','input':'door','reward':1.0 if i<2 else 0}]} for i in range(3)]
+  steps=[{'episode':'a','task':'t','action':'look','reward':0.5},{'episode':'a','action':'act','reward':0.5,'success':True}]
+  with tempfile.TemporaryDirectory() as tmp:
+   f=Path(tmp)/'r.json';f.write_text(_j.dumps(eps));store=tracestore.TraceStore(Path(tmp)/'db')
+   sid,n=chatimport.import_rollouts(store,f);self.assertEqual(n,3)
+   ev=store.snapshot(sid)['events'];rets=[e for e in ev if e['type']=='env.return']
+   self.assertEqual([round(e['score'],2) for e in rets],[0.9,0.9,-0.1]);self.assertEqual([e['passed'] for e in rets],[True,True,False])
+   self.assertTrue(all(e.get('score') is not None for e in ev if e['type']=='tool.completed'))
+   self.assertTrue(any(e['type']=='span.start' and e.get('name')=='maze-3' for e in ev))
+   g=Path(tmp)/'s.jsonl';g.write_text('\n'.join(_j.dumps(x) for x in steps));sid2,n2=chatimport.import_rollouts(store,g);self.assertEqual(n2,1)
+   r2=[e for e in store.snapshot(sid2)['events'] if e['type']=='env.return'][0];self.assertEqual(r2['score'],1.0);self.assertTrue(r2['passed'])
 if __name__=='__main__':unittest.main()

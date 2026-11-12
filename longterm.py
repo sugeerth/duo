@@ -20,7 +20,7 @@ RECENT=10
 ALPHA=0.05
 PRIMARY=('responder','reader','writer')
 METRICS={  # key: (label, unit, better direction: +1 higher is better, -1 lower is better, 0 neutral)
-    'score':('judge score','/5',1),'seconds':('time per turn','s',-1),'fail_rate':('tool failure rate','%',-1),'calls':('tool calls per turn','',0)}
+    'score':('judge score','/5',1),'seconds':('time per turn','s',-1),'fail_rate':('tool failure rate','%',-1),'calls':('tool calls per turn','',0),'ret':('episode return','',1)}
 
 def _phi(z):return 0.5*(1+math.erf(z/math.sqrt(2)))
 
@@ -71,12 +71,12 @@ def records(store,limit=3000):
     store.flush(3)
     with store.lock,store.connect() as db:
         spans=db.execute("SELECT span_id,session_id,parent_id,kind,provider,role,mode,start,end FROM spans WHERE kind IN ('turn','agent')").fetchall()
-        rows=db.execute("SELECT session_id,provider,span_id,type,data FROM events WHERE type IN ('span.end','judge.result','judge.verdict','judge.verdict_override','analysis.longrun')").fetchall()
+        rows=db.execute("SELECT session_id,provider,span_id,type,data FROM events WHERE type IN ('span.end','judge.result','judge.verdict','judge.verdict_override','analysis.longrun','env.return')").fetchall()
     turns={};agents=defaultdict(list)
     for sid,sess,parent,kind,prov,role,mode,start,end in spans:
         if kind=='turn':turns[sid]={'turn':sid,'session':sess,'ts':start,'kind':'respond' if (mode or '').startswith('respond') else 'write' if 'write' in (mode or '') else 'read'}
-        elif role in PRIMARY and parent and start and end:agents[parent].append((prov,sid,end-start))
-    ends={};scores=defaultdict(list);verdicts=defaultdict(set);override={};lr={}
+        elif (role in PRIMARY or role=='policy') and parent and start and end:agents[parent].append((prov,sid,end-start))
+    ends={};scores=defaultdict(list);verdicts=defaultdict(set);override={};lr={};rets={}
     for sess,prov,span,kind,data in rows:
         d=json.loads(data)
         if kind=='span.end' and span:ends[span]=(d.get('tools') or 0,d.get('tool_errors') or 0)
@@ -84,6 +84,7 @@ def records(store,limit=3000):
         elif kind=='judge.verdict' and d.get('turn_id'):verdicts[d['turn_id']].add(d.get('verdict'))
         elif kind=='judge.verdict_override' and d.get('turn_id'):override[d['turn_id']]=d.get('verdict')
         elif kind=='analysis.longrun' and d.get('turn_id'):lr[(d['turn_id'],prov)]=d.get('data') or {}
+        elif kind=='env.return' and d.get('turn_id') and d.get('score') is not None:rets[(d['turn_id'],prov)]=float(d['score'])
     out=[]
     for tid,t in turns.items():
         by=defaultdict(list)
@@ -96,7 +97,7 @@ def records(store,limit=3000):
             elif both and w in ('tie','split'):res='tie'
             out.append({**t,'provider':prov,'seconds':round(sum(s for _,s in rs),2),'calls':calls,'fails':fails,'fail_rate':(fails/calls if calls else None),
                         'score':(sum(sc)/len(sc) if sc else None),'result':res,'loops':len(L.get('loops') or []),'loop_s':sum(x.get('wall',0) for x in L.get('loops') or []),
-                        'stall_s':(L.get('stall') or {}).get('wall'),'progress':L.get('progress')})
+                        'stall_s':(L.get('stall') or {}).get('wall'),'progress':L.get('progress'),'ret':rets.get((tid,prov))})
     out.sort(key=lambda r:r['ts'] or 0)
     return out[-limit:]
 
@@ -114,7 +115,7 @@ def insight(recs):
     tests=[]
     for prov,rs in by.items():
         for key,(label,unit,better) in METRICS.items():
-            xs=[r[key] for r in rs if r[key] is not None]
+            xs=[r.get(key) for r in rs if r.get(key) is not None]
             if len(xs)>=MIN_N:
                 s,p=mann_kendall(xs);k=max(1,len(xs)//3);a,b=median(xs[:k]),median(xs[-k:])
                 up=s>0
@@ -148,5 +149,5 @@ def insight(recs):
 def snapshot(store):
     if not store:return {'records':[],'insight':insight([])}
     recs=records(store)
-    keep=('turn','session','ts','kind','provider','seconds','calls','fails','fail_rate','score','result','loops','loop_s','stall_s','progress')
+    keep=('turn','session','ts','kind','provider','seconds','calls','fails','fail_rate','score','ret','result','loops','loop_s','stall_s','progress')
     return {'records':[{k:r[k] for k in keep} for r in recs],'insight':insight(recs)}

@@ -155,7 +155,10 @@ section:not(.open){padding-top:9px;padding-bottom:9px}
 .focus-view #evalTreeSec{min-height:calc(100vh - 150px)}
 .focus-view #evalTree{height:clamp(320px,55vh,640px)}
 .rail-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:16px}.rail-summary.one{grid-template-columns:1fr}
+#session{max-width:min(340px,100%);text-overflow:ellipsis}
 .solo .diff-head,.solo #stepDiff,.solo .att-sec{display:none}
+#evalTreeSec:not(.has-env) .env-sec{display:none}
+.env-grid{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:14px}@media(max-width:900px){.env-grid{grid-template-columns:1fr}}
 .rail-summary>div{border:1px solid var(--line);border-left:3px solid var(--model);padding:10px 14px;border-radius:10px;background:var(--panel)}
 .rail-summary b{color:var(--model);font-size:15px}.rail-summary .rail-values{display:flex;gap:8px 18px;flex-wrap:wrap;color:var(--text-2);font-size:12px;margin-top:6px}.rail-values strong{font-weight:600;color:var(--text)}
 .vcard{margin-top:14px;border:1px solid var(--line);border-left:3px solid var(--text);border-radius:10px;background:var(--panel);padding:10px 14px;display:grid;grid-template-columns:auto 1fr;gap:5px 14px;font-size:13px}
@@ -230,6 +233,8 @@ section:not(.open){padding-top:9px;padding-bottom:9px}
     <div class="diff-head"><h3>Step diff — where the runs diverge</h3><span class="sub" id="diffSentence"></span></div>
     <div id="stepDiff" aria-label="Step-aligned comparison of both models on this turn"></div>
     <div class="tree-caption"><span>━ Task bar</span><span style="color:var(--codex)">● Codex</span><span style="color:var(--claude)">● Claude</span><span>◆ Reasoning</span><span class="ok">✓ Passed</span><span class="bad">✗ Failed</span><span>Branches = tool calls · clustered calls expand with zoom · click for evidence</span></div>
+    <div class="tw-head env-sec"><h3>Rewards &amp; rollouts</h3><span class="sub">Every episode of this task in the environment. Lines are cumulative reward by step (green = success, red = failure; the selected episode is bold). pass@k = chance at least one of k episodes succeeds; pass^k = chance all k do.</span></div>
+    <div id="envView" class="env-sec"></div>
     <div class="tw-head"><h3>Reasoning, memory &amp; context</h3><span class="sub">How each model thinks, what it remembers, and what fills its context window as the run goes on.</span></div>
     <div id="reasonMem"></div>
     <div class="tw-head att-sec"><h3>Answer attribution</h3><span class="sub">Where each sentence of Duo's final answer came from: Codex, Claude, both, or new wording from the synthesis step. Matched by overlapping word sequences, so a paraphrase can read as new.</span></div>
@@ -397,7 +402,7 @@ const DIML={correctness:'Correctness',completeness:'Completeness',groundedness:'
 const KIND_L={respond:'Answer',read:'Read',write:'Write'};
 const qs=new URLSearchParams(location.search);
 let S;
-function reset(){S={events:[],maxId:0,started:null,session:'',spans:new Map(),order:[],J:{results:[],scores:[],verdicts:[],agree:[],errors:[],raw:[],steps:[],roots:[],actions:[]},feedback:[],byEvent:new Map(),A:{behaviour:[],flags:[],hacks:[],align:[],claims:[],hackFinal:[],override:[],rootAgree:[],conflicts:[],rewards:[],usage:[],evolve:[],fork:[],longrun:[],memctx:[],ctxtok:[]},live:false,stored:false}}
+function reset(){S={events:[],maxId:0,started:null,session:'',spans:new Map(),order:[],J:{results:[],scores:[],verdicts:[],agree:[],errors:[],raw:[],steps:[],roots:[],actions:[]},feedback:[],byEvent:new Map(),A:{behaviour:[],flags:[],hacks:[],align:[],claims:[],hackFinal:[],override:[],rootAgree:[],conflicts:[],rewards:[],usage:[],evolve:[],fork:[],longrun:[],memctx:[],ctxtok:[],envret:[]},live:false,stored:false}}
 reset();
 const PROC=['planning','tool_selection','error_recovery','verification'];
 const PROCL={planning:'Planning',tool_selection:'Tool choice',error_recovery:'Error recovery',verification:'Verification'};
@@ -409,7 +414,7 @@ function ingest(e){
   if(e.id<=S.maxId)return;S.maxId=e.id;S.events.push(e);
   if(S.started===null)S.started=e.timestamp;
   if(e.type==='span.start'){
-    const s={id:e.span_id,parent:e.parent_id,kind:e.span_kind,provider:e.provider,role:e.role,mode:e.mode,model:e.model&&e.model!=='default'?e.model:null,turnId:e.turn_id,start:e.timestamp,end:null,status:'running',duration:null,children:[],tools:[],reasoning:[],evals:[],answerId:null,promptId:null};
+    const s={task:e.name||null,id:e.span_id,parent:e.parent_id,kind:e.span_kind,provider:e.provider,role:e.role,mode:e.mode,model:e.model&&e.model!=='default'?e.model:null,turnId:e.turn_id,start:e.timestamp,end:null,status:'running',duration:null,children:[],tools:[],reasoning:[],evals:[],answerId:null,promptId:null};
     S.spans.set(s.id,s);S.order.push(s.id);const p=s.parent&&S.spans.get(s.parent);if(p)p.children.push(s.id);return;
   }
   const J=S.J;
@@ -422,7 +427,7 @@ function ingest(e){
   if(e.type==='judge.root'){J.roots.push(e);return}
   if(e.type==='judge.action'){J.actions.push(e);return}
   if(e.type==='feedback'){S.feedback.push(e);return}
-  const AM={'analysis.behaviour':'behaviour','analysis.flag':'flags','analysis.hack':'hacks','analysis.align':'align','judge.claim':'claims','judge.hack_final':'hackFinal','judge.verdict_override':'override','judge.root_agreement':'rootAgree','judge.conflict':'conflicts','policy.reward':'rewards','usage':'usage','evolve.result':'evolve','fork.result':'fork','analysis.longrun':'longrun','memory.context':'memctx','context.tokens':'ctxtok'};
+  const AM={'analysis.behaviour':'behaviour','analysis.flag':'flags','analysis.hack':'hacks','analysis.align':'align','judge.claim':'claims','judge.hack_final':'hackFinal','judge.verdict_override':'override','judge.root_agreement':'rootAgree','judge.conflict':'conflicts','policy.reward':'rewards','usage':'usage','evolve.result':'evolve','fork.result':'fork','analysis.longrun':'longrun','memory.context':'memctx','context.tokens':'ctxtok','env.return':'envret'};
   if(AM[e.type]){S.A[AM[e.type]].push(e);if(e.type!=='usage')return}
   const s=e.span_id&&S.spans.get(e.span_id);
   if(e.type==='judge.raw'){if(s)s.answerId=e.id;return}
@@ -431,7 +436,7 @@ function ingest(e){
   if(e.type==='tool.started'){const l={tool:e.tool||'tool',item:e.item_id,t:e.timestamp,passed:null,dur:null,detail:e.detail||'',inId:e.chars?e.id:null,outId:null,eid:e.id};s.tools.push(l);S.byEvent.set(e.id,{span:s.id,tool:l})}
   else if(e.type==='tool.completed'){
     const l=s.tools.find(l=>l.passed===null&&(e.item_id?l.item===e.item_id:l.tool===(e.tool||'tool')));
-    if(l){l.passed=e.passed;l.dur=(e.timestamp-l.t)*1000;l.outId=e.chars?e.id:null;l.outChars=e.chars||0}
+    if(l){if(typeof e.score==='number')l.reward=e.score;l.passed=e.passed;l.dur=(e.timestamp-l.t)*1000;l.outId=e.chars?e.id:null;l.outChars=e.chars||0}
     else s.tools.push({tool:e.tool||'tool',t:e.timestamp,passed:e.passed,dur:0,detail:'',outId:e.chars?e.id:null});
   }
   else if(e.type==='reasoning'){s.reasoning.push({t:e.timestamp,id:e.id,chars:e.chars||0});S.byEvent.set(e.id,{span:s.id,reason:e.id})}
@@ -1680,16 +1685,53 @@ function renderConvMem(D){
   host.innerHTML=`<div class="at-card"><div class="rm-scroll">${s}</div><div class="rm-key"><span><i style="background:var(--text);opacity:.5"></i>earlier turn still in context (darker = more recent)</span><span><i style="background:var(--claude)"></i>the turn itself (colour = winner)</span><span><i style="background:#8a919b"></i>carried in, ≈ tokens</span></div><div class="lr-why" style="margin-top:6px">${esc(why)}</div></div>`;
 }
 document.getElementById('convMem').addEventListener('click',e=>{const g=e.target.closest('[data-turn-row]');if(!g)return;TREE.follow=false;TREE.turn=g.dataset.turnRow;document.getElementById('treeFollow').setAttribute('aria-pressed','false');schedule();document.getElementById('evalTreeSec').scrollIntoView({behavior:'smooth'})});
+
+/* ================= RL environments: rewards & rollouts =================
+   Episodes of one task (same turn name) side by side: cumulative reward per step, success rate, mean return,
+   pass@k = 1 - C(n-c,k)/C(n,k) and pass^k = C(c,k)/C(n,k) (unbiased estimators over n episodes, c successes),
+   reward by action (where reward is earned or lost), and the reward-hacking signals analysis already flags. */
+function comb(n,k){if(k<0||k>n)return 0;let r=1;for(let i=1;i<=k;i++)r=r*(n-k+i)/i;return r}
+function renderEnv(t,D){
+  const sec=document.getElementById('evalTreeSec'),host=document.getElementById('envView');
+  const isEnv=!!t&&String(t.mode||'').startsWith('env:');sec.classList.toggle('has-env',isEnv);if(!isEnv){host.innerHTML='';return}
+  const task=S.spans.get(t.id)?.task||'task',eps=D.allTurns.filter(u=>String(u.mode||'').startsWith('env:')&&(S.spans.get(u.id)?.task||'task')===task);
+  const rows=eps.map(u=>{const r=u.runs.find(x=>x.role!=='synthesis');const er=S.A.envret.filter(e=>e.turn_id===u.id).at(-1);let c=0;
+    const curve=r?r.tools.map(l=>c+=(l.reward||0)):[];return {u,r,ret:er?+er.score:c,ok:er?!!er.passed:c>0,curve,steps:r?r.tools.length:0,hack:S.A.hacks.some(h=>h.turn_id===u.id)}});
+  const n=rows.length,cnt=rows.filter(x=>x.ok).length,cntClean=rows.filter(x=>x.ok&&!x.hack).length,nHack=rows.filter(x=>x.hack).length,rets=rows.map(x=>x.ret),mr=mean(rets),sdv=sd(rets);
+  const W=Math.max(380,(host.clientWidth||900)*.58),H=210,m={l:46,r:12,t:10,b:26};
+  const maxS=d3.max(rows,x=>x.steps)||1,ys=rows.flatMap(x=>x.curve).concat([0]);
+  const x=d3.scaleLinear().domain([0,maxS]).range([m.l,W-m.r]),y=d3.scaleLinear().domain(d3.extent(ys)).nice().range([H-m.b,m.t]);
+  let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Cumulative reward per episode">`;
+  y.ticks(4).forEach(v=>{s+=`<line x1="${m.l}" x2="${W-m.r}" y1="${y(v)}" y2="${y(v)}" stroke="var(--grid)"/><text x="${m.l-5}" y="${y(v)+3}" text-anchor="end" class="rm-lab">${d3.format('~g')(v)}</text>`});
+  x.ticks(6).forEach(v=>{s+=`<text x="${x(v)}" y="${H-8}" text-anchor="middle" class="rm-lab">${v}</text>`});s+=`<text x="${W-m.r}" y="${m.t+10}" text-anchor="end" class="rm-lab">x = step · y = cumulative reward</text>`;
+  rows.sort((a,b)=>(a.u.id===t.id)-(b.u.id===t.id)).forEach(R=>{const sel=R.u.id===t.id,pts=[[x(0),y(0)],...R.curve.map((v,i)=>[x(i+1),y(v)])];
+    s+=`<g data-env-turn="${R.u.id}" class="rm-hit"><path d="${d3.line().curve(d3.curveStepAfter)(pts)}" fill="none" stroke="${R.ok?'var(--good)':'var(--critical)'}" stroke-width="${sel?3:1.4}" opacity="${sel?1:.45}" stroke-dasharray="${R.hack?'5 3':''}"/>${R.hack?`<text x="${pts.at(-1)[0]+4}" y="${pts.at(-1)[1]+4}" style="font-size:12px;fill:var(--warn)">⚠</text>`:''}<title>Episode turn ${R.u.no}: return ${R.ret.toFixed(2)} · ${R.ok?'success':'failure'}${R.hack?' · flagged for reward hacking':''} · ${R.steps} steps (click to open)</title></g>`});
+  s+='</svg>';
+  const ks=d3.range(1,Math.min(n,8)+1),at=ks.map(k=>({k,at:1-comb(n-cnt,k)/comb(n,k),hat:comb(cnt,k)/comb(n,k)}));
+  const tiles=[[n,'episodes'],[n?pct(cnt/n):'–',nHack?`success rate (${pct(cntClean/n)} without flagged)`:'success rate'],[mr==null?'–':mr.toFixed(2)+(n>1?' ± '+sdv.toFixed(2):''),'mean return'],[at.length?pct(at.at(-1).hat):'–',`pass^${at.length?at.at(-1).k:'k'} (all succeed)`]];
+  const byAct=new Map();rows.forEach(R=>R.r&&R.r.tools.forEach(l=>{if(!l.reward)return;const g=byAct.get(short(l.tool))||{n:0,sum:0};g.n++;g.sum+=l.reward;byAct.set(short(l.tool),g)}));
+  const acts=[...byAct.entries()].sort((a,b)=>Math.abs(b[1].sum)-Math.abs(a[1].sum)).slice(0,6),am=d3.max(acts,a=>Math.abs(a[1].sum))||1;
+  const hacks=S.A.hacks.filter(h=>eps.some(u=>u.id===h.turn_id));
+  host.innerHTML=`<div class="at-card"><div class="rm-tiles" style="grid-template-columns:repeat(4,minmax(0,1fr))">${tiles.map(([v,l])=>`<div><b>${v}</b><span>${l}</span></div>`).join('')}</div>
+    <div class="env-grid"><div class="rm-scroll">${s}</div><div>
+      <table style="width:100%;font-size:12px"><thead><tr><th>k</th><th>pass@k</th><th>pass^k</th></tr></thead><tbody>${at.map(a=>`<tr><td>${a.k}</td><td>${pct(a.at)}</td><td>${pct(a.hat)}</td></tr>`).join('')}</tbody></table>
+      <div class="lr-why" style="margin-top:10px"><b>Where reward comes from</b></div>${acts.map(([k,g])=>`<div class="tw-row" style="grid-template-columns:90px 1fr auto;margin-top:4px"><span>${esc(k)}</span><div class="tw-bar" style="background:var(--grid)"><span style="width:${(100*Math.abs(g.sum)/am).toFixed(1)}%;background:${g.sum>0?'var(--good)':'var(--critical)'}"></span></div><span class="sub">${g.sum>0?'+':''}${g.sum.toFixed(2)} · ${g.n}×</span></div>`).join('')||'<div class="sub">No step rewards recorded (return only).</div>'}
+    </div></div>
+    <div class="lr-why" style="margin-top:8px">Task <b>${esc(task)}</b>: ${cnt} of ${n} episodes succeeded. ${n>=2&&cnt>0&&cnt<n?`An agent that solves it ${pct(cnt/n)} of the time solves ${ks.at(-1)} runs in a row only ${pct(at.at(-1).hat)} of the time.`:''} ${hacks.length?`<span class="bad">${nHack} episode${nHack===1?'':'s'} flagged for reward hacking (${hacks.length} signal${hacks.length===1?'':'s'}: test or grader edits, skips, removed asserts); ${rows.filter(x=>x.hack&&x.ok).length} of them counted as successes, so the clean success rate is ${pct(cntClean/n)}. Dashed lines with ⚠ mark them.</span>`:'No reward-hacking signals in these episodes.'}${n<5?' Few episodes: treat the rates as rough.':''}</div></div>`;
+}
+document.getElementById('envView').addEventListener('click',e=>{const g=e.target.closest('[data-env-turn]');if(!g)return;TREE.follow=false;TREE.turn=g.dataset.envTurn;document.getElementById('treeFollow').setAttribute('aria-pressed','false');schedule()});
 function renderTitle(D){
   const ps=[...new Set(D.allRuns.filter(r=>r.role!=='synthesis'&&P.includes(r.provider)).map(r=>r.provider))],el=document.getElementById('title');
-  const html=ps.length===1?`Duo <span class="muted" style="font-weight:400">·</span> <span><i class="sw" style="background:var(--${ps[0]})"></i> ${NAME[ps[0]]}</span> <span class="muted" style="font-weight:400">single-agent session</span>`
+  let html=ps.length===1?`Duo <span class="muted" style="font-weight:400">·</span> <span><i class="sw" style="background:var(--${ps[0]})"></i> ${NAME[ps[0]]}</span> <span class="muted" style="font-weight:400">single-agent session</span>`
     :'Duo <span class="muted" style="font-weight:400">·</span> <span><i class="sw" style="background:var(--codex)"></i> Codex</span> <span class="muted" style="font-weight:400">vs</span> <span><i class="sw" style="background:var(--claude)"></i> Claude</span>';
+  const envRuns=D.allRuns.filter(r=>String(r.s.mode||'').startsWith('env:'));
+  if(envRuns.length&&envRuns.length===D.allRuns.filter(r=>r.role!=='synthesis').length){const pol=[...new Set(envRuns.map(r=>r.model||NAME[r.provider]))];html=`Duo <span class="muted" style="font-weight:400">·</span> ${esc(pol.slice(0,2).join(' vs '))} <span class="muted" style="font-weight:400">RL environment</span>`}
   if(el.dataset.v!==html){el.dataset.v=html;el.innerHTML=html}
 }
 function renderTurnReading(D){renderTitle(D);
   const t=D.turns.find(t=>t.id===TREE.turn),card=document.getElementById('verdictCard'),host=document.getElementById('timeWent');
-  if(!t){card.innerHTML='';renderLongRun(null);renderReasonMem(null);renderAttribution(null);renderConvMem(D);if(!LT)fetchLongterm();else renderLongTerm();host.innerHTML='<div class="empty">Time budgets appear once a turn finishes.</div>';return}
-  card.innerHTML=cardHtml(verdictCard(t));renderLongRun(t);renderReasonMem(t);renderAttribution(t);renderConvMem(D);if(!LT||Date.now()-LT_AT>30000){LT_AT=Date.now();fetchLongterm()}else renderLongTerm();
+  if(!t){card.innerHTML='';renderEnv(null,D);renderLongRun(null);renderReasonMem(null);renderAttribution(null);renderConvMem(D);if(!LT)fetchLongterm();else renderLongTerm();host.innerHTML='<div class="empty">Time budgets appear once a turn finishes.</div>';return}
+  card.innerHTML=cardHtml(verdictCard(t));renderEnv(t,D);renderLongRun(t);renderReasonMem(t);renderAttribution(t);renderConvMem(D);if(!LT||Date.now()-LT_AT>30000){LT_AT=Date.now();fetchLongterm()}else renderLongTerm();
   const B=P.map(p=>({p,b:timeBudget(t.by[p].filter(r=>r.role!=='synthesis'&&!r.running))})).filter(x=>x.b.total>0);
   if(!B.length){host.innerHTML='<div class="empty">No finished runs in this turn yet.</div>';return}
   const max=d3.max(B,x=>x.b.total),w=v=>(100*v/max).toFixed(2)+'%',sec=v=>dur(v*1000);
@@ -1723,6 +1765,7 @@ function renderEvalTree(D){
   const runIds=new Set(runs.map(r=>r.id));
   const findings=S.events.filter(e=>(e.turn_id===t.id||runIds.has(e.span_id))&&/^(evaluation$|judge\.|analysis\.|policy\.reward|evolve\.result)/.test(e.type)&&(F.judge==='all'||!e.judge||String(e.judge).startsWith(F.judge)));
   const start=t.start,end=Math.max(t.end,...runs.map(r=>r.end),...findings.map(e=>e.timestamp)),span=Math.max(1,end-start),cutoff=start+span*TREE.progress/100;
+  host.style.height=TREE.view==='tree'?'auto':'';
   if(TREE.view==='tree'){const n=renderGrowthTree(t,span,cutoff,host);
     document.getElementById('treeProgress').value=TREE.progress;
     document.getElementById('treePosition').textContent=dur(Math.max(0,cutoff-start)*1000)+' / '+dur(span*1000)+' · '+n+' tool calls';
@@ -1797,7 +1840,7 @@ function treeMarks(t){
   const div=al&&al.divergence!=null&&al.pairs[al.divergence]?al.pairs[al.divergence]:null;
   const checks=new Map();for(const p in lr)for(const c of lr[p].checks)checks.set(c.ref,c);
   const mc=S.A.memctx.filter(e=>e.span_id===t.id).at(-1);
-  return {roots,crit,lr,div,checks,hist:mc?mc.count||0:0};
+  return {hacks:new Map(S.A.hacks.filter(h=>h.turn_id===t.id).map(h=>[+h.item_id,h.name])),roots,crit,lr,div,checks,hist:mc?mc.count||0:0,envret:S.A.envret.filter(e=>e.turn_id===t.id)};
 }
 function maxLenFor(laneH){return laneH/2-22}
 function renderGrowthTree(t,span,cutoff,host){
@@ -1879,14 +1922,16 @@ function renderGrowthTree(t,span,cutoff,host){
         g.append('path').attr('d',`M${lx2-6},${ty-24}h12l-6,9z`).attr('fill','var(--critical)');
         g.append('text').attr('x',lx2+8).attr('y',ty-17).attr('class','b').attr('fill','var(--critical)').text('look first')}
     }
-    svg.append('text').attr('x',x0-26).attr('y',ty-2).attr('text-anchor','end').attr('class','b').attr('fill',c).text(NAME[p]+(ordered.filter(o=>o.provider===p).length>1?' · '+r.role:''));
-    if(r.model)svg.append('text').attr('x',x0-26).attr('y',ty+13).attr('text-anchor','end').attr('class','mut').text(r.model);
+    const envRun=String(r.s.mode||'').startsWith('env:');
+    svg.append('text').attr('x',x0-26).attr('y',ty-2).attr('text-anchor','end').attr('class','b').attr('fill',c).text(envRun?(r.model||'policy'):NAME[p]+(ordered.filter(o=>o.provider===p).length>1?' · '+r.role:''));
+    if(envRun)svg.append('text').attr('x',x0-26).attr('y',ty+13).attr('text-anchor','end').attr('class','mut').text(String(r.s.mode).slice(4,30));
+    else if(r.model)svg.append('text').attr('x',x0-26).attr('y',ty+13).attr('text-anchor','end').attr('class','mut').text(r.model);
     const maxLen=maxLenFor(laneH);
     const tools=r.tools.filter(l=>l.t<=cutoff);visible+=tools.length;
     // long runs: consecutive calls of one tool closer than 5 px merge into one thicker branch (xN); anything marked stays single
     const seen=new Set(),groups=[];
     tools.forEach(l=>{const key=l.tool+'|'+l.detail,wither=l.passed===false||(!!l.detail&&seen.has(key));if(l.passed!==false)seen.add(key);
-      const marked=M.roots.has(l.eid)||M.crit.has(l.eid)||M.checks.has(l.eid)||l.passed===false,bx=Math.min(endX-2,X(l.t-r.start)),last=groups.at(-1);
+      const marked=M.hacks.has(l.eid)||M.roots.has(l.eid)||M.crit.has(l.eid)||M.checks.has(l.eid)||l.passed===false||!!l.reward,bx=Math.min(endX-2,X(l.t-r.start)),last=groups.at(-1);
       if(last&&!marked&&!last.marked&&last.tool===l.tool&&bx-last.bx1<5){last.n++;last.bx1=bx;last.dur+=l.dur||0;last.wither+=wither?1:0}
       else groups.push({l,tool:l.tool,n:1,bx,bx1:bx,dur:l.dur||0,wither:wither?1:0,marked})});
     groups.forEach((G,i)=>{const l=G.l,bx=G.bx,side=i%2?1:-1,sway=((i*37)%7-3)/14;
@@ -1894,26 +1939,29 @@ function renderGrowthTree(t,span,cutoff,host){
       const ex=bx+len*(.5+sway),ey=ty-side*len,chk=M.checks.get(l.eid),root=M.roots.has(l.eid),crit=M.crit.has(l.eid);
       const withered=G.wither===G.n&&l.passed!==false;
       const col=l.passed===false?'var(--critical)':withered?'var(--muted)':(LAB_COLORS[phaseOf(l)]||'var(--judge)');
-      const label=short(l.tool)+(G.n>1?` ×${G.n} (${dur(G.dur)} total${G.wither?', '+G.wither+' failed or repeated':''})`:(l.detail?' · '+l.detail:'')+' · '+dur(l.dur))+(l.passed===false?' · failed':withered?' · repeat of a call that already succeeded':'')+(chk?` · check ${chk.ok?'passed':'failed'}${chk.passed!=null?' ('+chk.passed+' passed)':''}${chk.progress?' · progress':''}${chk.regression?' · regression':''}`:'')+(root?" · judges' root cause":crit?' · critical error':'');
+      const label=short(l.tool)+(G.n>1?` ×${G.n} (${dur(G.dur)} total${G.wither?', '+G.wither+' failed or repeated':''})`:(l.detail?' · '+l.detail:'')+' · '+dur(l.dur))+(l.passed===false?' · failed':withered?' · repeat of a call that already succeeded':'')+(chk?` · check ${chk.ok?'passed':'failed'}${chk.passed!=null?' ('+chk.passed+' passed)':''}${chk.progress?' · progress':''}${chk.regression?' · regression':''}`:'')+(l.reward?` · reward ${l.reward>0?'+':''}${l.reward}`:'')+(M.hacks.has(l.eid)?' · reward-hacking signal: '+M.hacks.get(l.eid):'')+(root?" · judges' root cause":crit?' · critical error':'');
       const g=target(svg.append('g'),label,()=>showTool(r.id,r.tools.indexOf(l)));
       g.append('path').attr('d',`M${bx},${ty} Q${bx+len*(.1+sway*.5)},${ty-side*len*.5} ${ex},${ey}`).attr('fill','none').attr('stroke',col).attr('stroke-width',G.n>1?Math.min(7,2.4+Math.sqrt(G.n)):2.4).attr('stroke-linecap','round').attr('stroke-dasharray',withered?'3 3':null).attr('opacity',withered?.7:1);
       const ang=Math.atan2(-side*len*.5,len*(.4+sway))*180/Math.PI;
-      if(chk){const rr=chk.progress?7:5;g.append('circle').attr('cx',ex).attr('cy',ey).attr('r',rr).attr('fill',chk.ok?'var(--good)':'var(--critical)').attr('stroke',chk.progress||chk.regression?'var(--text)':'none').attr('stroke-width',1.4);
+      const maxR=d3.max(r.tools,x=>Math.abs(x.reward||0))||1;
+      if(l.reward){const rr=3.5+6*Math.sqrt(Math.abs(l.reward)/maxR);g.append('circle').attr('cx',ex).attr('cy',ey).attr('r',rr).attr('fill',l.reward>0?'var(--good)':'var(--critical)').attr('stroke','var(--panel)').attr('stroke-width',1.2);g.append('text').attr('x',ex+rr+3).attr('y',ey+4).attr('class','mut').style('font-size','10px').text((l.reward>0?'+':'')+(+l.reward).toFixed(2))}
+      else if(chk){const rr=chk.progress?7:5;g.append('circle').attr('cx',ex).attr('cy',ey).attr('r',rr).attr('fill',chk.ok?'var(--good)':'var(--critical)').attr('stroke',chk.progress||chk.regression?'var(--text)':'none').attr('stroke-width',1.4);
         g.append('text').attr('x',ex).attr('y',ey+3.5).attr('text-anchor','middle').style('font-size','9px').style('fill','#fff').style('font-weight',700).text(chk.ok?'✓':'✗')}
       else if(l.passed===false){g.append('circle').attr('cx',ex).attr('cy',ey).attr('r',4.5).attr('fill',col);g.append('text').attr('x',ex+4).attr('y',ey-6).attr('fill','var(--critical)').attr('class','b').text('✗')}
       else g.append('ellipse').attr('cx',ex).attr('cy',ey).attr('rx',withered?4:6).attr('ry',withered?2:3).attr('transform',`rotate(${ang},${ex},${ey})`).attr('fill',col).attr('opacity',withered?.5:.9);
       if(G.n>1)g.append('text').attr('x',ex+6).attr('y',ey+(side>0?-4:12)).attr('class','mut').style('font-size','10px').text('×'+G.n);
       if(root||crit){g.append('circle').attr('cx',ex).attr('cy',ey).attr('r',root?10.5:8.5).attr('fill','none').attr('stroke','var(--critical)').attr('stroke-width',root?2:1.2);
         if(root)g.append('text').attr('x',ex+13).attr('y',ey+4).attr('class','b').attr('fill','var(--critical)').text('root cause')}
+      if(M.hacks.has(l.eid)){g.append('text').attr('x',ex-6).attr('y',ey-9).style('font-size','15px').style('fill','var(--warn)').text('⚠');g.append('text').attr('x',ex+10).attr('y',ey-9).attr('class','b').attr('fill','var(--warn)').text(String(M.hacks.get(l.eid)).replace(/_/g,' '))}
       tips.set(l.eid,{x:bx,y:ty});
     });
     for(const q of r.reasoning.filter(q=>q.t<=cutoff)){const qx=Math.min(endX-2,X(q.t-r.start));
       const g=target(svg.append('g'),'Reasoning · '+q.chars+' characters',()=>showRun(r.id,q.id));
       g.append('path').attr('d',`M${qx},${ty-5}l4.5,5l-4.5,5l-4.5,-5Z`).attr('fill','var(--text)')}
-    const j=t.judge[p],won=t.winner===p;
-    const crown=target(svg.append('g'),NAME[p]+(j?' · judge score '+f1(j.overall)+'/5':' · judge pending')+(won?' · turn winner':''),()=>showTurn(t.id));
+    const j=t.judge[p],won=t.winner===p,er=M.envret.filter(e=>e.provider===p).at(-1);
+    const crown=target(svg.append('g'),er?`${r.model||NAME[p]} · episode return ${er.score} · ${er.passed?'success':'failure'}`:NAME[p]+(j?' · judge score '+f1(j.overall)+'/5':' · judge pending')+(won?' · turn winner':''),()=>showTurn(t.id));
     crown.append('ellipse').attr('cx',endX+42).attr('cy',ty).attr('rx',Math.min(60,30+tools.length*.8)).attr('ry',Math.min(laneH/2-10,20+tools.length*.4)).attr('fill',c).attr('opacity',won?.3:.14).attr('stroke',won?c:'none').attr('stroke-width',2);
-    crown.append('text').attr('x',endX+42).attr('y',ty+4).attr('text-anchor','middle').attr('class','ink b').text(j?f1(j.overall)+'/5':'…');
+    crown.append('text').attr('x',endX+42).attr('y',ty+4).attr('text-anchor','middle').attr('class','ink b').text(er?`R ${(+er.score).toFixed(2)} ${er.passed?'✓':'✗'}`:j?f1(j.overall)+'/5':'…');
     if(won)crown.append('text').attr('x',endX+42).attr('y',ty-Math.min(laneH/2-10,20+tools.length*.4)-6).attr('text-anchor','middle').text('★');
     if(r.running&&TREE.progress===100)trunk.append('circle').attr('cx',endX).attr('cy',ty).attr('r',5).attr('fill',c).attr('class','current');
   });
