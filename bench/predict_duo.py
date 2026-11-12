@@ -92,18 +92,30 @@ eval(src.slice(a,b));
 const cases=JSON.parse(fs.readFileSync(0,'utf8'));
 process.stdout.write(JSON.stringify(cases.map(c=>attribute(c.final,c.candidates).map(x=>x.src))));
 '''
+def cluster_purity():
+    """Patterns map sanity: cluster the benchmark runs by their facets; purity = share of runs whose cluster's
+    majority family is their own family (families that behave alike, e.g. clean_long and multisession, may merge)."""
+    import facets
+    from collections import Counter,defaultdict
+    rows=[]
+    for x in jsonl(DATA/'runs.jsonl'):
+        f=facets.facets(x['steps']);n=f.pop('steps');rows.append({'id':x['id'],'family':x['family'],'provider':x['style'],'ts':0,'steps':n,'features':f})
+    rows,info=facets.cluster(rows);by=defaultdict(Counter)
+    for r in rows:by[r['cluster']][r['family']]+=1
+    return sum(c.most_common(1)[0][1] for c in by.values())/len(rows)
+
 def system_checks():
-    """Duo-only checks: the viewer's JavaScript attribution must agree with attribution.py on every case."""
-    node=shutil.which('node')
-    if not node:return {'attribution.js_parity':None},['node not found: JS parity skipped']
+    """Duo-only checks: viewer JS attribution == attribution.py; patterns-map cluster purity on the benchmark runs."""
+    node=shutil.which('node');extra={'clusters.purity':round(cluster_purity(),4)}
+    if not node:return {'attribution.js_parity':None,**extra},['node not found: JS parity skipped']
     cases=jsonl(DATA/'attribution.jsonl')
     with tempfile.NamedTemporaryFile('w',suffix='.js',delete=False) as f:f.write(JS_DRIVER)
     out=subprocess.run([node,f.name,str(ROOT/'viewer.html')],input=json.dumps([{'final':c['final'],'candidates':c['candidates']} for c in cases]),capture_output=True,text=True,timeout=60)
     Path(f.name).unlink()
-    if out.returncode:return {'attribution.js_parity':0.0},['JS driver failed: '+out.stderr[:200]]
+    if out.returncode:return {'attribution.js_parity':0.0,**extra},['JS driver failed: '+out.stderr[:200]]
     js=json.loads(out.stdout);py=[[g['src'] for g in attribution.attribute(c['final'],c['candidates'])] for c in cases]
     diffs=[f"{c['id']}: JS {a} != Python {b}" for c,a,b in zip(cases,js,py) if a!=b]
-    return {'attribution.js_parity':sum(a==b for a,b in zip(js,py))/len(cases)},diffs
+    return {'attribution.js_parity':sum(a==b for a,b in zip(js,py))/len(cases),**extra},diffs
 
 def main(argv=None):
     ap=argparse.ArgumentParser(description=__doc__.split('\n')[0]);ap.add_argument('--out',required=True);ap.add_argument('--extra',nargs='*',default=[])

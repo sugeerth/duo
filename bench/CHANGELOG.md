@@ -2,6 +2,10 @@
 
 Versioning rules: bench/SPEC.md §7. Results are only comparable within one MAJOR version.
 
+## Unreleased
+
+- Duo system check `clusters.purity` (patterns-map clusters vs planted run families; target >= 0.6). Data and labels unchanged.
+
 ## 1.0.0 (2026-11-12)
 
 First formal release.

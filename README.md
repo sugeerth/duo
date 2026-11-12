@@ -80,6 +80,25 @@ Imports run the same reward-hacking detector as live turns: test or grader edits
 
 When only one agent ran, the viewer drops the comparison-only panels (step diff, attribution) and titles the page as a single-agent session.
 
+**Research-driven views** (from `docs/agent-trace-visualization-research.md`, a survey of 2025-2026 observability products and papers):
+- **Verdict card, SUSPECTS / TAGS / TELEMETRY.**
+  - Decisive-step suspects are ranked from all the evidence: judge root causes, critical-error labels, the long-run look-first step, loop starts, regressions, reward-hacking signals and the first failure.
+  - Each suspect gets a confidence share, including a fixed share for "none of these", because automatic attribution is only 11-14% accurate in the literature.
+  - Failure modes are tagged with a TRAIL/MAST-style vocabulary (specification, reasoning, planning, execution, verification).
+  - The card warns when the telemetry is too thin to diagnose: uncompleted calls, outputs not recorded, no reasoning captured.
+- **Progress lane.** Per-step progress (AgentBoard-style) from step scores, rewards, checks passing or the judges' step labels, in that order of preference. Any scorer can feed it with `step.score` events. A ▼ marks a sudden drop, and loop bursts are shaded.
+- **Process graph.** All runs of the same kind of task merged into one action graph (Graphectory, aggregated agent graphs).
+  - Nodes are actions sized by frequency; edges are transitions.
+  - Colour is the success rate of runs through each node.
+  - Dashed edges go back to an earlier stage, and ↻ counts actions repeated back to back.
+- **Failure modes.** A heatmap of category by model across the session, with the evidence behind each cell.
+- **Patterns across runs** (`facets.py`, `/facets`). Every stored run is reduced to facets, standardized, projected to 2-D (PCA) and clustered (k-means, with k chosen by silhouette).
+  - Clusters are labelled by the facets that most set them apart, with models, pass rate, mean calls, judge score, NEW and no-eval-coverage flags.
+  - Click through to the runs. On the benchmark, the clusters recover the planted run families with purity 0.70 (checked by `bench/evaluate.py`).
+- **RL behaviour overlay.**
+  - Success, clean success (no reward-hacking flag), hack-flag rate and length over episodes.
+  - Observed pass^k beside the (pass^1)^k prediction for independent episodes.
+
 **Benchmark (`bench/`).** 256 synthetic, labelled cases, with labels from how each case was planted rather than from the detectors. They cover runs (loops, stalls, progress, regressions, sessions, reward hacking, behaviour flags, plus traps and healthy controls), trends, answer attribution, RL rollouts and import fixtures. `python3 bench/evaluate.py` scores every detector against them and exits 1 below target. `bench/export_for_labeling.py` turns real stored turns into the same format for hand labelling. See `bench/README.md` for the data card, label definitions, results and limits.
 
 Long runs and long-term change (`longrun.py`, `longterm.py`; rules from AgentDiff's long-run reading):

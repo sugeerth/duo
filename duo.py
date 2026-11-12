@@ -23,6 +23,7 @@ import judge as evaljudge
 import analysis
 import longrun
 import longterm
+import facets
 from tracestore import open_default as open_store
 import lessons
 import learning
@@ -810,6 +811,7 @@ def chat():
     HUB.routes['/learning']=lambda q=None:learning.snapshot(HUB.store,list(HUB.events))
     HUB.routes['/policy']=lambda q=None:policy.summary()
     HUB.routes['/longterm']=lambda q=None:longterm.snapshot(HUB.store)
+    HUB.routes['/facets']=lambda q=None:facets.snapshot(HUB.store)
     HUB.routes['/next']=next_preview
     HUB.post_routes['/lessons']=lessons_update
     HUB.routes['/filemap']=lambda q=None:file_map_data()

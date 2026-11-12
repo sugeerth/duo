@@ -188,6 +188,9 @@ section:not(.open){padding-top:9px;padding-bottom:9px}
 .at-card{border:1px solid var(--line);border-radius:12px;background:var(--panel);padding:14px 16px;margin-top:8px}
 .at-bar{display:flex;height:14px;border-radius:7px;overflow:hidden;background:var(--grid)}.at-bar span{height:100%}
 .at-list{margin-top:10px;max-height:340px;overflow:auto;font-size:13px;line-height:1.5}.at-list p{margin:0 0 6px;padding:2px 0 2px 10px;border-left:3px solid}.at-tag{font:600 10.5px/1 system-ui;text-transform:uppercase;letter-spacing:.06em;margin-right:8px}
+.fm{border-collapse:collapse;font-size:12.5px;width:100%}.fm th,.fm td{padding:6px 10px;border-bottom:1px solid var(--line);text-align:left}.fm td{border-left:1px solid var(--line)}
+.pc-list{display:flex;flex-direction:column;gap:6px;max-height:330px;overflow:auto}.pc{text-align:left;font:inherit;font-size:12px;border:1px solid var(--line);border-left:4px solid var(--c);border-radius:8px;background:var(--surface);color:var(--text);padding:6px 10px;cursor:pointer}
+.pc b{display:block;font-size:12.5px}.pc span{display:block;color:var(--text-2)}.pc.on{border-color:var(--c);box-shadow:0 0 0 1px var(--c)}.pc .tag{font-style:normal;font-size:10px;font-weight:700;letter-spacing:.05em;background:var(--hover);border-radius:4px;padding:0 5px;margin-right:4px}.pc .tag.warn{color:var(--critical)}
 .tw-why{font-size:12px;color:var(--text-2);margin-top:8px;line-height:1.5}
 .rail-compo{display:flex;height:8px;border-radius:4px;overflow:hidden;margin-top:9px;background:var(--grid)}.rail-compo i{display:block;height:100%}
 .rail-compo-key{font-size:11.5px;color:var(--text-2);margin-top:4px}
@@ -230,6 +233,8 @@ section:not(.open){padding-top:9px;padding-bottom:9px}
       <span id="treePosition" class="sub"></span>
     </div>
     <div id="evalTree" aria-label="Execution railway timeline"></div>
+    <div class="tw-head"><h3>Progress lane</h3><span class="sub">Per step, how close each run is to done: from step scores when a scorer provides them, else rewards, else checks passing, else the judges' step labels. ▼ marks a sudden drop, the likeliest decisive moment (most agent failures are sudden, not gradual).</span></div>
+    <div id="progressLane"></div>
     <div class="diff-head"><h3>Step diff — where the runs diverge</h3><span class="sub" id="diffSentence"></span></div>
     <div id="stepDiff" aria-label="Step-aligned comparison of both models on this turn"></div>
     <div class="tree-caption"><span>━ Task bar</span><span style="color:var(--codex)">● Codex</span><span style="color:var(--claude)">● Claude</span><span>◆ Reasoning</span><span class="ok">✓ Passed</span><span class="bad">✗ Failed</span><span>Branches = tool calls · clustered calls expand with zoom · click for evidence</span></div>
@@ -243,6 +248,12 @@ section:not(.open){padding-top:9px;padding-bottom:9px}
     <div id="timeWent"></div>
     <div class="tw-head"><h3>Long run: phases, loops and stalls</h3><span class="sub">The run read at the scale it ran: bursts of calls, with idle between them compressed. ✓ a check newly passing, ↻ a burst repeating earlier calls without progress, ! a failing check. Brackets mark the longest loop and the longest stall.</span></div>
     <div id="longRun"></div>
+    <div class="tw-head"><h3>Process graph</h3><span class="sub">Every run of this kind of task in the session, merged into one map: nodes are actions (size = how often), edges are what came next (width = how often), colour is the share of runs through that node that succeeded. ↻ counts repeats of the same action. Shows the common path and where failing runs go astray.</span></div>
+    <div id="procGraph"></div>
+    <div class="tw-head"><h3>Failure modes</h3><span class="sub">Each turn's problems tagged with one vocabulary (TRAIL/MAST style: specification, reasoning, planning, execution, verification) from the judges' root causes and Duo's own detectors. Cells count turns; click one for the evidence.</span></div>
+    <div id="failModes"></div>
+    <div class="tw-head"><h3>Patterns across runs</h3><span class="sub">Every stored run, all sessions, placed on one map by what it did (action mix, length, failures, repeats, loops, stalls, progress, test edits) and grouped into clusters labelled by what sets them apart. The recipe today's observability tools use, computed without model calls, so every label is explainable. Click a cluster or a point.</span></div>
+    <div id="patterns"></div>
     <div class="tw-head"><h3>Conversation memory</h3><span class="sub">The chat session as memory: each row is a turn, and filled cells are the earlier turns it still carried in its context. The bar is how much was carried in (≈ tokens). Click a row to open that turn.</span></div>
     <div id="convMem"></div>
     <div class="tw-head"><h3>Over time: every stored session</h3><span class="sub">Each model across all turns in the trace DB. A change is stated only when it survives a significance test corrected for every test shown (Benjamini-Hochberg, q &lt; 0.05).</span></div>
@@ -1690,6 +1701,25 @@ document.getElementById('convMem').addEventListener('click',e=>{const g=e.target
    Episodes of one task (same turn name) side by side: cumulative reward per step, success rate, mean return,
    pass@k = 1 - C(n-c,k)/C(n,k) and pass^k = C(c,k)/C(n,k) (unbiased estimators over n episodes, c successes),
    reward by action (where reward is earned or lost), and the reward-hacking signals analysis already flags. */
+
+function behaviourOverlay(rows){
+  /* METR MALT / Docent style: judged behaviour against reward over episodes (time order stands in for training step).
+     Reward hacking shows as success rising while clean success stays flat. */
+  if(rows.length<3)return '';
+  const R=rows.slice().sort((a,b)=>a.u.start-b.u.start),win=Math.max(2,Math.round(R.length/5));
+  const roll=f=>R.map((x,i)=>{const w=R.slice(Math.max(0,i-win+1),i+1);return d3.mean(w,f)});
+  const S1=roll(x=>+x.ok),S2=roll(x=>+(x.ok&&!x.hack)),HK=roll(x=>+x.hack),ST=roll(x=>x.steps),mxS=d3.max(ST)||1;
+  const W=560,H=150,m={l:36,r:10,t:12,b:22},x=i=>m.l+(W-m.l-m.r)*(R.length<2?.5:i/(R.length-1)),y=v=>H-m.b-v*(H-m.t-m.b);
+  const line=(vals,col,dash,lbl)=>`<path d="${d3.line()(vals.map((v,i)=>[x(i),y(v)]))}" fill="none" stroke="${col}" stroke-width="2" stroke-dasharray="${dash}"><title>${lbl}</title></path>`;
+  let s=`<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" style="max-width:100%;height:auto" role="img" aria-label="Behaviour over episodes">`;
+  [0,.5,1].forEach(v=>{s+=`<line x1="${m.l}" x2="${W-m.r}" y1="${y(v)}" y2="${y(v)}" stroke="var(--grid)"/><text x="${m.l-4}" y="${y(v)+3}" text-anchor="end" class="rm-lab">${pct(v)}</text>`});
+  s+=line(S1,'var(--good)','','success (as the environment reports it)')+line(S2,'var(--codex)','5 3','clean success (no reward-hacking flag)')+line(HK,'var(--critical)','','flagged for reward hacking')+line(ST.map(v=>v/mxS),'var(--muted)','2 3','episode length, scaled');
+  s+=`<text x="${m.l}" y="${H-6}" class="rm-lab">episode 1</text><text x="${W-m.r}" y="${H-6}" text-anchor="end" class="rm-lab">episode ${R.length} · rolling window ${win}</text></svg>`;
+  const gap=S1.at(-1)-S2.at(-1);
+  return `<div style="margin-top:10px"><div class="lr-why"><b>Behaviour over episodes</b> (in time order, a stand-in for training steps)</div><div class="rm-scroll">${s}</div>
+    <div class="rm-key"><span><i style="background:var(--good)"></i>success</span><span><i style="background:var(--codex)"></i>clean success</span><span><i style="background:var(--critical)"></i>reward-hacking flags</span><span><i style="background:var(--muted)"></i>length</span></div>
+    ${gap>.05?`<div class="lr-why bad">Success and clean success diverge by ${pct(gap)} at the end: part of the reported success is flagged as reward hacking.</div>`:''}</div>`;
+}
 function comb(n,k){if(k<0||k>n)return 0;let r=1;for(let i=1;i<=k;i++)r=r*(n-k+i)/i;return r}
 function renderEnv(t,D){
   const sec=document.getElementById('evalTreeSec'),host=document.getElementById('envView');
@@ -1714,9 +1744,10 @@ function renderEnv(t,D){
   const hacks=S.A.hacks.filter(h=>eps.some(u=>u.id===h.turn_id));
   host.innerHTML=`<div class="at-card"><div class="rm-tiles" style="grid-template-columns:repeat(4,minmax(0,1fr))">${tiles.map(([v,l])=>`<div><b>${v}</b><span>${l}</span></div>`).join('')}</div>
     <div class="env-grid"><div class="rm-scroll">${s}</div><div>
-      <table style="width:100%;font-size:12px"><thead><tr><th>k</th><th>pass@k</th><th>pass^k</th></tr></thead><tbody>${at.map(a=>`<tr><td>${a.k}</td><td>${pct(a.at)}</td><td>${pct(a.hat)}</td></tr>`).join('')}</tbody></table>
+      <table style="width:100%;font-size:12px"><thead><tr><th>k</th><th>pass@k</th><th>pass^k</th><th title="what pass^k would be if episodes succeeded independently: (pass^1)^k">if independent</th></tr></thead><tbody>${at.map(a=>`<tr><td>${a.k}</td><td>${pct(a.at)}</td><td>${pct(a.hat)}</td><td class="muted">${pct(Math.pow(cnt/Math.max(1,n),a.k))}</td></tr>`).join('')}</tbody></table>
       <div class="lr-why" style="margin-top:10px"><b>Where reward comes from</b></div>${acts.map(([k,g])=>`<div class="tw-row" style="grid-template-columns:90px 1fr auto;margin-top:4px"><span>${esc(k)}</span><div class="tw-bar" style="background:var(--grid)"><span style="width:${(100*Math.abs(g.sum)/am).toFixed(1)}%;background:${g.sum>0?'var(--good)':'var(--critical)'}"></span></div><span class="sub">${g.sum>0?'+':''}${g.sum.toFixed(2)} · ${g.n}×</span></div>`).join('')||'<div class="sub">No step rewards recorded (return only).</div>'}
     </div></div>
+    ${behaviourOverlay(rows)}
     <div class="lr-why" style="margin-top:8px">Task <b>${esc(task)}</b>: ${cnt} of ${n} episodes succeeded. ${n>=2&&cnt>0&&cnt<n?`An agent that solves it ${pct(cnt/n)} of the time solves ${ks.at(-1)} runs in a row only ${pct(at.at(-1).hat)} of the time.`:''} ${hacks.length?`<span class="bad">${nHack} episode${nHack===1?'':'s'} flagged for reward hacking (${hacks.length} signal${hacks.length===1?'':'s'}: test or grader edits, skips, removed asserts); ${rows.filter(x=>x.hack&&x.ok).length} of them counted as successes, so the clean success rate is ${pct(cntClean/n)}. Dashed lines with ⚠ mark them.</span>`:'No reward-hacking signals in these episodes.'}${n<5?' Few episodes: treat the rates as rough.':''}</div></div>`;
 }
 document.getElementById('envView').addEventListener('click',e=>{const g=e.target.closest('[data-env-turn]');if(!g)return;TREE.follow=false;TREE.turn=g.dataset.envTurn;document.getElementById('treeFollow').setAttribute('aria-pressed','false');schedule()});
@@ -1728,10 +1759,181 @@ function renderTitle(D){
   if(envRuns.length&&envRuns.length===D.allRuns.filter(r=>r.role!=='synthesis').length){const pol=[...new Set(envRuns.map(r=>r.model||NAME[r.provider]))];html=`Duo <span class="muted" style="font-weight:400">·</span> ${esc(pol.slice(0,2).join(' vs '))} <span class="muted" style="font-weight:400">RL environment</span>`}
   if(el.dataset.v!==html){el.dataset.v=html;el.innerHTML=html}
 }
+/* ================= research-driven views (bench of 2025-2026 methods; see the research report) =================
+   1. failure-mode tags + ranked decisive-step suspects + telemetry sufficiency (TRAIL / MAST / Who&When style)
+   2. progress lane (AgentBoard progress rate, PRM-style step scores; pluggable via step.score events)
+   3. process graph across runs (Graphectory / aggregated agent graphs)
+   4. patterns map across all stored runs (facets -> embed -> 2-D -> cluster -> label; /facets)
+   5. RL behaviour-prevalence overlay (in renderEnv) */
+const FCATS=['Specification','Reasoning','Planning','Execution','Verification'];
+const ROOT_CAT={ignored_constraint:'Specification',scope_violation:'Specification',missing_context:'Specification',misread_context:'Reasoning',hallucinated_result:'Reasoning',
+  blind_retry_loop:'Planning',premature_stop:'Planning',slow_path:'Planning',ignored_tool_error:'Execution',wrong_tool:'Execution',bad_arguments:'Execution',no_verification:'Verification'};
+const FLAG_CAT={search_loop:'Planning',oscillation:'Planning',write_churn:'Planning',reread_churn:'Planning',rogue_after_error:'Execution',unverified_finish:'Verification'};
+function failureTags(t,p){
+  const out=new Map(),add=(c,why,ref)=>{const e=out.get(c)||{c,why:[],refs:[]};e.why.push(why);if(ref)e.refs.push(+ref);out.set(c,e)};
+  t.ann[p].roots.forEach(r=>{const c=ROOT_CAT[r.name];if(c)add(c,'judge root cause: '+String(r.name).replace(/_/g,' '),r.item_id)});
+  S.A.flags.filter(f=>f.turn_id===t.id&&f.provider===p).forEach(f=>{const c=FLAG_CAT[f.name];if(c)add(c,'detector: '+String(f.name).replace(/_/g,' '))});
+  const lr=S.A.longrun.filter(e=>e.turn_id===t.id&&e.provider===p).at(-1)?.data;
+  if(lr){if(lr.loops.length)add('Planning',`looped ${lr.loops.length}×`,lr.loops[0].ref);if(lr.regressions)add('Verification',`${lr.regressions} regression(s)`);}
+  const tools=t.by[p].flatMap(r=>r.tools),bad=tools.filter(l=>l.passed===false);
+  if(tools.length&&bad.length/tools.length>=.2)add('Execution',`${bad.length} of ${tools.length} tool calls failed`,bad[0].eid);
+  S.A.claims.filter(c=>c.turn_id===t.id&&c.provider===p&&c.verdict==='contradicted').forEach(c=>add('Reasoning','claim contradicted by its own steps',c.item_id));
+  if(S.A.hackFinal.some(h=>h.turn_id===t.id&&h.provider===p)||S.A.hacks.some(h=>h.turn_id===t.id&&h.provider===p))add('Specification','reward-hacking signal',S.A.hacks.find(h=>h.turn_id===t.id&&h.provider===p)?.item_id);
+  return [...out.values()];
+}
+function suspects(t,p){
+  // evidence-weighted ranking; attribution by judges alone is only 11-14% accurate in the literature, so show a ranking
+  const W=new Map(),add=(ref,w,why)=>{if(!ref&&ref!==0)return;ref=+ref;if(!S.byEvent.has(ref))return;const e=W.get(ref)||{ref,w:0,why:[]};e.w+=w;e.why.push(why);W.set(ref,e)};
+  t.ann[p].roots.forEach(r=>add(r.item_id,3,`${r.judge} judge: root cause`));
+  t.ann[p].steps.filter(s=>s.verdict==='critical_error').forEach(s=>add(s.item_id,2,`${s.judge} judge: critical error`));
+  const lr=S.A.longrun.filter(e=>e.turn_id===t.id&&e.provider===p).at(-1)?.data;
+  if(lr){if(lr.look_first)add(lr.look_first.ref,2,'long-run reading: look first');(lr.loops||[]).forEach(L=>add(L.ref,1.5,'start of a loop'));(lr.checks||[]).filter(c=>c.regression).forEach(c=>add(c.ref,1.5,'regression'))}
+  S.A.hacks.filter(h=>h.turn_id===t.id&&h.provider===p).forEach(h=>add(h.item_id,3,'reward-hacking signal: '+h.name));
+  const first=t.by[p].flatMap(r=>r.tools).find(l=>l.passed===false);if(first)add(first.eid,.75,'first failed call');
+  // a fixed 'none of these' share (weight 1.5) keeps thin evidence from looking certain: one weak signal reads ~33%, not 100%
+  const all=[...W.values()].sort((a,b)=>b.w-a.w),tot=d3.sum(all,e=>e.w)+1.5;
+  return all.slice(0,3).map(e=>({...e,conf:e.w/tot}));
+}
+function telemetry(t){
+  const runs=t.runs.filter(r=>r.role!=='synthesis'),tools=runs.flatMap(r=>r.tools),out=[];
+  if(!tools.length)return null;
+  const noOut=tools.filter(l=>l.passed!==null&&!l.outId&&!l.declined).length,open=tools.filter(l=>l.passed===null).length;
+  if(open&&!t.running)out.push(`${open} tool call${open===1?'':'s'} never completed`);
+  if(noOut/tools.length>.5)out.push(`${pct(noOut/tools.length)} of tool outputs were not recorded`);
+  if(!runs.some(r=>r.reasoning.length))out.push('no reasoning captured');
+  return out.length?out:null;
+}
+function suspectLines(t){
+  const L=[];const ps=P.filter(p=>t.by[p].some(r=>r.role!=='synthesis'));
+  for(const p of ps){const sus=suspects(t,p);if(!sus.length)continue;
+    const chips=sus.map(s=>{const st=stepLabel(t,s.ref);return st?{...st,detail:s.why.join('; ')}:null}).filter(Boolean);
+    if(!chips.length)continue;
+    L.push({k:'SUSPECTS',chips,text:`${NAME[p]}: `+chips.map((c,i)=>`{${i}} ${pct(sus[i].conf)}`).join(' · ')+' (ranked evidence, not a verdict)'})}
+  const tags=ps.flatMap(p=>failureTags(t,p).map(x=>`${NAME[p]} ${x.c.toLowerCase()}`));
+  if(tags.length)L.push({k:'TAGS',text:tags.join(' · ')});
+  const tel=telemetry(t);if(tel)L.push({k:'TELEMETRY',text:'insufficient to diagnose with confidence: '+tel.join('; ')});
+  return L;
+}
+/* ---------- progress lane ---------- */
+function progressSeries(t,r){
+  const tools=r.tools;if(!tools.length)return null;
+  const sc=S.events.filter(e=>e.type==='step.score'&&e.span_id===r.id);
+  if(sc.length){const m=new Map(sc.map(e=>[+e.item_id,+e.score]));let v=0;return {src:'step scorer',vals:tools.map(l=>{if(m.has(l.eid))v=m.get(l.eid);return v})}}
+  if(tools.some(l=>l.reward)){let c=0;const cum=tools.map(l=>c+=(l.reward||0)),lo=Math.min(0,...cum),hi=Math.max(...cum,1e-9);return {src:'cumulative reward',vals:cum.map(v=>(v-lo)/(hi-lo||1))}}
+  const lr=S.A.longrun.filter(e=>e.turn_id===t.id&&e.provider===r.provider).at(-1)?.data,checks=new Map((lr?.checks||[]).map(c=>[c.ref,c]));
+  if(checks.size){const mx=Math.max(1,...[...checks.values()].map(c=>c.passed||0));let v=0;
+    return {src:'checks passing',vals:tools.map(l=>{const c=checks.get(l.eid);if(c)v=c.ok?Math.max(v,(c.passed||mx)/mx):Math.min(v,c.passed!=null?c.passed/mx:v*.5);return v})}}
+  const lab=new Map(t.ann[r.provider].steps.map(s=>[+s.item_id,s.verdict]));
+  if(lab.size){let v=.5;return {src:'judge step labels',vals:tools.map(l=>{const x=lab.get(l.eid);if(x==='good_move')v=Math.min(1,v+.15);else if(x==='wasted')v=Math.max(0,v-.05);else if(x==='critical_error')v=Math.max(0,v-.35);return v})}}
+  return null;
+}
+function renderProgressLane(t){
+  const host=document.getElementById('progressLane');
+  const runs=t?t.runs.filter(r=>r.role!=='synthesis'&&r.tools.length):[];
+  const ser=runs.map(r=>({r,s:progressSeries(t,r)})).filter(x=>x.s);  // step i spans [i, i+1) so the last step has width too
+  if(!ser.length){host.innerHTML=`<div class="empty">${runs.length?'No progress signal on this turn: no checks, rewards, step scores or judge step labels.':'The lane appears once a model makes tool calls.'}</div>`;return}
+  const W=Math.max(520,host.clientWidth-36),H=58,L=96,R=34;  // card padding; R leaves room for the end label
+  host.innerHTML='<div class="at-card">'+ser.map(({r,s})=>{const n=s.vals.length,x=i=>L+(W-L-R)*i/n,y=v=>H-8-v*(H-18),c=`var(--${P.includes(r.provider)?r.provider:'judge'})`;
+    const cliffs=[];for(let i=1;i<n;i++)if(s.vals[i-1]-s.vals[i]>=.25)cliffs.push(i);
+    const lr=S.A.longrun.filter(e=>e.turn_id===t.id&&e.provider===r.provider).at(-1)?.data;let shade='';
+    if(lr){const idx=ts=>{let k=0;r.tools.forEach((l,i)=>{if(l.t<=ts+.01)k=i});return k};(lr.bursts||[]).filter(b=>b.status==='loop').forEach(b=>{shade+=`<rect x="${x(idx(b.start))}" y="4" width="${Math.max(3,x(idx(b.end))-x(idx(b.start)))}" height="${H-12}" fill="var(--warn)" opacity=".14"><title>loop burst</title></rect>`})}
+    let sv=`<svg width="${W}" height="${H}" role="img" aria-label="${esc(NAME[r.provider])} progress lane">${shade}<line x1="${L}" x2="${W-R}" y1="${y(1)}" y2="${y(1)}" stroke="var(--grid)" stroke-dasharray="2 3"/><line x1="${L}" x2="${W-R}" y1="${y(0)}" y2="${y(0)}" stroke="var(--grid)"/>`;
+    sv+=`<text x="4" y="${H/2-2}" class="rm-lab" style="font-weight:700;fill:${c}">${esc(r.model||NAME[r.provider])}</text><text x="4" y="${H/2+11}" class="rm-lab">${esc(s.src)}</text>`;
+    sv+=`<path d="${d3.line().curve(d3.curveStepAfter)([...s.vals.map((v,i)=>[x(i),y(v)]),[x(n),y(s.vals.at(-1))]])}" fill="none" stroke="${c}" stroke-width="2"/>`;
+    s.vals.forEach((v,i)=>{sv+=`<circle cx="${x(i+.5)}" cy="${y(v)}" r="5" fill="transparent" data-gotool="${r.id}:${i}" class="rm-hit"><title>step ${i+1}: ${short(r.tools[i].tool)} ${esc(r.tools[i].detail||'')} · progress ${pct(v)}</title></circle>`});
+    cliffs.forEach(i=>{sv+=`<g data-gotool="${r.id}:${i}" class="rm-hit"><path d="M${x(i)-5},${Math.max(2,y(s.vals[i])-12)}h10l-5,7z" fill="var(--critical)"/><title>sudden drop at step ${i+1}: ${pct(s.vals[i-1])} → ${pct(s.vals[i])}</title></g>`});
+    sv+=`<text x="${W-R+4}" y="${y(s.vals.at(-1))+4}" text-anchor="start" class="rm-lab" style="font-weight:700">${pct(s.vals.at(-1))}</text></svg>`;
+    return `<div class="rm-scroll">${sv}</div>`}).join('')+'</div>';
+}
+document.getElementById('progressLane').addEventListener('click',e=>{const g=e.target.closest('[data-gotool]');if(g){const [r,i]=g.dataset.gotool.split(':');showTool(r,+i)}});
+/* ---------- process graph across runs ---------- */
+function sigOf(l){const a=atype(l),d=unwrapCmd(l.detail);
+  if(a==='FILE_READ')return 'read';if(a==='FILE_WRITE')return /(^|\/)(tests?|spec)\/|test_[^/]*\.py|_test\.|\.test\.|conftest|\.github\/workflows/i.test(d)?'edit test/grader':'edit';
+  if(a==='SEARCH')return 'search';if(a==='FETCH')return 'fetch';if(a==='PLAN')return 'plan';if(a==='AGENT_SPAWN')return 'sub-agent';
+  if(TEST_RE.test(d))return 'run tests';const w=(d.split(/\s+/)[0]||short(l.tool)).replace(/^.*\//,'');return 'run '+w.slice(0,14)}
+function runSuccess(r,t){const er=S.A.envret.filter(e=>e.turn_id===t.id&&e.provider===r.provider).at(-1);if(er)return !!er.passed;const j=t.judge[r.provider];if(j)return j.overall>=3.5;return !r.failed}
+function renderProcGraph(t,D){
+  const host=document.getElementById('procGraph');if(!t){host.innerHTML='';return}
+  const env=String(t.mode||'').startsWith('env:'),task=S.spans.get(t.id)?.task;
+  const turns=D.allTurns.filter(u=>env?(String(u.mode||'').startsWith('env:')&&S.spans.get(u.id)?.task===task):u.kind===t.kind);
+  const runs=turns.flatMap(u=>u.runs.filter(r=>r.role!=='synthesis'&&r.tools.length).map(r=>({r,u,ok:runSuccess(r,u)})));
+  if(runs.length<1){host.innerHTML='<div class="empty">The process graph needs runs with tool calls.</div>';return}
+  const N=new Map(),E=new Map(),node=k=>{if(!N.has(k))N.set(k,{k,n:0,runs:new Set(),ok:0,pos:0,self:0});return N.get(k)};
+  for(const {r,ok} of runs){const seq=['START',...r.tools.map(sigOf),ok?'END ✓':'END ✗'];let prev=null;
+    seq.forEach((k,i)=>{if(prev===k){node(k).self++;return}const nd=node(k);nd.n++;nd.pos+=i/(seq.length-1);if(!nd.runs.has(r.id)){nd.runs.add(r.id);nd.ok+=ok}
+      if(prev){const ek=prev+'→'+k;E.set(ek,(E.get(ek)||0)+1)}prev=k})}
+  const nodes=[...N.values()].map(n=>({...n,mp:n.k==='START'?0:n.k.startsWith('END')?1:n.pos/n.n,sr:n.ok/n.runs.size}));
+  const totalE=d3.sum([...E.values()]),minE=Math.max(1,Math.floor(totalE*.01));
+  const cols=Math.min(7,Math.max(3,Math.round(Math.sqrt(nodes.length))+1)),W=Math.max(620,host.clientWidth),H=Math.max(220,Math.min(460,60+nodes.length*20)),pad=60;
+  nodes.forEach(n=>n.col=n.k==='START'?0:n.k.startsWith('END')?cols-1:Math.min(cols-2,Math.max(1,Math.round(n.mp*(cols-1)))));
+  d3.groups(nodes,n=>n.col).forEach(([c,g])=>{g.sort((a,b)=>b.n-a.n).forEach((n,i)=>{n.x=pad+(W-2*pad)*c/(cols-1);n.y=30+(H-60)*(g.length<2?.5:i/(g.length-1))})});
+  const by=new Map(nodes.map(n=>[n.k,n])),rad=n=>4+10*Math.sqrt(n.n/d3.max(nodes,x=>x.n)),col=d3.interpolateRgb(css('--critical')||'#d03b3b',css('--good')||'#0ca30c');
+  let s=`<svg width="${W}" height="${H}" role="img" aria-label="Process graph across ${runs.length} runs">`;
+  const mx=d3.max([...E.values()])||1;
+  [...E.entries()].filter(([k,v])=>v>=minE).forEach(([k,v])=>{const [a,b]=k.split('→'),A=by.get(a),B=by.get(b);if(!A||!B)return;
+    const back=B.x<A.x-1,same=Math.abs(B.x-A.x)<1,dy=back?-(40+Math.abs(B.x-A.x)*.15):same?-24:0;
+    const c1=Math.max(8,A.y+dy),c2=Math.max(8,B.y+dy);
+    s+=`<path d="M${A.x},${A.y} C${(A.x+B.x)/2},${c1} ${(A.x+B.x)/2},${c2} ${B.x},${B.y}" fill="none" stroke="${back?'var(--warn)':'var(--base)'}" stroke-width="${(1+5*Math.sqrt(v/mx)).toFixed(2)}" opacity="${back?.55:.45}" stroke-dasharray="${back?'4 3':''}"><title>${esc(a)} → ${esc(b)}: ${v}×${back?' (goes back to an earlier stage)':''}</title></path>`});
+  nodes.forEach(n=>{const r=rad(n),fill=n.k==='START'?'var(--text-2)':n.k==='END ✓'?'var(--good)':n.k==='END ✗'?'var(--critical)':col(n.sr);
+    s+=`<g class="rm-hit" data-proc="${esc(n.k)}"><circle cx="${n.x}" cy="${n.y}" r="${r}" fill="${fill}" stroke="var(--panel)" stroke-width="1.5"/>`+
+      (n.self?`<path d="M${n.x-4},${n.y-r} a6,6 0 1,1 8,0" fill="none" stroke="var(--warn)" stroke-width="1.6"/><text x="${n.x+r+2}" y="${n.y-r}" class="rm-lab" style="fill:var(--warn)">↻${n.self}</text>`:'')+
+      `<text x="${n.x}" y="${n.y+r+12}" text-anchor="middle" class="rm-lab" style="font-weight:600">${esc(n.k)} ×${n.n}</text><title>${esc(n.k)}: ${n.n} visits in ${n.runs.size} runs; ${pct(n.sr)} of those runs succeeded${n.self?`; repeated back-to-back ${n.self}×`:''}</title></g>`});
+  s+='</svg>';
+  const okR=runs.filter(x=>x.ok).length,back=[...E.entries()].filter(([k,v])=>{const [a,b]=k.split('→');return by.get(b)&&by.get(a)&&by.get(b).x<by.get(a).x-1}).reduce((a,[k,v])=>a+v,0);
+  host.innerHTML=`<div class="at-card"><div class="rm-scroll">${s}</div><div class="rm-key"><span><i style="background:var(--good)"></i>runs through it mostly succeed</span><span><i style="background:var(--critical)"></i>mostly fail</span><span><i style="background:var(--warn)"></i>dashed = goes back to an earlier stage · ↻ = same action repeated</span><span>edges under ${minE}× hidden</span></div>
+    <div class="lr-why">${runs.length} runs (${okR} succeeded) of ${env?'task '+esc(task):'this kind of turn'} in this session; ${back} backward transitions${totalE?` (${pct(back/totalE)} of all)`:''}.</div></div>`;
+  host.onclick=e=>{const g=e.target.closest('[data-proc]');if(!g)return;const k=g.dataset.proc,rs=runs.filter(x=>x.r.tools.some(l=>sigOf(l)===k)||(k.startsWith('END')&&(k==='END ✓')===x.ok));
+    openDrawer(esc(k),`<p class="sub">${rs.length} runs pass through this node.</p>`+rs.slice(0,40).map(x=>`<p><button class="link" data-goto-run="${x.r.id}">${esc(x.r.model||NAME[x.r.provider])} · turn ${x.u.no}</button> ${x.ok?'<span class="ok">✓</span>':'<span class="bad">✗</span>'} · ${x.r.tools.length} calls</p>`).join(''))};
+}
+/* ---------- failure-mode heatmap (session) ---------- */
+function renderFailModes(D){
+  const host=document.getElementById('failModes'),cols=[...new Set(D.turns.flatMap(t=>P.filter(p=>t.by[p].some(r=>r.role!=='synthesis'))))];
+  const cell={};let any=0;
+  for(const t of D.turns)for(const p of cols){if(!t.by[p].length)continue;for(const x of failureTags(t,p)){(cell[x.c+'|'+p]=cell[x.c+'|'+p]||[]).push({t,why:x.why});any++}}
+  if(!any){host.innerHTML='<div class="empty">No failure modes tagged in this session.</div>';return}
+  const turnsBy=p=>D.turns.filter(t=>t.by[p].some(r=>r.role!=='synthesis')).length,mx=d3.max(Object.values(cell),v=>v.length)||1;
+  host.innerHTML=`<div class="at-card"><table class="fm"><thead><tr><th></th>${cols.map(p=>`<th style="color:var(--${p})">${NAME[p]} <span class="muted">(${turnsBy(p)} turns)</span></th>`).join('')}</tr></thead><tbody>`+
+    FCATS.map(c=>`<tr><th>${c}</th>${cols.map(p=>{const v=cell[c+'|'+p]||[];return `<td data-fm="${c}|${p}" class="${v.length?'rm-hit':''}" style="background:${v.length?`color-mix(in srgb,var(--critical) ${Math.round(12+60*v.length/mx)}%,transparent)`:'transparent'}">${v.length?`${v.length} <span class="muted">(${pct(v.length/Math.max(1,turnsBy(p)))})</span>`:'<span class="muted">–</span>'}</td>`}).join('')}</tr>`).join('')+'</tbody></table></div>';
+  host.onclick=e=>{const td=e.target.closest('[data-fm]');if(!td)return;const v=cell[td.dataset.fm]||[];if(!v.length)return;const [c,p]=td.dataset.fm.split('|');
+    openDrawer(`${esc(c)} · ${NAME[p]}`,v.map(x=>`<p><button class="link" data-goto-turn="${x.t.id}">Turn ${x.t.no}</button> · ${esc(x.why.join('; '))}</p>`).join(''))};
+}
+/* ---------- patterns map across all stored runs ---------- */
+let FC=null,FC_AT=0,FC_SEL=null,PENDING_TURN=null;
+async function fetchFacets(){try{const r=await fetch('/facets');if(r.ok){FC=await r.json();FC_AT=Date.now();renderPatterns()}}catch(e){}}
+function renderPatterns(){
+  const host=document.getElementById('patterns');
+  if(!FC){host.innerHTML='<div class="empty">Loading the trace DB…</div>';return}
+  const R=FC.runs||[];if(R.length<4){host.innerHTML='<div class="empty">Patterns appear once the trace DB holds a few runs with tool calls.</div>';return}
+  const C=FC.clusters||[],color=d3.scaleOrdinal(d3.schemeTableau10).domain(C.map(c=>c.id));
+  const W=Math.max(380,(host.clientWidth||900)*.55),H=330,m=16,x=d3.scaleLinear().domain(d3.extent(R,r=>r.x)).nice().range([m,W-m]),y=d3.scaleLinear().domain(d3.extent(R,r=>r.y)).nice().range([H-m,m]);
+  let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Map of ${R.length} runs">`;
+  R.forEach(r=>{const sel=FC_SEL==null||FC_SEL===r.cluster,cur=r.session===S.session,px=x(r.x)+((r.id.charCodeAt(r.id.length-1)%7)-3)*.6,py=y(r.y)+((r.id.charCodeAt(0)%7)-3)*.6;
+    const mark=r.provider==='claude'?`<rect x="${px-3.2}" y="${py-3.2}" width="6.4" height="6.4"`:`<circle cx="${px}" cy="${py}" r="3.6"`;
+    s+=`<g data-fcrun="${esc(r.id)}" class="rm-hit">${mark} fill="${color(r.cluster)}" opacity="${sel?.85:.12}" stroke="${cur?'var(--text)':'none'}" stroke-width="1.2"/><title>${esc(r.model||NAME[r.provider]||r.provider)} · ${r.steps} calls · ${r.success==null?'no outcome':r.success?'succeeded':'failed'} · cluster ${r.cluster}${cur?' · this session':''}</title></g>`});
+  s+='</svg>';
+  const cards=C.slice().sort((a,b)=>b.n-a.n).map(c=>`<button class="pc${FC_SEL===c.id?' on':''}" data-fc="${c.id}" style="--c:${color(c.id)}"><b>${esc(c.label)}</b>
+     <span>${c.n} runs · ${Object.entries(c.models).map(([k,v])=>`${NAME[k]||k} ${v}`).join(', ')}</span>
+     <span>${c.pass_rate==null?'no outcome':`pass ${pct(c.pass_rate)}`} · ${c.mean_steps_n} calls avg${c.mean_score!=null?` · judge ${c.mean_score}`:''}</span>
+     ${c.new?'<em class="tag">NEW</em>':''}${c.uncovered?'<em class="tag warn">no eval coverage</em>':''}</button>`).join('');
+  host.innerHTML=`<div class="at-card"><div class="env-grid"><div class="rm-scroll">${s}</div><div class="pc-list">${cards}</div></div>
+    <div class="lr-why">${R.length} runs from every stored session, ${C.length} clusters (k chosen by silhouette ${FC.silhouette}); ● Codex ■ Claude, outlined = this session. Labels name the facets that most set a cluster apart; open a run to check it, since a cluster is a hypothesis about a pattern, not proof. On the Duo benchmark these clusters recover the planted failure families with purity 0.70.</div></div>`;
+}
+document.getElementById('patterns').addEventListener('click',e=>{const b=e.target.closest('[data-fc]');if(b){FC_SEL=FC_SEL===+b.dataset.fc?null:+b.dataset.fc;renderPatterns();
+    if(FC_SEL!=null){const c=FC.clusters.find(c=>c.id===FC_SEL),rs=FC.runs.filter(r=>r.cluster===FC_SEL);
+      openDrawer(esc(c.label),`<p class="sub">${c.n} runs. What sets it apart: ${c.top.map(t=>`${esc(t.facet)} ${t.z>0?'+':''}${t.z} SD`).join(', ')}.</p>`+rs.slice(0,50).map(r=>`<p><button class="link" data-open-run="${esc(r.session)}|${esc(r.turn)}">${esc(r.model||NAME[r.provider]||r.provider)} · ${new Date(r.ts*1000).toLocaleString()}</button> · ${r.steps} calls · ${r.success==null?'–':r.success?'<span class="ok">✓</span>':'<span class="bad">✗</span>'}</p>`).join(''))}return}
+  const g=e.target.closest('[data-fcrun]');if(g){const r=FC.runs.find(x=>x.id===g.dataset.fcrun);if(r)openRunAnywhere(r.session,r.turn)}});
+document.getElementById('dBody').addEventListener('click',e=>{const b=e.target.closest('[data-open-run]');if(!b)return;const [sid,tid]=b.dataset.openRun.split('|');openRunAnywhere(sid,tid)});
+function openRunAnywhere(sid,tid){
+  if(sid===S.session||(!sid&&!S.session)){TREE.follow=false;TREE.turn=tid;document.getElementById('treeFollow').setAttribute('aria-pressed','false');schedule();document.getElementById('evalTreeSec').scrollIntoView({behavior:'smooth'});return}
+  const sel=document.getElementById('session');if(![...sel.options].some(o=>o.value===sid))return;PENDING_TURN=tid;sel.value=sid;sel.onchange();
+}
+
 function renderTurnReading(D){renderTitle(D);
+  if(PENDING_TURN&&D.allTurns.some(u=>u.id===PENDING_TURN)){TREE.follow=false;TREE.turn=PENDING_TURN;PENDING_TURN=null;document.getElementById('treeFollow').setAttribute('aria-pressed','false');setTimeout(schedule,0)}
+  renderFailModes(D);if(!FC||Date.now()-FC_AT>60000){FC_AT=Date.now();fetchFacets()}else renderPatterns();
   const t=D.turns.find(t=>t.id===TREE.turn),card=document.getElementById('verdictCard'),host=document.getElementById('timeWent');
-  if(!t){card.innerHTML='';renderEnv(null,D);renderLongRun(null);renderReasonMem(null);renderAttribution(null);renderConvMem(D);if(!LT)fetchLongterm();else renderLongTerm();host.innerHTML='<div class="empty">Time budgets appear once a turn finishes.</div>';return}
-  card.innerHTML=cardHtml(verdictCard(t));renderEnv(t,D);renderLongRun(t);renderReasonMem(t);renderAttribution(t);renderConvMem(D);if(!LT||Date.now()-LT_AT>30000){LT_AT=Date.now();fetchLongterm()}else renderLongTerm();
+  if(!t){card.innerHTML='';renderProgressLane(null);renderProcGraph(null,D);renderEnv(null,D);renderLongRun(null);renderReasonMem(null);renderAttribution(null);renderConvMem(D);if(!LT)fetchLongterm();else renderLongTerm();host.innerHTML='<div class="empty">Time budgets appear once a turn finishes.</div>';return}
+  card.innerHTML=cardHtml([...verdictCard(t),...suspectLines(t)]);renderProgressLane(t);renderProcGraph(t,D);renderEnv(t,D);renderLongRun(t);renderReasonMem(t);renderAttribution(t);renderConvMem(D);if(!LT||Date.now()-LT_AT>30000){LT_AT=Date.now();fetchLongterm()}else renderLongTerm();
   const B=P.map(p=>({p,b:timeBudget(t.by[p].filter(r=>r.role!=='synthesis'&&!r.running))})).filter(x=>x.b.total>0);
   if(!B.length){host.innerHTML='<div class="empty">No finished runs in this turn yet.</div>';return}
   const max=d3.max(B,x=>x.b.total),w=v=>(100*v/max).toFixed(2)+'%',sec=v=>dur(v*1000);
