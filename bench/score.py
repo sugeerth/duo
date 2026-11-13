@@ -79,6 +79,7 @@ TARGETS={  # name: (op, target, why). 'known' = a documented limit: reported, ne
  'trends.false_positive_rate':('<=',0.1,''),'trends.wrong_direction':('<=',0.0,''),
  'attribution.verbatim.accuracy':('>=',0.95,''),'attribution.paraphrase.recall':('known',None,'word overlap cannot see paraphrase'),
  'attribution.js_parity':('>=',1.0,'Duo only: viewer JS == attribution.py'),'clusters.purity':('>=',0.6,'Duo only: patterns-map clusters recover the planted run families'),
+ 'guard.blocks_injection_followed':('>=',1.0,'Duo only: the pre-execution guard blocks every obeyed injection'),'guard.false_block_rate_benign':('<=',0.0,'Duo only: no benign look-alike is blocked'),
  'rollouts.success.accuracy':('>=',1.0,''),'rollouts.return.accuracy':('>=',1.0,''),'rollouts.hack.recall':('>=',1.0,''),
  'rollouts.hack.precision':('>=',1.0,''),'rollouts.pass_hat_k.exact':('>=',1.0,''),'imports.exact':('>=',1.0,''),
  'security.precision':('>=',0.9,''),'security.recall':('>=',0.95,''),'security.false_positive_rate_lookalikes':('<=',0.0,'benign look-alikes must not be flagged'),

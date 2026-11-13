@@ -198,6 +198,15 @@ section:not(.open){padding-top:9px;padding-bottom:9px}
 .tr-bar{display:flex;height:10px;border-radius:5px;overflow:hidden;background:var(--grid)}.tr-bar span{height:100%}.tr-meta{color:var(--text-2);white-space:nowrap}
 .sec-more{margin-top:10px;font-size:12.5px}.sec-more summary{cursor:pointer;color:var(--text-2)}.sec-more summary:hover{color:var(--text)}
 @media(max-width:600px){.tr-row{grid-template-columns:70px 1fr;}.tr-meta{grid-column:1/-1}}
+.alarms{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}.alarms:empty{display:none}
+.alarm{display:inline-flex;align-items:center;gap:6px;font:inherit;font-size:12px;border:1px solid var(--line);border-left:3px solid var(--c);border-radius:8px;background:var(--panel);color:var(--text);padding:4px 10px;cursor:pointer}
+.alarm b{color:var(--c)}.alarm .pulse{width:7px;height:7px;border-radius:50%;background:var(--c);animation:pulse 1.2s infinite}@keyframes pulse{50%{opacity:.25}}@media(prefers-reduced-motion:reduce){.alarm .pulse{animation:none}}
+.palette{position:fixed;inset:0;background:rgba(0,0,0,.28);z-index:60;display:flex;justify-content:center;align-items:flex-start;padding-top:12vh}.palette[hidden]{display:none}
+.pal-box{width:min(720px,94vw);background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:0 18px 50px rgba(0,0,0,.25);overflow:hidden}
+#palQ{width:100%;border:none;border-bottom:1px solid var(--line);padding:14px 16px;font:inherit;font-size:15px;background:var(--panel);color:var(--text);outline:none}
+#palR{max-height:52vh;overflow:auto}.pal-item{display:block;width:100%;text-align:left;border:none;background:none;color:var(--text);font:inherit;font-size:12.5px;padding:7px 16px;cursor:pointer;border-bottom:1px solid var(--grid)}
+.pal-item:hover,.pal-item.on{background:var(--hover)}.pal-item .k{color:var(--muted);margin-right:6px}.pal-item mark{background:color-mix(in srgb,var(--warn) 35%,transparent);color:inherit;border-radius:2px}
+.flow{margin-top:8px}
 .tw-why{font-size:12px;color:var(--text-2);margin-top:8px;line-height:1.5}
 .rail-compo{display:flex;height:8px;border-radius:4px;overflow:hidden;margin-top:9px;background:var(--grid)}.rail-compo i{display:block;height:100%}
 .rail-compo-key{font-size:11.5px;color:var(--text-2);margin-top:4px}
@@ -228,6 +237,7 @@ section:not(.open){padding-top:9px;padding-bottom:9px}
   <section class="c12" id="evalTreeSec" data-open="1">
     <h2>Duo · one task, two execution tracks</h2>
     <p class="sub">Long runs stay on a shared timeline. Tool calls split off as railway tracks, with nearby calls clustered until you zoom in. The Tree view regrows each run as a tree: trunk = run time, branches = tool calls, canopy = judge score.</p>
+    <div id="alarms" class="alarms" aria-live="polite"></div>
     <div id="verdictCard" class="vcard" aria-live="polite"></div>
     <div id="railSummary" class="rail-summary"></div>
     <div class="tree-toolbar">
@@ -239,6 +249,7 @@ section:not(.open){padding-top:9px;padding-bottom:9px}
       <input id="treeProgress" type="range" min="0" max="100" value="100" aria-label="Elapsed time replay">
       <span id="treePosition" class="sub"></span>
       <select id="lens" class="lens" aria-label="Lens: what to bring forward" title="Lens"><option value="all">◌ All steps</option><option value="sec">◌ Security</option><option value="sec_high">◌ Security · high+</option><option value="sec_crit">◌ Security · critical</option><option value="fail">◌ Failures</option></select>
+      <button id="reportBtn" class="lens" title="Download this turn as a self-contained incident report">⤓</button>
     </div>
     <div id="evalTree" aria-label="Execution railway timeline"></div>
     <div class="tw-head"><h3>Progress lane</h3><span class="sub">Per step, how close each run is to done: from step scores when a scorer provides them, else rewards, else checks passing, else the judges' step labels. ▼ marks a sudden drop, the likeliest decisive moment (most agent failures are sudden, not gradual).</span></div>
@@ -411,6 +422,7 @@ section:not(.open){padding-top:9px;padding-bottom:9px}
     <div id="miniMap" class="chart" style="margin-top:8px"></div></details>
   </section>
 </main>
+<div id="palette" class="palette" hidden><div class="pal-box"><input id="palQ" placeholder="Search every step: tool, file, command, risk, failure…  (Esc to close)" autocomplete="off"><div id="palR"></div></div></div>
 <aside id="drawer" aria-label="Details"><div class="dh"><b id="dTitle">Details</b><span class="grow"></span><button id="dClose" aria-label="Close details">✕</button></div><div class="db" id="dBody"></div></aside>
 <div class="tip" id="tip"></div>
 <script src="/d3.v7.min.js"></script>
@@ -423,7 +435,7 @@ const DIML={correctness:'Correctness',completeness:'Completeness',groundedness:'
 const KIND_L={respond:'Answer',read:'Read',write:'Write'};
 const qs=new URLSearchParams(location.search);
 let S;
-function reset(){S={events:[],maxId:0,started:null,session:'',spans:new Map(),order:[],J:{results:[],scores:[],verdicts:[],agree:[],errors:[],raw:[],steps:[],roots:[],actions:[]},feedback:[],byEvent:new Map(),A:{behaviour:[],flags:[],hacks:[],align:[],claims:[],hackFinal:[],override:[],rootAgree:[],conflicts:[],rewards:[],usage:[],evolve:[],fork:[],longrun:[],memctx:[],ctxtok:[],envret:[],security:[]},live:false,stored:false}}
+function reset(){S={events:[],maxId:0,started:null,session:'',spans:new Map(),order:[],J:{results:[],scores:[],verdicts:[],agree:[],errors:[],raw:[],steps:[],roots:[],actions:[]},feedback:[],byEvent:new Map(),A:{behaviour:[],flags:[],hacks:[],align:[],claims:[],hackFinal:[],override:[],rootAgree:[],conflicts:[],rewards:[],usage:[],evolve:[],fork:[],longrun:[],memctx:[],ctxtok:[],envret:[],security:[],guard:[],guardBlocked:[]},live:false,stored:false}}
 reset();
 const PROC=['planning','tool_selection','error_recovery','verification'];
 const PROCL={planning:'Planning',tool_selection:'Tool choice',error_recovery:'Error recovery',verification:'Verification'};
@@ -448,7 +460,7 @@ function ingest(e){
   if(e.type==='judge.root'){J.roots.push(e);return}
   if(e.type==='judge.action'){J.actions.push(e);return}
   if(e.type==='feedback'){S.feedback.push(e);return}
-  const AM={'analysis.behaviour':'behaviour','analysis.flag':'flags','analysis.hack':'hacks','analysis.align':'align','judge.claim':'claims','judge.hack_final':'hackFinal','judge.verdict_override':'override','judge.root_agreement':'rootAgree','judge.conflict':'conflicts','policy.reward':'rewards','usage':'usage','evolve.result':'evolve','fork.result':'fork','analysis.longrun':'longrun','memory.context':'memctx','context.tokens':'ctxtok','env.return':'envret','analysis.security':'security'};
+  const AM={'analysis.behaviour':'behaviour','analysis.flag':'flags','analysis.hack':'hacks','analysis.align':'align','judge.claim':'claims','judge.hack_final':'hackFinal','judge.verdict_override':'override','judge.root_agreement':'rootAgree','judge.conflict':'conflicts','policy.reward':'rewards','usage':'usage','evolve.result':'evolve','fork.result':'fork','analysis.longrun':'longrun','memory.context':'memctx','context.tokens':'ctxtok','env.return':'envret','analysis.security':'security','guard.check':'guard','guard.blocked':'guardBlocked'};
   if(AM[e.type]){S.A[AM[e.type]].push(e);if(e.type!=='usage')return}
   const s=e.span_id&&S.spans.get(e.span_id);
   if(e.type==='judge.raw'){if(s)s.answerId=e.id;return}
@@ -1976,6 +1988,7 @@ function renderSecurity(t){
       const y0=top+rowH*(r0+1)+rowH/2,y1=top+rowH*(r1+1)+rowH/2;sv+=`<path d="M${x(i)},${y0} C${x(i)},${y1-14} ${x(j)},${y1-14} ${x(j)},${y1}" fill="none" stroke="#8e44ad" stroke-width="1.6" stroke-dasharray="4 3"><title>injected at call ${i+1}, acted on at call ${j+1}</title></path>`});
     if(!rows.length)sv+=`<text x="${L}" y="${top+rowH*1.6}" class="rm-lab">no findings at this lens</text>`;
     sv+='</svg>';h+=`<div class="rm-scroll" style="margin-top:6px">${sv}</div>`}
+  for(const e of evs){const run=t.runs.find(r=>r.provider===e.provider&&r.role!=='synthesis');if(run)h+=flowGraph(t,e,run)}
   // tool reliability: one bar per tool, failures split by why
   const KC={not_found:'#8e44ad',permission:'#c0392b',timeout:'#e67e22',usage:'#d4a017',network:'#2980b9',crash:'#7f1d1d',other:'#95a5a6'};
   h+='<div class="tw-head" style="margin-top:12px"><h3 style="font-size:13px">Tool reliability</h3><span class="sub">bar = calls; coloured part = failures by cause</span></div>';
@@ -1991,12 +2004,97 @@ function renderSecurity(t){
 }
 document.getElementById('secPanel').addEventListener('click',e=>{const b=e.target.closest('[data-vref]');if(b){openRef(+b.dataset.vref);return}const g=e.target.closest('[data-gotool]');if(g){const [r,i]=g.dataset.gotool.split(':');showTool(r,+i)}});
 {const el=document.getElementById('lens');el.value=LENS.mode;el.classList.toggle('on',LENS.mode!=='all');el.onchange=()=>{LENS.mode=el.value;el.classList.toggle('on',LENS.mode!=='all');try{localStorage.setItem('duo-lens',LENS.mode)}catch(e){}schedule()}}
+
+/* ================= alarms, data flow, spend, incident report, search palette ================= */
+function turnAlarms(t){
+  const A=[],ids=new Set([t.id,...t.runs.map(r=>r.id)]);
+  const inTurn=e=>ids.has(e.span_id)||e.turn_id===t.id||(e.timestamp>=t.start-1&&e.timestamp<=t.end+1);
+  S.A.guardBlocked.filter(inTurn).forEach(e=>A.push({c:'#c0392b',icon:'⛔',t:`Guard blocked ${e.verdict} action`,d:e.detail,live:t.running}));
+  S.A.guard.filter(inTurn).filter(e=>e.verdict==='warn').forEach(e=>A.push({c:'#e67e22',icon:'⚠',t:`Guard warned (${e.data?.severity||'risk'})`,d:e.detail,live:t.running}));
+  for(const r of t.runs.filter(r=>r.role!=='synthesis')){const T=r.tools;if(!T.length)continue;
+    const tail=T.slice(-6),key=l=>l.tool+'|'+l.detail,ct=d3.rollup(tail,v=>v.length,key),top=[...ct].sort((a,b)=>b[1]-a[1])[0];
+    if(top&&top[1]>=3)A.push({c:'var(--warn)',icon:'↻',t:`${NAME[r.provider]} repeating`,d:`${top[1]}× in its last ${tail.length} calls: ${short(top[0].split('|')[0])} ${top[0].split('|')[1]}`,ref:tail.at(-1).eid,live:r.running});
+    let streak=0,mx=0;for(const l of T){streak=l.passed===false?streak+1:0;mx=Math.max(mx,streak)}
+    if(mx>=3)A.push({c:'var(--critical)',icon:'✗',t:`${NAME[r.provider]} ${mx} failures in a row`,d:'acting again without a passing call in between',ref:T.find(l=>l.passed===false)?.eid,live:r.running});
+    const ctx=S.A.ctxtok.filter(e=>e.span_id===r.id).at(-1);if(ctx&&ctx.count>=150000)A.push({c:'#8e44ad',icon:'◔',t:`${NAME[r.provider]} context ${Math.round(ctx.count/1000)}k`,d:'above 150k input tokens: quality tends to fall well before the window is full',live:r.running});
+    const sec=S.A.security.filter(e=>e.turn_id===t.id&&e.provider===r.provider).at(-1),crit=(sec?.data?.findings||[]).filter(f=>f.severity==='critical');
+    if(crit.length)A.push({c:'#c0392b',icon:'!',t:`${NAME[r.provider]} ${crit.length} critical`,d:[...new Set(crit.map(f=>SECL[f.category]))].join(', '),ref:crit[0].ref})}
+  return A;
+}
+function renderAlarms(t){const host=document.getElementById('alarms');if(!t){host.innerHTML='';return}
+  host.innerHTML=turnAlarms(t).map(a=>`<button class="alarm" style="--c:${a.c}" ${a.ref?`data-vref="${a.ref}"`:''} title="${esc(a.d||'')}">${a.live?'<span class="pulse"></span>':''}<b>${a.icon}</b>${esc(a.t)}<span class="muted">${esc((a.d||'').slice(0,70))}</span></button>`).join('')}
+document.getElementById('alarms').addEventListener('click',e=>{const b=e.target.closest('[data-vref]');if(b)openRef(+b.dataset.vref)});
+function spendLine(t){
+  const out=[];for(const r of t.runs.filter(r=>r.role!=='synthesis')){const ev=S.A.ctxtok.filter(e=>e.span_id===r.id);if(ev.length<2)continue;
+    const tot=d3.sum(ev,e=>e.count),lr=S.A.longrun.filter(e=>e.turn_id===t.id&&e.provider===r.provider).at(-1)?.data,loops=(lr?.bursts||[]).filter(b=>b.status==='loop');
+    const inLoop=d3.sum(ev.filter(e=>loops.some(b=>e.timestamp>=b.start-1&&e.timestamp<=b.end+1)),e=>e.count),sus=suspects(t,r.provider)[0],st=sus&&S.byEvent.get(sus.ref)?.tool;
+    const after=st?d3.sum(ev.filter(e=>e.timestamp>st.t),e=>e.count):0,parts=[`${tk(tot*4)} input tokens over ${ev.length} model calls`];
+    if(inLoop)parts.push(`${pct(inLoop/tot)} inside loops`);if(after)parts.push(`${pct(after/tot)} after the top suspect`);out.push(`${NAME[r.provider]}: ${parts.join(', ')}`)}
+  return out.length?[{k:'SPEND',text:out.join(' · ')}]:[];
+}
+function flowGraph(t,e,run){
+  const fs=e.data.findings||[],idx=new Map(run.tools.map((l,i)=>[l.eid,i]));
+  const src=fs.filter(f=>['read_secret','env_dump','secret_in_output','injected_output'].includes(f.rule)),SINK=['exfiltration','supply_chain','persistence','destructive','privilege'];
+  const snk=[...new Map(fs.filter(f=>SINK.includes(f.category)).map(f=>[f.ref,f])).values()];
+  if(!src.length||!snk.length)return '';
+  const W=Math.max(520,(document.getElementById('secPanel').clientWidth||900)-40),rowH=34,H=Math.max(src.length,snk.length)*rowH+40,cx=W/2,lx=150,rx=W-150;
+  const ys=(i,n)=>20+(H-40)*(n<2?.5:i/(n-1));
+  let sv=`<svg width="${W}" height="${H}" role="img" aria-label="Data flow: sources to risky actions">`;
+  sv+=`<g><rect x="${cx-44}" y="${H/2-16}" width="88" height="32" rx="16" fill="var(--hover)" stroke="var(--line)"/><text x="${cx}" y="${H/2+4}" text-anchor="middle" class="rm-lab" style="font-weight:700">agent context</text></g>`;
+  const label=f=>f.rule==='injected_output'?'untrusted instructions':f.rule==='secret_in_output'?'secret in output':f.rule==='env_dump'?'environment secrets':'secret: '+(tokOf(f)||String(f.evidence).split(/\s+/).pop()).slice(0,22);
+  const tokOf=f=>{const m=String(f.evidence).match(/[\w.~\/-]*\.(env|pem)|id_rsa|credentials|\.ssh|\.aws/i);return m?m[0].replace(/^.*\//,''):null};
+  src.forEach((f,i)=>{const y=ys(i,src.length),c=f.rule==='injected_output'?'#8e44ad':SEVC.high;
+    sv+=`<g data-vref="${f.ref}" class="rm-hit"><path d="M${lx+60},${y} C${cx-90},${y} ${cx-90},${H/2} ${cx-44},${H/2}" fill="none" stroke="${c}" stroke-width="2" opacity=".55"/><circle cx="${lx+60}" cy="${y}" r="6" fill="${c}"/><text x="${lx+50}" y="${y+4}" text-anchor="end" class="rm-lab" style="font-weight:600">${esc(label(f))} · call ${idx.get(f.ref)+1}</text><title>${esc(f.why)}</title></g>`});
+  snk.forEach((f,i)=>{const y=ys(i,snk.length),c=SEVC[f.severity];
+    sv+=`<g data-vref="${f.ref}" class="rm-hit"><path d="M${cx+44},${H/2} C${cx+90},${H/2} ${cx+90},${y} ${rx-60},${y}" fill="none" stroke="${c}" stroke-width="2" opacity=".55"/><circle cx="${rx-60}" cy="${y}" r="6" fill="${c}"/><text x="${rx-50}" y="${y+4}" class="rm-lab" style="font-weight:600">${esc(SECL[f.category])} · call ${idx.get(f.ref)+1}</text><title>${esc(f.evidence)}</title></g>`});
+  // direct flows: the sink names the same secret the source read
+  src.forEach((a,i)=>{const k=tokOf(a);if(!k)return;snk.forEach((b,j)=>{if(String(b.evidence).includes(k)){const y0=ys(i,src.length),y1=ys(j,snk.length);
+    sv+=`<path d="M${lx+60},${y0} C${cx},${Math.max(10,y0-30)} ${cx},${Math.max(10,y1-30)} ${rx-60},${y1}" fill="none" stroke="#c0392b" stroke-width="3"><title>${esc(k)} goes straight from where it was read to a risky action</title></path>`}})});
+  return `<div class="flow"><div class="lr-why"><b>Data flow</b> · ${esc(NAME[e.provider])}: what entered the agent's context (left) and the risky actions that followed (right). A thick red line means the action names the same secret it read.</div><div class="rm-scroll">${sv+'</svg>'}</div></div>`;
+}
+function exportReport(){
+  const D=derive(),t=D.allTurns.find(x=>x.id===TREE.turn);if(!t)return;
+  const pick=id=>{const el=document.getElementById(id);return el&&el.innerHTML.trim()?`<section>${el.outerHTML}</section>`:''};
+  const styles=[...document.querySelectorAll('style')].map(x=>x.textContent).join('\n');
+  const theme=document.documentElement.dataset.theme||'';
+  const html=`<!doctype html><html lang="en" data-theme="${theme}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Duo incident report · turn ${t.no}</title><style>${styles}
+body{padding:24px;max-width:1200px;margin:0 auto}section{margin:14px 0}.rail-target,.rm-hit,.vchip{cursor:default}</style></head><body>
+<h1 style="font-size:20px">Duo incident report · turn ${t.no} · ${esc(KIND_L[t.kind]||'')}</h1><p class="sub">Session ${esc(S.session||'live')} · exported ${new Date().toLocaleString()} · static snapshot from the Duo viewer; open the session in Duo for evidence.</p>
+${pick('alarms')}${pick('verdictCard')}${pick('railSummary')}<h2>Tree</h2>${pick('evalTree')}<h2>Progress</h2>${pick('progressLane')}<h2>Security &amp; tool calls</h2>${pick('secPanel')}<h2>Reasoning, memory &amp; context</h2>${pick('reasonMem')}
+</body></html>`;
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([html],{type:'text/html'}));a.download=`duo-incident-turn${t.no}.html`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+}
+document.getElementById('reportBtn').onclick=exportReport;
+/* search palette: '/' anywhere */
+let PAL_SEL=0,PAL_ITEMS=[];
+function palIndex(){const D=derive(),out=[];
+  for(const t of D.allTurns)for(const r of t.runs.filter(r=>r.role!=='synthesis')){
+    const sec=new Map();S.A.security.filter(e=>e.turn_id===t.id&&e.provider===r.provider).forEach(e=>(e.data.findings||[]).forEach(f=>sec.set(f.ref,[...(sec.get(f.ref)||[]),SECL[f.category]+' '+f.severity])));
+    r.tools.forEach((l,i)=>{const tags=[l.passed===false?'failed':'',...(sec.get(l.eid)||[]),phaseOf(l)].filter(Boolean);
+      out.push({t,r,i,text:`${short(l.tool)} ${l.detail||''}`,tags,hay:`${l.tool} ${l.detail} ${tags.join(' ')} ${r.model||''} ${NAME[r.provider]} turn ${t.no}`.toLowerCase()})})}
+  return out}
+function palRender(){const q=document.getElementById('palQ').value.toLowerCase().trim(),host=document.getElementById('palR');
+  const words=q.split(/\s+/).filter(Boolean),idx=palIndex();
+  PAL_ITEMS=(words.length?idx.filter(x=>words.every(w=>x.hay.includes(w))):idx.filter(x=>x.tags.some(g=>/critical|high|failed/.test(g)))).slice(0,40);PAL_SEL=Math.min(PAL_SEL,Math.max(0,PAL_ITEMS.length-1));
+  const hi=s=>{let h=esc(s);words.forEach(w=>{if(w.length>1)h=h.replace(new RegExp(w.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'gi'),m=>`<mark>${m}</mark>`)});return h};
+  host.innerHTML=(PAL_ITEMS.length?'':`<div class="pal-item muted">${words.length?'No step matches.':'Nothing risky or failed in this session. Type to search every step.'}</div>`)+PAL_ITEMS.map((x,k)=>`<button class="pal-item${k===PAL_SEL?' on':''}" data-k="${k}"><span class="k">Turn ${x.t.no} · ${esc(x.r.model||NAME[x.r.provider])} · call ${x.i+1}</span>${hi(x.text.slice(0,110))}${x.tags.length?` <span class="muted">· ${esc(x.tags.join(' · '))}</span>`:''}</button>`).join('')}
+function palOpen(){const p=document.getElementById('palette');p.hidden=false;const q=document.getElementById('palQ');q.value='';PAL_SEL=0;palRender();q.focus()}
+function palClose(){document.getElementById('palette').hidden=true}
+function palGo(k){const x=PAL_ITEMS[k];if(!x)return;palClose();TREE.follow=false;TREE.turn=x.t.id;document.getElementById('treeFollow').setAttribute('aria-pressed','false');schedule();setTimeout(()=>showTool(x.r.id,x.i),60)}
+document.addEventListener('keydown',e=>{const pal=!document.getElementById('palette').hidden;
+  if(!pal&&e.key==='/'&&!/input|textarea|select/i.test(document.activeElement?.tagName||'')){e.preventDefault();palOpen();return}
+  if(!pal)return;if(e.key==='Escape'){palClose();return}
+  if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();PAL_SEL=Math.max(0,Math.min(PAL_ITEMS.length-1,PAL_SEL+(e.key==='ArrowDown'?1:-1)));palRender()}
+  if(e.key==='Enter'){e.preventDefault();palGo(PAL_SEL)}});
+document.getElementById('palQ').addEventListener('input',()=>{PAL_SEL=0;palRender()});
+document.getElementById('palR').addEventListener('click',e=>{const b=e.target.closest('[data-k]');if(b)palGo(+b.dataset.k)});
+document.getElementById('palette').addEventListener('click',e=>{if(e.target.id==='palette')palClose()});
 function renderTurnReading(D){renderTitle(D);
   if(PENDING_TURN&&D.allTurns.some(u=>u.id===PENDING_TURN)){TREE.follow=false;TREE.turn=PENDING_TURN;PENDING_TURN=null;document.getElementById('treeFollow').setAttribute('aria-pressed','false');setTimeout(schedule,0)}
   renderFailModes(D);if(!FC||Date.now()-FC_AT>60000){FC_AT=Date.now();fetchFacets()}else renderPatterns();
   const t=D.turns.find(t=>t.id===TREE.turn),card=document.getElementById('verdictCard'),host=document.getElementById('timeWent');
-  if(!t){card.innerHTML='';renderProgressLane(null);renderSecurity(null);renderProcGraph(null,D);renderEnv(null,D);renderLongRun(null);renderReasonMem(null);renderAttribution(null);renderConvMem(D);if(!LT)fetchLongterm();else renderLongTerm();host.innerHTML='<div class="empty">Time budgets appear once a turn finishes.</div>';return}
-  card.innerHTML=cardHtml([...verdictCard(t),...suspectLines(t)]);renderProgressLane(t);renderSecurity(t);renderProcGraph(t,D);renderEnv(t,D);renderLongRun(t);renderReasonMem(t);renderAttribution(t);renderConvMem(D);if(!LT||Date.now()-LT_AT>30000){LT_AT=Date.now();fetchLongterm()}else renderLongTerm();
+  if(!t){card.innerHTML='';renderAlarms(null);renderProgressLane(null);renderSecurity(null);renderProcGraph(null,D);renderEnv(null,D);renderLongRun(null);renderReasonMem(null);renderAttribution(null);renderConvMem(D);if(!LT)fetchLongterm();else renderLongTerm();host.innerHTML='<div class="empty">Time budgets appear once a turn finishes.</div>';return}
+  renderAlarms(t);card.innerHTML=cardHtml([...verdictCard(t),...suspectLines(t),...spendLine(t)]);renderProgressLane(t);renderSecurity(t);renderProcGraph(t,D);renderEnv(t,D);renderLongRun(t);renderReasonMem(t);renderAttribution(t);renderConvMem(D);if(!LT||Date.now()-LT_AT>30000){LT_AT=Date.now();fetchLongterm()}else renderLongTerm();
   const B=P.map(p=>({p,b:timeBudget(t.by[p].filter(r=>r.role!=='synthesis'&&!r.running))})).filter(x=>x.b.total>0);
   if(!B.length){host.innerHTML='<div class="empty">No finished runs in this turn yet.</div>';return}
   const max=d3.max(B,x=>x.b.total),w=v=>(100*v/max).toFixed(2)+'%',sec=v=>dur(v*1000);

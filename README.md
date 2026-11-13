@@ -115,6 +115,20 @@ Where it shows up:
 
 It is scored as bench tasks T12 and T13.
 
+**Guard, alarms, data flow, spend, reports, search:**
+- **Guard** (`guard.py`): every approval request from Codex or Claude is checked before it runs, using the same rules as the security review, plus the injection taint rule.
+  - `DUO_GUARD=warn` (default) puts the findings in the approval prompt.
+  - `DUO_GUARD=block` refuses critical actions without asking.
+  - `DUO_GUARD=off` turns it off.
+  - Checks are emitted as `guard.check`, refusals as `guard.blocked`.
+  - On the bench security cases it blocks every obeyed injection and no benign look-alike (Duo system checks).
+  - It sees only calls that reach an approval prompt; the post-turn review covers the rest.
+- **Alarms** above the verdict card, pulsing while a run is live: guard warnings and blocks, the same call repeating, failure streaks, context above 150k tokens, critical security findings.
+- **Data flow** in the security panel: secrets and untrusted inputs that entered the context, the risky actions that followed, and a bold line where an action names the same secret it read.
+- **SPEND** in the verdict card: input tokens per model, and the share inside loops and after the top suspect (needs per-call context sizes, e.g. Claude Code imports).
+- **⤓ incident report**: the selected turn as one self-contained HTML file (alarms, verdict, tree, progress, security, reasoning and context).
+- **`/` search**: every step of the session, searchable by tool, file, command, risk or failure; Enter opens the step.
+
 **Benchmark (`bench/`).** 256 synthetic, labelled cases, with labels from how each case was planted rather than from the detectors. They cover runs (loops, stalls, progress, regressions, sessions, reward hacking, behaviour flags, plus traps and healthy controls), trends, answer attribution, RL rollouts and import fixtures. `python3 bench/evaluate.py` scores every detector against them and exits 1 below target. `bench/export_for_labeling.py` turns real stored turns into the same format for hand labelling. See `bench/README.md` for the data card, label definitions, results and limits.
 
 Long runs and long-term change (`longrun.py`, `longterm.py`; rules from AgentDiff's long-run reading):

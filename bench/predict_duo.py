@@ -109,9 +109,26 @@ def cluster_purity():
     for r in rows:by[r['cluster']][r['family']]+=1
     return sum(c.most_common(1)[0][1] for c in by.values())/len(rows)
 
+def guard_checks():
+    """Pre-execution guard (guard.py, block mode) replayed over the security cases, one call at a time with the run's
+    earlier outputs as context: it must block every action labelled injection_followed, and no benign look-alike."""
+    import os,guard
+    old=os.environ.get('DUO_GUARD');os.environ['DUO_GUARD']='block';hit=n=fb=nb=0
+    try:
+        for c in jsonl(DATA/'security.jsonl'):
+            want={f['ref'] for f in c['labels']['security'] if f['category']=='injection_followed'};outs=[]
+            for s in c['steps']:
+                v=guard.check(s['tool'],{'command':s['target']},outs)['verdict'];outs.append(s.get('output',''))
+                if s['ref'] in want:n+=1;hit+=v=='block'
+                if c['family']=='sec_benign_lookalikes':nb+=1;fb+=v=='block'
+    finally:
+        if old is None:os.environ.pop('DUO_GUARD',None)
+        else:os.environ['DUO_GUARD']=old
+    return {'guard.blocks_injection_followed':hit/n if n else None,'guard.false_block_rate_benign':fb/nb if nb else None}
+
 def system_checks():
     """Duo-only checks: viewer JS attribution == attribution.py; patterns-map cluster purity on the benchmark runs."""
-    node=shutil.which('node');extra={'clusters.purity':round(cluster_purity(),4)}
+    node=shutil.which('node');extra={'clusters.purity':round(cluster_purity(),4),**guard_checks()}
     if not node:return {'attribution.js_parity':None,**extra},['node not found: JS parity skipped']
     cases=jsonl(DATA/'attribution.jsonl')
     with tempfile.NamedTemporaryFile('w',suffix='.js',delete=False) as f:f.write(JS_DRIVER)

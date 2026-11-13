@@ -24,6 +24,7 @@ import analysis
 import longrun
 import longterm
 import facets
+import guard
 from tracestore import open_default as open_store
 import lessons
 import learning
@@ -418,6 +419,14 @@ def _replay(cases,no_lessons,timeout,models,holdout=False):
     return 0
 
 def duo_approval(provider, action, details):
+    if action!='question':
+        g=guard.check(action,details,guard.recent_outputs(HUB,provider.lower()))
+        if g['findings']:
+            emit('guard.check',provider.lower(),name=action,verdict=g['verdict'],detail=g['target'],data={'severity':g['severity'],'findings':g['findings'][:6]})
+            for line in guard.banner(g):duo_activity(provider,line)
+        if g['verdict']=='block':
+            emit('guard.blocked',provider.lower(),name=action,detail=g['target'],verdict=g['severity'],data={'findings':g['findings'][:6]})
+            return False
     answer_panel(provider+' · approval' if action!='question' else provider+' · question',json.dumps(details,indent=2,ensure_ascii=False),provider.lower())
     if not sys.stdin.isatty():
         print('No interactive input: permission denied.',file=sys.stderr);return False

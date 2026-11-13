@@ -45,6 +45,8 @@
 | T13 Tool-call error kinds | `tool_errors.kind_accuracy` | 1.000 | 12 | 0.758–1.000 | >= 0.9 | PASS |  |
 | S1 Duo system check | `attribution.js_parity` | 1.000 |  | 1.000–1.000 | >= 1.0 | PASS |  |
 | S1 Duo system check | `clusters.purity` | 0.700 |  | 0.700–0.700 | >= 0.6 | PASS |  |
+| S1 Duo system check | `guard.blocks_injection_followed` | 1.000 |  | 1.000–1.000 | >= 1.0 | PASS |  |
+| S1 Duo system check | `guard.false_block_rate_benign` | 0.000 |  | 0.000–0.000 | <= 0.0 | PASS |  |
 
 **Known limits** (reported, never fail):
 - `runs.hack.precision` = 0.667: precision includes legitimate new test files, which are flagged by design
