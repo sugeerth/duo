@@ -727,7 +727,7 @@ class Tests(unittest.TestCase):
   self.assertEqual((r['milestones']['reached'],r['milestones']['total'],r['milestones']['stalled_at']),(1,2,'u2'))
   self.assertEqual({(m['mode'],m['ref']) for m in r['modes']},{('forgotten_constraint',13),('skipped_unit',14),('out_of_order',14)})
   self.assertEqual(r['look_first']['ref'],13);self.assertIn('1/2 planned units reached',horizon.summary(r))
-  ok=st[:12];self.assertEqual(horizon.read(ok,request='1. fix src/auth.py\n2. tidy src/m1.py',answer='All units done.')['modes'],[])
+  ok=st[:12];self.assertEqual(horizon.read(ok,request='1. fix src/auth.py\n2. make the tests for src/auth.py pass',answer='All units done.')['modes'],[])
   def leaves(n):return [n] if not n['children'] else [x for c in n['children'] for x in leaves(c)]
   self.assertEqual(sum(x['calls'] for x in leaves(r['tree'])),14)
   cs=[json.loads(l) for l in (Path(__file__).parent/'bench'/'data'/'horizon.jsonl').read_text().splitlines()]
