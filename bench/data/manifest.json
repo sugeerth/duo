@@ -2944,6 +2944,438 @@
    "split": "dev"
   },
   {
+   "dataset": "horizon",
+   "family": "hz_skipped_unit",
+   "file": "horizon.jsonl",
+   "id": "horizon-skipped_unit-00",
+   "note": "108 steps; planted skipped_unit at step 108",
+   "size": 108,
+   "split": "test"
+  },
+  {
+   "dataset": "horizon",
+   "family": "hz_skipped_unit",
+   "file": "horizon.jsonl",
+   "id": "horizon-skipped_unit-01",
+   "note": "123 steps; planted skipped_unit at step 123",
+   "size": 123,
+   "split": "dev"
+  },
+  {
+   "dataset": "horizon",
+   "family": "hz_skipped_unit",
+   "file": "horizon.jsonl",
+   "id": "horizon-skipped_unit-02",
+   "note": "97 steps; planted skipped_unit at step 97",
+   "size": 97,
+   "split": "dev"
+  },
+  {
+   "dataset": "horizon",
+   "family": "hz_skipped_unit",
+   "file": "horizon.jsonl",
+   "id": "horizon-skipped_unit-03",
+   "note": "95 steps; planted skipped_unit at step 95",
+   "size": 95,
+   "split": "dev"
+  },
+  {
+   "dataset": "horizon",
+   "family": "hz_retry_stall",
+   "file": "horizon.jsonl",
+   "id": "horizon-retry_stall-00",
+   "note": "120 steps; planted retry_stall at step 46",
+   "size": 120,
+   "split": "dev"
+  },
+  {
+   "dataset": "horizon",
+   "family": "hz_retry_stall",
+   "file": "horizon.jsonl",
+   "id": "horizon-retry_stall-01",
+   "note": "126 steps; planted retry_stall at step 50",
+   "size": 126,
+   "split": "dev"
+  },
+  {
+   "dataset": "horizon",
+   "family": "hz_retry_stall",
+   "file": "horizon.jsonl",
+   "id": "horizon-retry_stall-02",
+   "note": "151 steps; planted retry_stall at step 99",
+   "size": 151,
+   "split": "test"
+  },
+  {
+   "dataset": "horizon",
+   "family": "hz_retry_stall",
+   "file": "horizon.jsonl",
+   "id": "horizon-retry_stall-03",
+   "note": "104 steps; planted retry_stall at step 34",
+   "size": 104,
+   "split": "dev"
+  },
+  {
+   "dataset": "horizon",
+   "family": "hz_swallowed_error",
+   "file": "horizon.jsonl",
+   "id": "horizon-swallowed_error-00",
+   "note": "143 steps; planted swallowed_error at step 50",
+   "size": 143,
+   "split": "dev"
+  },
+  {
+   "dataset": "horizon",
+   "family": "hz_swallowed_error",
+   "file": "horizon.jsonl",
+   "id": "horizon-swallowed_error-01",
+   "note": "100 steps; planted swallowed_error at step 55",
+   "size": 100,
+   "split": "dev"
+  },
+  {
+   "dataset": "horizon",
+   "family": "hz_swallowed_error",
+   "file": "horizon.jsonl",
+   "id": "horizon-swallowed_error-02",
+   "note": "87 steps; planted swallowed_error at step 45",
+   "size": 87,
+   "split": "test"
+  },
+  {
+   "dataset": "horizon",
+   "family": "hz_swallowed_error",
+   "file": "horizon.jsonl",
+   "id": "horizon-swallowed_error-03",
+   "note": "107 steps; planted swallowed_error at step 54",
+   "size": 107,
+   "split": "dev"
+  },
+  {
+   "dataset": "horizon",
+   "family": "hz_regression",
+   "file": "horizon.jsonl",
+   "id": "horizon-regression-00",
+   "note": "132 steps; planted regression at step 130",
+   "size": 132,
+   "split": "dev"
+  },
+  {
+   "dataset": "horizon",
+   "family": "hz_regression",
+   "file": "horizon.jsonl",
+   "id": "horizon-regression-01",
+   "note": "131 steps; planted regression at step 129",
+   "size": 131,
+   "split": "dev"
+  },
+  {
+   "dataset": "horizon",
+   "family": "hz_regression",
+   "file": "horizon.jsonl",
+   "id": "horizon-regression-02",
+   "note": "97 steps; planted regression at step 95",
+   "size": 97,
+   "split": "dev"
+  },
+  {
+   "dataset": "horizon",
+   "family": "hz_regression",
+   "file": "horizon.jsonl",
+   "id": "horizon-regression-03",
+   "note": "134 steps; planted regression at step 132",
+   "size": 134,
+   "split": "dev"
+  },
+  {
+   "dataset": "horizon",
+   "family": "hz_out_of_order",
+   "file": "horizon.jsonl",
+   "id": "horizon-out_of_order-00",
+   "note": "125 steps; planted out_of_order at step 124",
+   "size": 125,
+   "split": "dev"
+  },
+  {
+   "dataset": "horizon",
+   "family": "hz_out_of_order",
+   "file": "horizon.jsonl",
+   "id": "horizon-out_of_order-01",
+   "note": "114 steps; planted out_of_order at step 113",
+   "size": 114,
+   "split": "test"
+  },
+  {
+   "dataset": "horizon",
+   "family": "hz_out_of_order",
+   "file": "horizon.jsonl",
+   "id": "horizon-out_of_order-02",
+   "note": "135 steps; planted out_of_order at step 134",
+   "size": 135,
+   "split": "dev"
+  },
+  {
+   "dataset": "horizon",
+   "family": "hz_out_of_order",
+   "file": "horizon.jsonl",
+   "id": "horizon-out_of_order-03",
+   "note": "114 steps; planted out_of_order at step 113",
+   "size": 114,
+   "split": "dev"
+  },
+  {
+   "dataset": "horizon",
+   "family": "hz_forgotten_constraint",
+   "file": "horizon.jsonl",
+   "id": "horizon-forgotten_constraint-00",
+   "note": "122 steps; planted forgotten_constraint at step 53",
+   "size": 122,
+   "split": "dev"
+  },
+  {
+   "dataset": "horizon",
+   "family": "hz_forgotten_constraint",
+   "file": "horizon.jsonl",
+   "id": "horizon-forgotten_constraint-01",
+   "note": "110 steps; planted forgotten_constraint at step 48",
+   "size": 110,
+   "split": "dev"
+  },
+  {
+   "dataset": "horizon",
+   "family": "hz_forgotten_constraint",
+   "file": "horizon.jsonl",
+   "id": "horizon-forgotten_constraint-02",
+   "note": "141 steps; planted forgotten_constraint at step 73",
+   "size": 141,
+   "split": "dev"
+  },
+  {
+   "dataset": "horizon",
+   "family": "hz_forgotten_constraint",
+   "file": "horizon.jsonl",
+   "id": "horizon-forgotten_constraint-03",
+   "note": "144 steps; planted forgotten_constraint at step 50",
+   "size": 144,
+   "split": "dev"
+  },
+  {
+   "dataset": "horizon",
+   "family": "hz_unverified_handoff",
+   "file": "horizon.jsonl",
+   "id": "horizon-unverified_handoff-00",
+   "note": "76 steps; planted unverified_handoff at step 75",
+   "size": 76,
+   "split": "dev"
+  },
+  {
+   "dataset": "horizon",
+   "family": "hz_unverified_handoff",
+   "file": "horizon.jsonl",
+   "id": "horizon-unverified_handoff-01",
+   "note": "117 steps; planted unverified_handoff at step 116",
+   "size": 117,
+   "split": "test"
+  },
+  {
+   "dataset": "horizon",
+   "family": "hz_unverified_handoff",
+   "file": "horizon.jsonl",
+   "id": "horizon-unverified_handoff-02",
+   "note": "94 steps; planted unverified_handoff at step 93",
+   "size": 94,
+   "split": "test"
+  },
+  {
+   "dataset": "horizon",
+   "family": "hz_unverified_handoff",
+   "file": "horizon.jsonl",
+   "id": "horizon-unverified_handoff-03",
+   "note": "85 steps; planted unverified_handoff at step 84",
+   "size": 85,
+   "split": "dev"
+  },
+  {
+   "dataset": "horizon",
+   "family": "hz_context_overflow",
+   "file": "horizon.jsonl",
+   "id": "horizon-context_overflow-00",
+   "note": "142 steps; planted context_overflow at step 121",
+   "size": 142,
+   "split": "test"
+  },
+  {
+   "dataset": "horizon",
+   "family": "hz_context_overflow",
+   "file": "horizon.jsonl",
+   "id": "horizon-context_overflow-01",
+   "note": "123 steps; planted context_overflow at step 106",
+   "size": 123,
+   "split": "dev"
+  },
+  {
+   "dataset": "horizon",
+   "family": "hz_context_overflow",
+   "file": "horizon.jsonl",
+   "id": "horizon-context_overflow-02",
+   "note": "125 steps; planted context_overflow at step 104",
+   "size": 125,
+   "split": "test"
+  },
+  {
+   "dataset": "horizon",
+   "family": "hz_context_overflow",
+   "file": "horizon.jsonl",
+   "id": "horizon-context_overflow-03",
+   "note": "128 steps; planted context_overflow at step 109",
+   "size": 128,
+   "split": "dev"
+  },
+  {
+   "dataset": "horizon",
+   "family": "hz_budget_exhausted",
+   "file": "horizon.jsonl",
+   "id": "horizon-budget_exhausted-00",
+   "note": "117 steps; planted budget_exhausted at step 117",
+   "size": 117,
+   "split": "test"
+  },
+  {
+   "dataset": "horizon",
+   "family": "hz_budget_exhausted",
+   "file": "horizon.jsonl",
+   "id": "horizon-budget_exhausted-01",
+   "note": "83 steps; planted budget_exhausted at step 83",
+   "size": 83,
+   "split": "dev"
+  },
+  {
+   "dataset": "horizon",
+   "family": "hz_budget_exhausted",
+   "file": "horizon.jsonl",
+   "id": "horizon-budget_exhausted-02",
+   "note": "90 steps; planted budget_exhausted at step 90",
+   "size": 90,
+   "split": "dev"
+  },
+  {
+   "dataset": "horizon",
+   "family": "hz_budget_exhausted",
+   "file": "horizon.jsonl",
+   "id": "horizon-budget_exhausted-03",
+   "note": "83 steps; planted budget_exhausted at step 83",
+   "size": 83,
+   "split": "dev"
+  },
+  {
+   "dataset": "horizon",
+   "family": "hz_control",
+   "file": "horizon.jsonl",
+   "id": "horizon-control-00",
+   "note": "106 steps; correct end to end (control)",
+   "size": 106,
+   "split": "dev"
+  },
+  {
+   "dataset": "horizon",
+   "family": "hz_control",
+   "file": "horizon.jsonl",
+   "id": "horizon-control-01",
+   "note": "108 steps; correct end to end (control)",
+   "size": 108,
+   "split": "dev"
+  },
+  {
+   "dataset": "horizon",
+   "family": "hz_control",
+   "file": "horizon.jsonl",
+   "id": "horizon-control-02",
+   "note": "108 steps; correct end to end (control)",
+   "size": 108,
+   "split": "dev"
+  },
+  {
+   "dataset": "horizon",
+   "family": "hz_control",
+   "file": "horizon.jsonl",
+   "id": "horizon-control-03",
+   "note": "122 steps; correct end to end (control)",
+   "size": 122,
+   "split": "dev"
+  },
+  {
+   "dataset": "horizon",
+   "family": "hz_control",
+   "file": "horizon.jsonl",
+   "id": "horizon-control-04",
+   "note": "132 steps; correct end to end (control)",
+   "size": 132,
+   "split": "dev"
+  },
+  {
+   "dataset": "horizon",
+   "family": "hz_control",
+   "file": "horizon.jsonl",
+   "id": "horizon-control-05",
+   "note": "127 steps; correct end to end (control)",
+   "size": 127,
+   "split": "test"
+  },
+  {
+   "dataset": "horizon",
+   "family": "hz_control",
+   "file": "horizon.jsonl",
+   "id": "horizon-control-06",
+   "note": "126 steps; correct end to end (control)",
+   "size": 126,
+   "split": "test"
+  },
+  {
+   "dataset": "horizon",
+   "family": "hz_control",
+   "file": "horizon.jsonl",
+   "id": "horizon-control-07",
+   "note": "97 steps; correct end to end (control)",
+   "size": 97,
+   "split": "dev"
+  },
+  {
+   "dataset": "horizon",
+   "family": "hz_control",
+   "file": "horizon.jsonl",
+   "id": "horizon-control-08",
+   "note": "117 steps; correct end to end (control)",
+   "size": 117,
+   "split": "dev"
+  },
+  {
+   "dataset": "horizon",
+   "family": "hz_control",
+   "file": "horizon.jsonl",
+   "id": "horizon-control-09",
+   "note": "92 steps; correct end to end (control)",
+   "size": 92,
+   "split": "dev"
+  },
+  {
+   "dataset": "horizon",
+   "family": "hz_control",
+   "file": "horizon.jsonl",
+   "id": "horizon-control-10",
+   "note": "100 steps; correct end to end (control)",
+   "size": 100,
+   "split": "dev"
+  },
+  {
+   "dataset": "horizon",
+   "family": "hz_control",
+   "file": "horizon.jsonl",
+   "id": "horizon-control-11",
+   "note": "140 steps; correct end to end (control)",
+   "size": 140,
+   "split": "dev"
+  },
+  {
    "dataset": "rollouts",
    "family": "rollouts",
    "file": "rollouts/task-00.json",
@@ -3077,6 +3509,18 @@
    "attribution_paraphrase": 14,
    "attribution_verbatim": 26
   },
+  "horizon": {
+   "hz_budget_exhausted": 4,
+   "hz_context_overflow": 4,
+   "hz_control": 12,
+   "hz_forgotten_constraint": 4,
+   "hz_out_of_order": 4,
+   "hz_regression": 4,
+   "hz_retry_stall": 4,
+   "hz_skipped_unit": 4,
+   "hz_swallowed_error": 4,
+   "hz_unverified_handoff": 4
+  },
   "import_chat": {
    "import_chat": 3
   },
@@ -3125,6 +3569,7 @@
  },
  "files": {
   "attribution.jsonl": "5e753180323941bbb7a607dbdf248d31790dd4c6e16adc4038f0f051a75517e0",
+  "horizon.jsonl": "368edace8d43ed1af03119201b66471d205e2736992a1c14924dc00f922c5f87",
   "imports.json": "aaf656518e6977d302fcfd73566b51a474e07479db89911795648709f831173a",
   "imports/chatgpt_export.json": "fd73048fcd49813d1f76dc3dd87496948306e84bd7fad00cd35cb0fa3eb2806a",
   "imports/claude_ai_export.json": "eba1a834fab27c179f02469e3a9c55b0aff8dc6e04001810b882bf1736b6230b",
@@ -3151,5 +3596,5 @@
  "name": "duo-bench",
  "seed": 7,
  "spec": "bench/SPEC.md",
- "version": "1.1.0"
+ "version": "1.2.0"
 }

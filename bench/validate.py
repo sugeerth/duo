@@ -45,7 +45,7 @@ def validate_data(extra=()):
         f=DATA/rel
         if not f.exists():errs.append(f'manifest: {rel} missing')
         elif hashlib.sha256(f.read_bytes()).hexdigest()!=digest:errs.append(f'manifest: {rel} checksum differs (regenerate or bump the version)')
-    for fname,sch in (('runs.jsonl','run.schema.json'),('trends.jsonl','trend.schema.json'),('attribution.jsonl','attribution.schema.json'),('security.jsonl','security.schema.json')):
+    for fname,sch in (('runs.jsonl','run.schema.json'),('trends.jsonl','trend.schema.json'),('attribution.jsonl','attribution.schema.json'),('security.jsonl','security.schema.json'),('horizon.jsonl','horizon.schema.json')):
         s=load(sch)
         for x in jsonl(DATA/fname):errs+=[f'{fname} {x.get("id")}: {e}' for e in check(x,s)]
     for fname,sch in (('rollouts.json','rollout_case.schema.json'),('imports.json','import_case.schema.json')):

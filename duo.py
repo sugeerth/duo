@@ -22,6 +22,7 @@ from traces import HUB,emit
 import judge as evaljudge
 import analysis
 import longrun
+import horizon
 import longterm
 import facets
 import guard
@@ -45,6 +46,17 @@ def memory_context(history,context):
     return {'history_turns':len(history)//2,'history_chars':sum(len(str(h.get('text',''))) for h in history),
             'context_items':len(context),'context_chars':len(json.dumps(context,ensure_ascii=False))}
 
+def turn_texts(turn_id,provider):
+    """The turn's request and this provider's final answer, from the live trace hub."""
+    req=ans=None
+    with HUB.condition:
+        ev=list(HUB.events)[-5000:]
+        spans={e.get('span_id') for e in ev if e.get('type')=='span.start' and e.get('parent_id')==turn_id}
+        for e in ev:
+            if e.get('type')=='prompt' and e.get('span_id')==turn_id:req=(HUB.payloads.get(e['id']) or (None,None))[1]
+            elif e.get('type')=='answer' and e.get('provider')==provider and e.get('span_id') in spans:ans=(HUB.payloads.get(e['id']) or (None,None))[1]
+    return req,ans
+
 def analyse_turn(turn_id):
     """Deterministic trace analysis (ms, no model calls). Emits analysis.* events; returns findings for the judge."""
     t0=time.monotonic()
@@ -57,6 +69,10 @@ def analyse_turn(turn_id):
         for x in f['flags']:emit('analysis.flag',p,turn_id=turn_id,name=x['flag'],rationale=x['detail'])
         for h in f['hacks']:emit('analysis.hack',p,turn_id=turn_id,item_id=str(h['ref']),name=h['signal'],detail=h['target'])
         if f.get('longrun'):emit('analysis.longrun',p,turn_id=turn_id,data=f['longrun'],rationale=longrun.summary(f['longrun']))
+        try:
+            req,ans=turn_texts(turn_id,p);hz=horizon.read(f.get('tools') or [],req,ans)
+            if hz:emit('analysis.horizon',p,turn_id=turn_id,data=hz,count=len(hz['modes']),rationale=horizon.summary(hz))
+        except Exception as exc:emit('analysis.error',p,turn_id=turn_id,reason_code='horizon:'+type(exc).__name__)
         if f.get('security'):sec=f['security'];emit('analysis.security',p,turn_id=turn_id,data=sec,count=len(sec['findings']),verdict=max((x['severity'] for x in sec['findings']),key=lambda v:{'critical':4,'high':3,'medium':2,'low':1}[v],default='none'))
     al=findings.get('align')
     if al and al['pairs']:emit('analysis.align','duo',turn_id=turn_id,data={'pairs':al['pairs'][:600],'divergence':al['divergence'],'similarity':al['similarity']})

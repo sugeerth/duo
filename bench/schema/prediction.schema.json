@@ -193,6 +193,35 @@
        }
       }
      }
+    },
+    "horizon": {
+     "type": "object",
+     "properties": {
+      "modes": {
+       "type": "array",
+       "items": {
+        "type": "object",
+        "required": [
+         "mode"
+        ],
+        "properties": {
+         "mode": {
+          "type": "string"
+         },
+         "ref": {
+          "type": [
+           "integer",
+           "null"
+          ]
+         }
+        }
+       }
+      },
+      "milestones_reached": {
+       "type": "integer",
+       "minimum": 0
+      }
+     }
     }
    }
   }

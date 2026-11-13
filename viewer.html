@@ -207,6 +207,8 @@ section:not(.open){padding-top:9px;padding-bottom:9px}
 #palR{max-height:52vh;overflow:auto}.pal-item{display:block;width:100%;text-align:left;border:none;background:none;color:var(--text);font:inherit;font-size:12.5px;padding:7px 16px;cursor:pointer;border-bottom:1px solid var(--grid)}
 .pal-item:hover,.pal-item.on{background:var(--hover)}.pal-item .k{color:var(--muted);margin-right:6px}.pal-item mark{background:color-mix(in srgb,var(--warn) 35%,transparent);color:inherit;border-radius:2px}
 .flow{margin-top:8px}
+.hz{margin-top:8px;border-top:1px dashed var(--line);padding-top:6px}.hz h5{margin:0 0 2px;font:700 10.5px/1.9 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.08em;color:var(--muted)}
+.hz .hzm{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12px;margin-top:4px}.hz .hzm span b{color:var(--critical);font-weight:600}.hz svg g[data-lref]{cursor:pointer}
 .rdr{grid-column:1/-1;border-top:1px solid var(--line);margin-top:6px;padding-top:8px;font-size:12.5px}.rdr .rh{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}.rdr .rh b{font-size:11px;letter-spacing:.08em;color:var(--muted);font:700 10.5px/1.9 ui-monospace,SFMono-Regular,Menlo,monospace}
 .rdr .oc{border-radius:99px;padding:0 8px;font-size:11px;border:1px solid var(--line)}.rdr .oc.success{color:var(--good)}.rdr .oc.failure{color:var(--critical)}.rdr .oc.partial{color:var(--warn,var(--muted))}
 .rdr p{margin:4px 0}.rdr .tags{display:flex;flex-direction:column;gap:3px;margin:4px 0}.rdr .tg{display:flex;gap:6px;align-items:baseline}.rdr .tg i{font-style:normal;font-size:11px;color:var(--muted);min-width:92px}
@@ -440,7 +442,7 @@ const DIML={correctness:'Correctness',completeness:'Completeness',groundedness:'
 const KIND_L={respond:'Answer',read:'Read',write:'Write'};
 const qs=new URLSearchParams(location.search);
 let S;
-function reset(){S={events:[],maxId:0,started:null,session:'',spans:new Map(),order:[],J:{results:[],scores:[],verdicts:[],agree:[],errors:[],raw:[],steps:[],roots:[],actions:[]},feedback:[],byEvent:new Map(),A:{behaviour:[],flags:[],hacks:[],align:[],claims:[],hackFinal:[],override:[],rootAgree:[],conflicts:[],rewards:[],usage:[],evolve:[],fork:[],longrun:[],memctx:[],ctxtok:[],envret:[],security:[],guard:[],guardBlocked:[],forkStep:[],readerRead:[],readerAsk:[]},live:false,stored:false}}
+function reset(){S={events:[],maxId:0,started:null,session:'',spans:new Map(),order:[],J:{results:[],scores:[],verdicts:[],agree:[],errors:[],raw:[],steps:[],roots:[],actions:[]},feedback:[],byEvent:new Map(),A:{behaviour:[],flags:[],hacks:[],align:[],claims:[],hackFinal:[],override:[],rootAgree:[],conflicts:[],rewards:[],usage:[],evolve:[],fork:[],longrun:[],memctx:[],ctxtok:[],envret:[],security:[],guard:[],guardBlocked:[],forkStep:[],readerRead:[],readerAsk:[],horizon:[]},live:false,stored:false}}
 reset();
 const PROC=['planning','tool_selection','error_recovery','verification'];
 const PROCL={planning:'Planning',tool_selection:'Tool choice',error_recovery:'Error recovery',verification:'Verification'};
@@ -465,7 +467,7 @@ function ingest(e){
   if(e.type==='judge.root'){J.roots.push(e);return}
   if(e.type==='judge.action'){J.actions.push(e);return}
   if(e.type==='feedback'){S.feedback.push(e);return}
-  const AM={'analysis.behaviour':'behaviour','analysis.flag':'flags','analysis.hack':'hacks','analysis.align':'align','judge.claim':'claims','judge.hack_final':'hackFinal','judge.verdict_override':'override','judge.root_agreement':'rootAgree','judge.conflict':'conflicts','policy.reward':'rewards','usage':'usage','evolve.result':'evolve','fork.result':'fork','analysis.longrun':'longrun','memory.context':'memctx','context.tokens':'ctxtok','env.return':'envret','analysis.security':'security','guard.check':'guard','guard.blocked':'guardBlocked','fork.step':'forkStep','reader.read':'readerRead','reader.ask':'readerAsk'};
+  const AM={'analysis.behaviour':'behaviour','analysis.flag':'flags','analysis.hack':'hacks','analysis.align':'align','judge.claim':'claims','judge.hack_final':'hackFinal','judge.verdict_override':'override','judge.root_agreement':'rootAgree','judge.conflict':'conflicts','policy.reward':'rewards','usage':'usage','evolve.result':'evolve','fork.result':'fork','analysis.longrun':'longrun','memory.context':'memctx','context.tokens':'ctxtok','env.return':'envret','analysis.security':'security','guard.check':'guard','guard.blocked':'guardBlocked','fork.step':'forkStep','reader.read':'readerRead','analysis.horizon':'horizon','reader.ask':'readerAsk'};
   if(AM[e.type]){S.A[AM[e.type]].push(e);if(e.type!=='usage')return}
   const s=e.span_id&&S.spans.get(e.span_id);
   if(e.type==='judge.raw'){if(s)s.answerId=e.id;return}
@@ -1505,6 +1507,34 @@ function lrAxis(r,W,L){
   const at=t=>{const s=segs.find(s=>t>=s.t0&&t<=s.t1)||(t<r.start?segs[0]:segs.at(-1));if(!s)return L;return s.brk?s.px+s.pw/2:s.px+(s.t1>s.t0?(t-s.t0)/(s.t1-s.t0):0)*s.pw};
   return {at,segs};
 }
+// Long horizon (horizon.py): milestones through the plan, named long-horizon failure modes, and the run subdivided.
+const HZ_C={look:'var(--muted)',write:'var(--text-2)',check:'var(--good)',ship:'var(--warn)',delegate:'var(--judge)',other:'var(--line)'};
+function horizonViz(t,p,W){
+  const e=S.A.horizon.filter(e=>e.turn_id===t.id&&e.provider===p).at(-1);if(!e||!e.data)return '';
+  const r=e.data,ms=r.milestones,L=70,X=v=>L+(W-L-12)*v/Math.max(1,r.steps-1);
+  let svg=`<svg width="${W}" height="${ms.total?118:84}" role="img" aria-label="Long-horizon reading">`;
+  const lab=(y,s)=>`<text x="4" y="${y}" class="mut" style="font-size:10.5px">${s}</text>`;
+  // icicle: run / session / burst / phase, width by calls
+  const rows=[];(function walk(n,d){rows.push({n,d});(n.children||[]).forEach(c=>walk(c,d+1))})(r.tree,0);
+  const depth=d3.max(rows,x=>x.d)||0,rh=Math.min(14,46/(depth+1));let off=new Map();
+  const xpos=[];let acc=0;(function lay(n,a){n._a=a;let c=a;(n.children||[]).forEach(k=>{lay(k,c);c+=k.calls})})(r.tree,0);
+  svg+=lab(14,'run')+lab(14+rh*depth,depth>1?'phases':'');
+  rows.forEach(({n,d})=>{if(!d&&depth)return;const x0=X(n._a),x1=Math.max(x0+2,X(n._a+n.calls)-1),y=4+(depth?d-1:0)*rh,col=n.kind==='phase'?HZ_C[n.label]||HZ_C.other:n.label.includes('loop')?'var(--warn)':n.label.includes('failing')?'var(--critical)':'var(--muted)';
+    svg+=`<g data-lref="${n.from}"><rect x="${x0}" y="${y}" width="${x1-x0}" height="${rh-2}" rx="2" fill="${col}" opacity="${n.kind==='phase'?.75:.22}" stroke="${n.modes.length?'var(--critical)':'none'}" stroke-width="1.5"/><title>${esc(n.label)} · ${n.calls} calls · ${n.seconds}s${n.failed?` · ${n.failed} failed`:''}${n.repeats?` · ${n.repeats} repeats`:''}${n.modes.length?' · '+n.modes.join(', '):''}</title></g>`});
+  let y=10+rh*Math.max(1,depth);
+  // modes on the step axis
+  svg+=lab(y+14,'modes');(r.modes||[]).forEach(m=>{const x=X(m.index??0);svg+=`<g data-lref="${m.ref}"><path d="M${x},${y+4}l5,9h-10z" fill="var(--critical)"/><title>${esc(m.mode.replace(/_/g,' '))}: ${esc(m.why)}</title></g>`});
+  if(!(r.modes||[]).length)svg+=`<text x="${L}" y="${y+14}" class="mut" style="font-size:10.5px">none</text>`;
+  y+=24;
+  if(ms.total){svg+=lab(y+12,ms.source==='plan'?'plan':'milestones')+`<line x1="${L}" x2="${W-12}" y1="${y+8}" y2="${y+8}" stroke="var(--line)"/>`;
+    const miss=ms.units.filter(u=>!u.reached);
+    ms.units.forEach((u,k)=>{if(u.reached){const x=X(u.index);svg+=`<g data-lref="${u.ref}"><circle cx="${x}" cy="${y+8}" r="4.5" fill="var(--good)" stroke="${ms.in_order?'none':'var(--warn)'}"/><title>${esc(u.label)} · reached at step ${u.ref}</title></g>`}});
+    miss.forEach((u,k)=>{const x=W-16-k*11;svg+=`<g><circle cx="${x}" cy="${y+24}" r="4.5" fill="none" stroke="var(--critical)" stroke-width="1.5"/><title>${esc(u.label)} · never reached</title></g>`});
+    if(miss.length)svg+=`<text x="${W-20-miss.length*11}" y="${y+28}" text-anchor="end" class="mut" style="font-size:10px">not reached</text>`}
+  svg+='</svg>';
+  const mm=(r.modes||[]).map(m=>`<span><b>${esc(m.mode.replace(/_/g,' '))}</b> <button class="vchip" data-lref="${m.ref}">step</button> ${esc(m.why)}</span>`).join('');
+  return `<div class="hz"><h5>LONG HORIZON</h5><div style="overflow-x:auto">${svg}</div><div class="lr-why">${esc(e.rationale||'')}</div>${mm?`<div class="hzm">${mm}</div>`:''}</div>`;
+}
 function renderLongRun(t){
   const host=document.getElementById('longRun');
   const reads=t?P.map(p=>({p,e:S.A.longrun.filter(e=>e.turn_id===t.id&&e.provider===p).at(-1)})).filter(x=>x.e&&x.e.data):[];
@@ -1524,7 +1554,7 @@ function renderLongRun(t){
     else if(r.stall&&r.checks.length&&r.stall.calls>=5)svg+=brk(r.stall.start,r.stall.end,90,'var(--muted)',`stall ${dur(r.stall.wall*1000)}${r.stall.open?' (open)':''}`);
     svg+='</svg>';
     const lf=r.look_first?` <button class="vchip" data-lref="${r.look_first.ref}">Look first</button> ${esc(r.look_first.why)}.`:'';
-    return `<div class="lr-row"><h4 style="color:var(--${p})">${NAME[p]}</h4><div style="overflow-x:auto">${svg}</div><div class="lr-why">${esc(e.rationale||'')}${lf} <span class="muted">Bursts split at ${dur(r.basis.burst_gap*1000)} idle (${esc(r.basis.burst_rule)}); sessions at ${dur(r.basis.session_gap*1000)}.</span></div></div>`}).join('');
+    return `<div class="lr-row"><h4 style="color:var(--${p})">${NAME[p]}</h4><div style="overflow-x:auto">${svg}</div><div class="lr-why">${esc(e.rationale||'')}${lf} <span class="muted">Bursts split at ${dur(r.basis.burst_gap*1000)} idle (${esc(r.basis.burst_rule)}); sessions at ${dur(r.basis.session_gap*1000)}.</span></div>${horizonViz(t,p,W)}</div>`}).join('');
 }
 document.getElementById('longRun').addEventListener('click',e=>{const b=e.target.closest('[data-lref]');if(b)openRef(+b.dataset.lref)});
 let LT=null,LT_AT=0;

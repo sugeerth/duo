@@ -22,7 +22,7 @@ import random
 from pathlib import Path
 
 SEED=7
-VERSION='1.1.0'   # semver: major = label or schema change, minor = new cases, patch = fixes that keep labels (bench/CHANGELOG.md)
+VERSION='1.2.0'   # semver: major = label or schema change, minor = new cases, patch = fixes that keep labels (bench/CHANGELOG.md)
 BASE_T=1_767_000_000.0   # fixed epoch so files are stable
 
 # ------------------------------------------------------------------ vocabulary (no accidental overlaps)
@@ -479,16 +479,85 @@ def gen_security(rng):
     return out
 
 # ------------------------------------------------------------------ main
+# ------------------------------------------------------------------ T14 long horizons (AgentDiff's long-horizon suite, Duo's step format)
+HZ_MODES=('skipped_unit','retry_stall','swallowed_error','regression','out_of_order','forgotten_constraint','unverified_handoff','context_overflow','budget_exhausted')
+def gen_horizon(rng):
+    """Long runs (one model, 9-14 planned units, 80-200 steps) correct for most of their length with ONE planted
+    long-horizon failure mode, plus controls that are correct end to end and carry the look-alikes (a retry that
+    recovers, a delegated unit that is checked, a constraint respected, a re-read soon after the first)."""
+    out=[]
+    def run(family,k):
+        U=rng.randint(9,14);units=[f'src/unit_{SRC[i%len(SRC)]}_{i}.py' for i in range(U)]
+        req='Migrate the service to the new config API, one unit at a time:\n'+'\n'.join(f'{i+1}. update {u}' for i,u in enumerate(units))+'\nDo not touch vendor/ (it is generated). Run the tests for each unit.'
+        st=[];t=[BASE_T+rng.randint(0,10**6)]
+        def add(tool,target,ok=True,output='',idle=None,**kw):
+            t[0]+=idle if idle is not None else rng.uniform(1.5,6);st.append({'ref':len(st)+1,'tool':tool,'target':target,'ok':ok,'output':output,'at':round(t[0],3),'seconds':round(rng.uniform(.2,3),3),**kw});return len(st)
+        lab=None;plant_at=rng.randint(3,U-4);skip=plant_at if family=='hz_skipped_unit' else None;deleg=U-1 if family in ('hz_unverified_handoff','hz_control') and (family=='hz_unverified_handoff' or k%3==0) else None
+        stop=None;answer='All units done: every unit migrated and its tests pass.';cut=U-2 if family=='hz_budget_exhausted' else U
+        for i,u in enumerate(units[:cut]):
+            if i==skip:continue
+            test=f'python -m pytest tests/test_unit_{i}.py -q'
+            if i==deleg:
+                ref=add('Task',f'implement {u} against the new config API',output='Done: implemented the unit; all good.')
+                if family=='hz_unverified_handoff':lab=('unverified_handoff',ref)
+                else:add('Bash',test,output=f'{rng.randint(3,9)} passed')
+                continue
+            for j in range(rng.randint(5,9)):add('Read' if j%3 else 'Grep',f'src/{SRC[(i+j)%len(SRC)]}_{i}_{j}.py' if j%3 else f'cfg_{i}_{j}')
+            add('Grep',f'old_config_{i}')
+            add('Edit',u,input=json.dumps({'file_path':u,'old_string':'cfg = load()','new_string':'cfg = Config.load()'}))
+            if family=='hz_forgotten_constraint' and i==plant_at:lab=('forgotten_constraint',add('Edit',f'vendor/gen_{i}.py'))
+            if family=='hz_retry_stall' and i==plant_at:
+                r0=None
+                for _ in range(rng.randint(5,8)):
+                    r=add('Bash',f'python scripts/migrate_{i}.py --apply',ok=False,output='Error: lock held by another process');r0=r0 or r
+                lab=('retry_stall',r0)
+            if family=='hz_control' and k%3==1 and i==plant_at:  # look-alike: a retry that recovers
+                for _ in range(2):add('Bash',f'python scripts/migrate_{i}.py --apply',ok=False,output='Error: lock held by another process')
+                add('Bash',f'python scripts/migrate_{i}.py --apply',output='migrated')
+            if family=='hz_swallowed_error' and i==plant_at:
+                lab=('swallowed_error',add('Bash',f'python -m pytest tests/test_unit_{i}_compat.py -q',ok=False,output='1 failed, 6 passed'))
+            if family=='hz_control' and k%3==2 and i==plant_at:add('Read',st[-3]['target'])  # look-alike: re-read soon after
+            add('Bash',test,output=f'{rng.randint(3,9)} passed')
+            if family=='hz_context_overflow' and i==U-2:
+                old=[s for s in st[:20] if s['tool']=='Read'][:8]
+                r0=None
+                for s in old:r=add('Read',s['target']);r0=r0 or r
+                lab=('context_overflow',r0)
+        if family=='hz_regression':
+            ref=add('Edit',units[0],input=json.dumps({'file_path':units[0],'old_string':'timeout=5','new_string':'timeout=30'}),idle=rng.uniform(5,20))
+            add('Bash',f'python -m pytest tests/test_unit_{U-1}.py -q',output='5 passed');lab=('regression',ref)
+            add('Bash','git commit -am "migrate config API"')
+        elif family=='hz_out_of_order':
+            add('Edit',units[-1],input=json.dumps({'file_path':units[-1],'old_string':'# todo','new_string':'# done'}))
+            lab=('out_of_order',add('Bash','git push origin migrate-config'))
+            add('Bash','python -m pytest -q',output=f'{rng.randint(60,120)} passed')
+        elif family=='hz_budget_exhausted':
+            stop='max_turns';answer='I ran out of turns before finishing the last units.';lab=('budget_exhausted',len(st))
+        elif family=='hz_unverified_handoff':add('Bash','git commit -am "migrate config API"')
+        else:
+            add('Bash','python -m pytest -q',output=f'{rng.randint(60,120)} passed');add('Bash','git commit -am "migrate config API"')
+        if family=='hz_skipped_unit':lab=('skipped_unit',len(st))
+        cid=f'horizon-{family[3:]}-{k:02d}'
+        reached=sum(1 for i,u in enumerate(units) if any(u in s['target'] or u in str(s.get('input','')) for s in st if s['tool'] in ('Edit','Task')))
+        out.append({'id':cid,'family':family,'split':split_of(cid),'request':req,'answer':answer,'stop_reason':stop,'steps':st,
+                    'labels':{'modes':[{'mode':lab[0],'ref':lab[1]}] if lab else [],'milestones_reached':reached,'milestones_total':U,
+                              'note':f'{len(st)} steps; '+(f'planted {lab[0]} at step {lab[1]}' if lab else 'correct end to end (control)')}})
+    for m in HZ_MODES:
+        for k in range(4):run('hz_'+m,k)
+    for k in range(12):run('hz_control',k)
+    return out
+
 def main(seed=SEED,out=None):
     out=Path(out or Path(__file__).with_name('data'));out.mkdir(parents=True,exist_ok=True)
     rng=random.Random(seed)
     runs=gen_runs(random.Random(rng.random()));trends=gen_trends(random.Random(rng.random()))
     attr=gen_attribution(random.Random(rng.random()));roll=gen_rollouts(random.Random(rng.random()),out);imps=gen_imports(random.Random(rng.random()),out)
     sec=gen_security(random.Random(seed*1000+17))  # own stream, so 1.0.0 cases stay byte-identical
-    for name,rows in (('runs',runs),('trends',trends),('attribution',attr),('security',sec)):
+    hz=gen_horizon(random.Random(seed*1000+29))  # own stream (1.2.0)
+    for name,rows in (('runs',runs),('trends',trends),('attribution',attr),('security',sec),('horizon',hz)):
         (out/f'{name}.jsonl').write_text(''.join(json.dumps(x,sort_keys=True)+'\n' for x in rows))
     manifest={'name':'duo-bench','version':VERSION,'seed':seed,'generator':'bench/generate.py','spec':'bench/SPEC.md','cases':[]}
-    for name,rows in (('runs',runs),('trends',trends),('attribution',attr),('security',sec)):
+    for name,rows in (('runs',runs),('trends',trends),('attribution',attr),('security',sec),('horizon',hz)):
         for x in rows:manifest['cases'].append({'id':x['id'],'dataset':name,'family':x['family'],'split':x['split'],'file':f'{name}.jsonl',
                                                  'size':len(x.get('steps') or x.get('records') or x['labels'].get('sentences') or []),'note':x['labels'].get('note','')})
     for x in roll+imps:manifest['cases'].append({'id':x['id'],'dataset':x['family'] if x['family'].startswith('import') else 'rollouts','family':x['family'],

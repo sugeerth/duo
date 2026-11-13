@@ -718,4 +718,19 @@ class Tests(unittest.TestCase):
   self.assertTrue(c.call_args.kwargs.get('quiet'));ev=[x for x in em.call_args_list if x.args[0]=='reader.read'][0]
   self.assertEqual(ev.kwargs['turn_id'],'turnxyz789');self.assertEqual(ev.kwargs['data']['look_first_ref'],3);self.assertIn('calibration',ev.kwargs['data'])
   self.assertIn('success · Listed files.',out.getvalue())
+ def test_horizon_milestones_modes_and_controls(self):
+  import horizon
+  st=[{'ref':i+1,'tool':'Read','target':f'src/m{i}.py','ok':True,'at':1000+i*3,'seconds':1} for i in range(10)]
+  st+=[{'ref':11,'tool':'Edit','target':'src/auth.py','ok':True,'at':1040,'seconds':1},{'ref':12,'tool':'Bash','target':'pytest -q','ok':True,'at':1045,'seconds':5,'output':'4 passed'},
+       {'ref':13,'tool':'Edit','target':'legacy/old.py','ok':True,'at':1060,'seconds':1},{'ref':14,'tool':'Bash','target':'git push origin main','ok':True,'at':1070,'seconds':1}]
+  r=horizon.read(st,request='1. fix src/auth.py\n2. update src/billing.py\nDo not touch legacy/',answer='All units done.')
+  self.assertEqual((r['milestones']['reached'],r['milestones']['total'],r['milestones']['stalled_at']),(1,2,'u2'))
+  self.assertEqual({(m['mode'],m['ref']) for m in r['modes']},{('forgotten_constraint',13),('skipped_unit',14),('out_of_order',14)})
+  self.assertEqual(r['look_first']['ref'],13);self.assertIn('1/2 planned units reached',horizon.summary(r))
+  ok=st[:12];self.assertEqual(horizon.read(ok,request='1. fix src/auth.py\n2. tidy src/m1.py',answer='All units done.')['modes'],[])
+  def leaves(n):return [n] if not n['children'] else [x for c in n['children'] for x in leaves(c)]
+  self.assertEqual(sum(x['calls'] for x in leaves(r['tree'])),14)
+  cs=[json.loads(l) for l in (Path(__file__).parent/'bench'/'data'/'horizon.jsonl').read_text().splitlines()]
+  ctl=[c for c in cs if not c['labels']['modes']];self.assertGreaterEqual(len(ctl),10);self.assertTrue(all(len(c['steps'])>=70 for c in cs))
+  self.assertFalse(any(horizon.read(c['steps'],c['request'],c['answer'],c['stop_reason'])['modes'] for c in ctl))
 if __name__=='__main__':unittest.main()

@@ -203,7 +203,7 @@ def analyse(traj):
         st=steps_of([r for r in runs if r.get('role')!='reviewer']);steps[p]=st
         m,f=behaviour(st)
         tools=[x for x in st if x['type']!='REASON' and x.get('kind')=='tool']
-        per[p]={'metrics':m,'flags':f,'hacks':hack_signals(st),'longrun':longrun.read(tools),
+        per[p]={'metrics':m,'flags':f,'hacks':hack_signals(st),'longrun':longrun.read(tools),'tools':tools,
                 'security':security.review([{**x,'output':x.get('output') or x.get('error') or ''} for x in tools])}
     acts=lambda p:[x for x in steps.get(p,[]) if x['type']!='REASON']
     al=align(steps['codex'],steps['claude']) if acts('codex') and acts('claude') else None  # only when both did the task (not writer vs reviewer)
