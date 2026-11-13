@@ -61,3 +61,35 @@ def banner(result):
     lines=[f"{head}: {result['severity'].upper()} · {result['target'][:120]}"]
     for f in result['findings'][:4]:lines.append(f"  - {f['category'].replace('_',' ')} ({f['rule']}): {f['why']} [{f['owasp']}]")
     return lines
+
+
+def codex_policy():
+    """Codex app-server approval policy: in block mode every non-trivial command asks first, so the guard sees it."""
+    return 'untrusted' if os.environ.get('DUO_GUARD','warn').lower()=='block' else 'on-request'
+
+def unchecked(provider,tool,details,emit,hub=None):
+    """A call that started without an approval prompt (sandbox or saved rule allowed it): it cannot be stopped any
+    more, but a risky one raises a live alarm so it is not silent."""
+    if os.environ.get('DUO_GUARD','warn').lower()=='off':return None
+    g=check(tool,details,recent_outputs(hub,provider) if hub else ())
+    if security.SEV_RANK.get(g['severity'],0)>=3:
+        emit('guard.check',provider,name=str(tool),verdict='ran_unchecked',detail=g['target'],data={'severity':g['severity'],'findings':g['findings'][:6]})
+    return g
+
+def claude_pre_tool_hook(hub,emit):
+    """PreToolUse hook for the Claude Agent SDK: sees EVERY tool call, including ones saved permissions would allow.
+    block -> deny with the reason; warn -> 'ask' (routes it through Duo's approval prompt); otherwise no opinion."""
+    async def hook(input_data,tool_use_id,context):
+        if os.environ.get('DUO_GUARD','warn').lower()=='off':return {}
+        tool=input_data.get('tool_name');args=input_data.get('tool_input') or {}
+        g=check(tool,args,recent_outputs(hub,'claude'))
+        if not g['findings']:return {}
+        emit('guard.check','claude',name=str(tool),verdict=g['verdict'],detail=g['target'],data={'severity':g['severity'],'findings':g['findings'][:6],'stage':'pre_tool_use'})
+        reason='; '.join(f"{f['category'].replace('_',' ')}: {f['why']}" for f in g['findings'][:3])
+        if g['verdict']=='block':
+            emit('guard.blocked','claude',name=str(tool),detail=g['target'],verdict=g['severity'],data={'findings':g['findings'][:6],'stage':'pre_tool_use'})
+            return {'hookSpecificOutput':{'hookEventName':'PreToolUse','permissionDecision':'deny','permissionDecisionReason':'Blocked by Duo guard: '+reason}}
+        if g['verdict']=='warn':
+            return {'hookSpecificOutput':{'hookEventName':'PreToolUse','permissionDecision':'ask','permissionDecisionReason':'Duo guard: '+reason}}
+        return {}
+    return hook

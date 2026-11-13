@@ -207,6 +207,7 @@ section:not(.open){padding-top:9px;padding-bottom:9px}
 #palR{max-height:52vh;overflow:auto}.pal-item{display:block;width:100%;text-align:left;border:none;background:none;color:var(--text);font:inherit;font-size:12.5px;padding:7px 16px;cursor:pointer;border-bottom:1px solid var(--grid)}
 .pal-item:hover,.pal-item.on{background:var(--hover)}.pal-item .k{color:var(--muted);margin-right:6px}.pal-item mark{background:color-mix(in srgb,var(--warn) 35%,transparent);color:inherit;border-radius:2px}
 .flow{margin-top:8px}
+.forkcmd{display:flex;gap:8px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:6px 8px}.forkcmd code{font-size:11.5px;word-break:break-all;flex:1}.forkres{margin-top:8px;font-size:12.5px}
 .tw-why{font-size:12px;color:var(--text-2);margin-top:8px;line-height:1.5}
 .rail-compo{display:flex;height:8px;border-radius:4px;overflow:hidden;margin-top:9px;background:var(--grid)}.rail-compo i{display:block;height:100%}
 .rail-compo-key{font-size:11.5px;color:var(--text-2);margin-top:4px}
@@ -435,7 +436,7 @@ const DIML={correctness:'Correctness',completeness:'Completeness',groundedness:'
 const KIND_L={respond:'Answer',read:'Read',write:'Write'};
 const qs=new URLSearchParams(location.search);
 let S;
-function reset(){S={events:[],maxId:0,started:null,session:'',spans:new Map(),order:[],J:{results:[],scores:[],verdicts:[],agree:[],errors:[],raw:[],steps:[],roots:[],actions:[]},feedback:[],byEvent:new Map(),A:{behaviour:[],flags:[],hacks:[],align:[],claims:[],hackFinal:[],override:[],rootAgree:[],conflicts:[],rewards:[],usage:[],evolve:[],fork:[],longrun:[],memctx:[],ctxtok:[],envret:[],security:[],guard:[],guardBlocked:[]},live:false,stored:false}}
+function reset(){S={events:[],maxId:0,started:null,session:'',spans:new Map(),order:[],J:{results:[],scores:[],verdicts:[],agree:[],errors:[],raw:[],steps:[],roots:[],actions:[]},feedback:[],byEvent:new Map(),A:{behaviour:[],flags:[],hacks:[],align:[],claims:[],hackFinal:[],override:[],rootAgree:[],conflicts:[],rewards:[],usage:[],evolve:[],fork:[],longrun:[],memctx:[],ctxtok:[],envret:[],security:[],guard:[],guardBlocked:[],forkStep:[]},live:false,stored:false}}
 reset();
 const PROC=['planning','tool_selection','error_recovery','verification'];
 const PROCL={planning:'Planning',tool_selection:'Tool choice',error_recovery:'Error recovery',verification:'Verification'};
@@ -460,7 +461,7 @@ function ingest(e){
   if(e.type==='judge.root'){J.roots.push(e);return}
   if(e.type==='judge.action'){J.actions.push(e);return}
   if(e.type==='feedback'){S.feedback.push(e);return}
-  const AM={'analysis.behaviour':'behaviour','analysis.flag':'flags','analysis.hack':'hacks','analysis.align':'align','judge.claim':'claims','judge.hack_final':'hackFinal','judge.verdict_override':'override','judge.root_agreement':'rootAgree','judge.conflict':'conflicts','policy.reward':'rewards','usage':'usage','evolve.result':'evolve','fork.result':'fork','analysis.longrun':'longrun','memory.context':'memctx','context.tokens':'ctxtok','env.return':'envret','analysis.security':'security','guard.check':'guard','guard.blocked':'guardBlocked'};
+  const AM={'analysis.behaviour':'behaviour','analysis.flag':'flags','analysis.hack':'hacks','analysis.align':'align','judge.claim':'claims','judge.hack_final':'hackFinal','judge.verdict_override':'override','judge.root_agreement':'rootAgree','judge.conflict':'conflicts','policy.reward':'rewards','usage':'usage','evolve.result':'evolve','fork.result':'fork','analysis.longrun':'longrun','memory.context':'memctx','context.tokens':'ctxtok','env.return':'envret','analysis.security':'security','guard.check':'guard','guard.blocked':'guardBlocked','fork.step':'forkStep'};
   if(AM[e.type]){S.A[AM[e.type]].push(e);if(e.type!=='usage')return}
   const s=e.span_id&&S.spans.get(e.span_id);
   if(e.type==='judge.raw'){if(s)s.answerId=e.id;return}
@@ -656,6 +657,7 @@ function showTool(runId,i){
   h+='<h3>Output</h3>'+(payloadSlot(l.outId,'Show output')||'<div class="muted">Not stored.</div>');
   const near=r.tools.slice(Math.max(0,i-4),i+5);
   h+='<h3>Around this call</h3><div class="chips">'+near.map((x,k)=>{const j=Math.max(0,i-4)+k;return `<span class="chip${x.passed===false?' f':''}" data-goto-tool="${r.id}:${j}" style="${j===i?'outline:2px solid var(--text)':''}">${esc(short(x.tool))}${x.passed===false?' ✗':''}</span>`}).join('')+'</div>';
+  h+=forkSection(r,l,i);
   openDrawer(`${sw(r.provider)} ${esc(l.tool)}`,h);
 }
 /* ================= helpers ================= */
@@ -2089,6 +2091,22 @@ document.addEventListener('keydown',e=>{const pal=!document.getElementById('pale
 document.getElementById('palQ').addEventListener('input',()=>{PAL_SEL=0;palRender()});
 document.getElementById('palR').addEventListener('click',e=>{const b=e.target.closest('[data-k]');if(b)palGo(+b.dataset.k)});
 document.getElementById('palette').addEventListener('click',e=>{if(e.target.id==='palette')palClose()});
+
+/* ---------- fork from here (duo --fork-step; replay.py) ---------- */
+function forkSection(r,l,i){
+  const t=S.spans.get(r.turn),mode=t?.mode||'',res=S.A.forkStep.filter(e=>String(e.item_id)===String(l.eid));
+  const cmd=`duo --fork-step ${String(r.turn).slice(0,8)} ${l.eid} --samples 5 --edit "…what to do here instead…"`;
+  let h='<h3>Fork from here</h3>';
+  if(/write/.test(mode))h+='<div class="muted">Write turns cannot be forked yet: the workspace as it was at this step is not stored.</div>';
+  else h+=`<p class="sub" style="margin:4px 0">Rerun ${esc(NAME[r.provider])} from call ${i+1}, doing something else here (or deciding again), 5 times, and compare the outcomes with this run. A single replay is noisy; the distribution is the answer.</p><div class="forkcmd"><code>${esc(cmd)}</code><button class="vchip" data-copy="${esc(cmd)}">copy</button></div>`;
+  res.forEach(e=>{const d=e.data||{},W=300,H=54,x=v=>14+(W-28)*(v-1)/4;
+    let sv=`<svg width="${W}" height="${H}" role="img" aria-label="Fork outcomes"><line x1="${x(1)}" x2="${x(5)}" y1="30" y2="30" stroke="var(--line)"/>`;[1,2,3,4,5].forEach(v=>{sv+=`<text x="${x(v)}" y="50" text-anchor="middle" class="rm-lab">${v}</text>`});
+    if(d.baseline!=null)sv+=`<line x1="${x(d.baseline)}" x2="${x(d.baseline)}" y1="12" y2="38" stroke="var(--text)" stroke-width="2"/><text x="${x(d.baseline)}" y="9" text-anchor="middle" class="rm-lab">original</text>`;
+    (d.scores||[]).forEach((v,k)=>{if(v!=null)sv+=`<circle cx="${x(v)}" cy="${30+((k%3)-1)*6}" r="5" fill="${d.baseline!=null&&v>=d.baseline+.5?'var(--good)':d.baseline!=null&&v<=d.baseline-.5?'var(--critical)':'var(--muted)'}" opacity=".85"/>`});
+    h+=`<div class="forkres"><b>${e.name==='edit'?'Edit: '+esc(e.rationale||''):'Resampled this step'}</b> · ${d.better??'–'}/${d.n} better, ${d.worse??'–'} worse · <i>${esc(d.verdict||'')}</i><div>${sv}</svg></div></div>`});
+  return h;
+}
+document.getElementById('dBody').addEventListener('click',e=>{const b=e.target.closest('[data-copy]');if(!b)return;try{navigator.clipboard.writeText(b.dataset.copy);b.textContent='copied ✓'}catch(_){}});
 function renderTurnReading(D){renderTitle(D);
   if(PENDING_TURN&&D.allTurns.some(u=>u.id===PENDING_TURN)){TREE.follow=false;TREE.turn=PENDING_TURN;PENDING_TURN=null;document.getElementById('treeFollow').setAttribute('aria-pressed','false');setTimeout(schedule,0)}
   renderFailModes(D);if(!FC||Date.now()-FC_AT>60000){FC_AT=Date.now();fetchFacets()}else renderPatterns();
@@ -2206,9 +2224,10 @@ function treeMarks(t){
   const sec=new Map(),chains=[];S.A.security.filter(e=>e.turn_id===t.id).forEach(e=>{(e.data?.findings||[]).forEach(f=>{const o=sec.get(f.ref);if(!o||SEVR[f.severity]>SEVR[o.severity])sec.set(f.ref,{...f,provider:e.provider,all:[...(o?.all||[]),f]});else o.all.push(f)});(e.data?.chains||[]).forEach(c=>chains.push(c))});
   return {sec,chains,hacks:new Map(S.A.hacks.filter(h=>h.turn_id===t.id).map(h=>[+h.item_id,h.name])),roots,crit,lr,div,checks,hist:mc?mc.count||0:0,envret:S.A.envret.filter(e=>e.turn_id===t.id)};
 }
+let S_FORK=new Map();
 function maxLenFor(laneH){return laneH/2-22}
 function renderGrowthTree(t,span,cutoff,host){
-  const runs=t.runs.filter(r=>r.start<=cutoff),M=treeMarks(t),tips=new Map();
+  const runs=t.runs.filter(r=>r.start<=cutoff),M=treeMarks(t),tips=new Map();S_FORK=new Map(S.A.forkStep.filter(e=>e.turn_id===t.id).map(e=>[+e.item_id,e.data||{}]));
   const n=Math.max(1,runs.length),laneH=Math.min(190,Math.max(130,480/n));
   const w=Math.max(760,host.clientWidth),h=70+laneH*n+104;
   const svg=d3.create('svg').attr('width',w).attr('height',h).attr('role','group').attr('aria-label','Turn '+t.no+' execution trees: trunks are agent runs, branches are tool calls');
@@ -2328,6 +2347,7 @@ function renderGrowthTree(t,span,cutoff,host){
         const main=cats.find(c=>c!=='injection_followed')||cats[0];
         g.append('text').attr('x',bx2+16).attr('y',by2+2).attr('class','b').style('font-size','10.5px').attr('fill',cc).text((SECL[main]||main)+(cats.length>1?` +${cats.length-1}`:''));
         g.select('title').text(g.select('title').text()+'\nSECURITY: '+f.all.map(x=>`${x.severity} ${SECL[x.category]||x.category} (${x.rule}): ${x.why}`).join('\n'))}
+      const fk=S_FORK.get(l.eid);if(fk){g.append('text').attr('x',ex-14).attr('y',ey+(side>0?-8:16)).attr('class','b').style('font-size','11px').attr('fill',fk.better*2>fk.n?'var(--good-text)':'var(--text-2)').text(`⑂${fk.better}/${fk.n}`)}
       tips.set(l.eid,{x:bx,y:ty,ex,ey});
     });
     for(const q of r.reasoning.filter(q=>q.t<=cutoff)){const qx=Math.min(endX-2,X(q.t-r.start));

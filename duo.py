@@ -625,6 +625,34 @@ def evolve(limit=None,timeout=240,models=None):
     print('\n'.join(changed) or 'No lesson changed status: the held-out difference is not yet significant. Add cases (duo --evalset build) and rerun.')
     return 0
 
+def fork_step(turn_id,ref,edit=None,samples=3,timeout=240):
+    """Fork from here: rerun the agent from step REF (optionally doing EDIT there instead), k times, and compare the
+    outcome distribution with the original's judge score (replay.py). Answer/read turns only."""
+    import replay
+    if not HUB.store:print('Trace DB is off.');return 1
+    T=export.turns(HUB.store);matches=[t for t in T if t.startswith(turn_id)]
+    if len(matches)!=1:print('Turn not found (or ambiguous). Use the turn id shown in the viewer drawer.');return 1
+    tid=matches[0];t=T[tid]
+    if 'write' in (t.get('mode') or ''):print('Write turns need the workspace as it was at that step; not supported yet.');return 1
+    if not t['prompt']:print('No stored prompt for this turn.');return 1
+    hit=[(p,i) for p,st in t['steps'].items() for i,x in enumerate(st) if str(x['ref'])==str(ref)]
+    if not hit:print(f'Step {ref} is not a tool call of this turn.');return 1
+    p,i=hit[0];steps=t['steps'][p];prompt=replay.replay_prompt(t['prompt'],steps[:i],steps[i],edit)
+    EVAL['background']=False;EVAL['mode']='panel' if EVAL['mode']=='off' else EVAL['mode']
+    kind='respond' if (t.get('mode') or '').startswith('respond') else 'read'
+    base=t['scores'].get(p);base=sum(base)/len(base) if base else None
+    print(f"\nFork {tid[:8]} · {p} from step {i+1} ({steps[i]['tool']} {str(steps[i]['target'])[:60]}){' with edit: '+edit if edit else ''} · {samples} samples · baseline {base}",file=sys.stderr)
+    got=[]
+    for k in range(samples):
+        EVAL['last']=None
+        res=run_turn(prompt,mode=p,auto_context=False,timeout=timeout) if kind=='respond' else unified_work(prompt,only=p,auto_context=False,timeout=timeout)
+        sc=[x['per'][p]['overall'] for x in (EVAL.get('last') or []) if p in x.get('per',{})]
+        got.append(sum(sc)/len(sc) if sc else None)
+    sm=replay.summarize(base,got)
+    emit('fork.step',p,turn_id=tid,item_id=str(ref),name='edit' if edit else 'resample',score=sm.get('mean'),count=sm['n'],rationale=edit or '',data=sm)
+    print(f"{p} from step {i+1}: {sm.get('better')}/{sm['n']} better, {sm.get('worse')} worse, {sm.get('same')} same than the original ({base}) → {sm['verdict']}.")
+    return 0
+
 def fork(turn_id,samples=2,timeout=240):
     """Counterfactual rerun: does applying the judges' minimal fix change the outcome? (answer/read turns only)"""
     if not HUB.store:print('Trace DB is off.');return 1
@@ -708,6 +736,8 @@ def main():
     parser.add_argument('--bench',nargs='?',const='all',choices=('dev','test','all'),help='Score Duo against duo-bench (bench/SPEC.md); prints the report, exits 1 below target')
     parser.add_argument('--import-rollouts',metavar='FILE',help='Import RL environment rollouts (episodes of steps with rewards) as an environment session')
     parser.add_argument('--chat-provider',choices=('claude','codex'),help='With --import-chat: which lane a plain message list belongs to (ChatGPT exports use codex)')
+    parser.add_argument('--fork-step',nargs=2,metavar=('TURN','STEP'),help='Fork from here: rerun from a tool step (its ref from the viewer), k samples, outcome distribution vs the original')
+    parser.add_argument('--edit',help='With --fork-step: what to do at that step instead')
     parser.add_argument('--fork',metavar='TURN',help='Counterfactual rerun: apply the judges\' minimal fix and re-score (answer/read turns)')
     parser.add_argument('--samples',type=int,default=2,help='With --fork: reruns per agent')
     parser.add_argument('--context',action='append',default=[],type=Path)
@@ -721,7 +751,7 @@ def main():
     HUB.attach_store(open_store())
     if args.only and (args.both or args.separate):parser.error('--only conflicts with --both/--separate')
     prompt=' '.join(args.prompt)
-    if (args.propose is not None or args.apply or args.pr or args.export_rl or args.export_otel or args.fork) and not HUB.store and not args.proposals:
+    if (args.propose is not None or args.apply or args.pr or args.export_rl or args.export_otel or args.fork or args.fork_step) and not HUB.store and not args.proposals:
         print('Trace DB is off (DUO_TRACE_DB=off); this command needs it.');return 1
     if args.evalset is not None:return evalset_cli(args.evalset)
     if args.replay is not None:return replay(args.replay or None,args.no_lessons,args.timeout,{'codex':args.codex_model,'claude':args.claude_model},args.holdout)
@@ -768,6 +798,7 @@ def main():
         for title,sid,n in done:print(f'{n:>4} turns  {sid}  {title[:70]}')
         print(f'Imported {len(done)} conversation(s). Open the viewer (python3 tools/serve_viewer.py) and pick a "chat:" session.' if done else 'No conversations with user messages found.')
         return 0
+    if args.fork_step:return fork_step(args.fork_step[0],args.fork_step[1],args.edit,max(1,args.samples),args.timeout)
     if args.fork:return fork(args.fork,args.samples,args.timeout)
     if args.improve:
         print(lessons.render(learning.ranked_suggestions(learning.gather(HUB.store))));return 0
