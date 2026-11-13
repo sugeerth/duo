@@ -35,7 +35,10 @@ def turns(store):
             elif e['type']=='tool.started':t['steps'][e['provider']].append({'tool':e.get('tool'),'target':e.get('detail'),'ok':None,'ref':e['id'],'item':e.get('item_id')})
             elif e['type']=='tool.completed':
                 for st in reversed(t['steps'][e['provider']]):
-                    if st['ok'] is None and (not e.get('item_id') or st['item']==e.get('item_id')):st['ok']=e.get('passed') is not False;break
+                    if st['ok'] is None and (not e.get('item_id') or st['item']==e.get('item_id')):
+                        st['ok']=e.get('passed') is not False;o=pay.get((e['session_id'],e['id']))
+                        if o and o[1]:st['output']=o[1][:2000]
+                        break
         tid=e.get('turn_id')
         if not tid:continue
         t=T[tid]
@@ -67,7 +70,7 @@ def export_rl(store,out,fmt='dpo'):
             else:skipped+=1;continue
             rejected='claude' if chosen=='codex' else 'codex'
             f.write(json.dumps({'prompt':t['prompt'],'chosen':t['answers'][chosen],'rejected':t['answers'][rejected],'chosen_model':chosen,'label_source':source,
-                'rewards':mean,'trajectories':{p:[{k:v for k,v in s.items() if k!='item'} for s in st] for p,st in t['steps'].items()},
+                'rewards':mean,'trajectories':{p:[{k:v for k,v in s.items() if k not in ('item','output')} for s in st] for p,st in t['steps'].items()},
                 'judge_labels':{'root_causes':dict(t['roots']),'steps':dict(t['step_labels']),'reward_hack':sorted(t['hacks'])},'turn_id':tid})+'\n');n+=1
     return n,skipped
 

@@ -625,6 +625,44 @@ def evolve(limit=None,timeout=240,models=None):
     print('\n'.join(changed) or 'No lesson changed status: the held-out difference is not yet significant. Add cases (duo --evalset build) and rerun.')
     return 0
 
+def post_to_turn(tid,kind,provider,**fields):
+    """Emit here AND append to the turn's own (past) session, so the viewer shows the result on that turn."""
+    emit(kind,provider,turn_id=tid,**fields)
+    try:
+        with HUB.store.connect() as db:row=db.execute('SELECT session_id FROM spans WHERE span_id=?',(tid,)).fetchone()
+        if row and row[0]!=HUB.session_id:HUB.store.add_event(row[0],{'type':kind,'provider':provider,'turn_id':tid,**fields})
+    except Exception:pass
+
+def read_turn(turn_id,provider=None,reader_provider='claude',hints=True,timeout=240,question=None):
+    """LLM trace reader (reader.py) over one stored turn: summary, MAST tags, suspects, benchmark-scored labels.
+    Emits reader.read (or reader.ask with --ask) with the measured calibration attached, for the viewer's reader card."""
+    import reader
+    if not HUB.store:print('Trace DB is off.');return 1
+    T=export.turns(HUB.store);matches=[t for t in T if t.startswith(turn_id)]
+    if len(matches)!=1:print('Turn not found (or ambiguous). Use the turn id shown in the viewer drawer.');return 1
+    tid=matches[0];t=T[tid];who=[p for p in t['steps'] if not provider or p==provider] or [p for p in t['answers'] if not provider or p==provider]
+    if not who:print('No agent steps in this turn.');return 1
+    def caller(prompt):
+        with tempfile.TemporaryDirectory(prefix='duo-reader-') as tmp:r=call(reader_provider,prompt,Path(tmp),timeout,os.environ.get('DUO_READER_MODEL'),quiet=True)
+        if not r.get('ok'):raise RuntimeError(r.get('error') or 'reader call failed')
+        return r.get('answer') or ''
+    cal=Path(__file__).resolve().parent/'bench'/'results'/'reader-calibration.json'
+    cal=json.loads(cal.read_text()) if cal.exists() else None
+    for p in who:
+        steps=t['steps'].get(p,[])
+        if question:
+            r=reader.ask(question,steps,caller,t['prompt'])
+            post_to_turn(tid,'reader.ask',p,name=reader_provider,detail=question[:200],data=r)
+            print(f"{p}: {r.get('answer') or r.get('error')}\n  query {json.dumps(r.get('query'))} -> steps {r.get('refs')}{'' if r.get('verified') else ' (unverified: the query matches nothing)'}")
+            continue
+        r=reader.read(steps,caller,request=t['prompt'],answer=t['answers'].get(p),hints=hints)
+        post_to_turn(tid,'reader.read',p,name=reader_provider,data={**r,'calibration':cal,'hints':hints})
+        if 'error' in r:print(f"{p}: {r['error']}");continue
+        print(f"{p} · {r['outcome']} · {r['summary']}")
+        for m in r['mast']:print(f"  [{m['tag']}{'/'+m['root'] if m['root'] else ''}] step {m['ref']}: {m['why']}")
+    if not cal:print('Reader accuracy not measured yet: python3 bench/predict_reader.py --provider '+reader_provider,file=sys.stderr)
+    return 0
+
 def fork_step(turn_id,ref,edit=None,samples=3,timeout=240):
     """Fork from here: rerun the agent from step REF (optionally doing EDIT there instead), k times, and compare the
     outcome distribution with the original's judge score (replay.py). Answer/read turns only."""
@@ -649,7 +687,7 @@ def fork_step(turn_id,ref,edit=None,samples=3,timeout=240):
         sc=[x['per'][p]['overall'] for x in (EVAL.get('last') or []) if p in x.get('per',{})]
         got.append(sum(sc)/len(sc) if sc else None)
     sm=replay.summarize(base,got)
-    emit('fork.step',p,turn_id=tid,item_id=str(ref),name='edit' if edit else 'resample',score=sm.get('mean'),count=sm['n'],rationale=edit or '',data=sm)
+    post_to_turn(tid,'fork.step',p,item_id=str(ref),name='edit' if edit else 'resample',score=sm.get('mean'),count=sm['n'],rationale=edit or '',data=sm)
     print(f"{p} from step {i+1}: {sm.get('better')}/{sm['n']} better, {sm.get('worse')} worse, {sm.get('same')} same than the original ({base}) → {sm['verdict']}.")
     return 0
 
@@ -737,6 +775,9 @@ def main():
     parser.add_argument('--import-rollouts',metavar='FILE',help='Import RL environment rollouts (episodes of steps with rewards) as an environment session')
     parser.add_argument('--chat-provider',choices=('claude','codex'),help='With --import-chat: which lane a plain message list belongs to (ChatGPT exports use codex)')
     parser.add_argument('--fork-step',nargs=2,metavar=('TURN','STEP'),help='Fork from here: rerun from a tool step (its ref from the viewer), k samples, outcome distribution vs the original')
+    parser.add_argument('--read-turn',metavar='TURN',help='LLM trace reader over a stored turn: summary, failure tags, suspects (accuracy measured on duo-bench)')
+    parser.add_argument('--ask',metavar='QUESTION',help='With --read-turn: answer a question with a query Duo re-runs over the steps')
+    parser.add_argument('--reader',choices=('claude','codex'),default='claude',help='Model that reads (default claude)')
     parser.add_argument('--edit',help='With --fork-step: what to do at that step instead')
     parser.add_argument('--fork',metavar='TURN',help='Counterfactual rerun: apply the judges\' minimal fix and re-score (answer/read turns)')
     parser.add_argument('--samples',type=int,default=2,help='With --fork: reruns per agent')
@@ -751,7 +792,7 @@ def main():
     HUB.attach_store(open_store())
     if args.only and (args.both or args.separate):parser.error('--only conflicts with --both/--separate')
     prompt=' '.join(args.prompt)
-    if (args.propose is not None or args.apply or args.pr or args.export_rl or args.export_otel or args.fork or args.fork_step) and not HUB.store and not args.proposals:
+    if (args.propose is not None or args.apply or args.pr or args.export_rl or args.export_otel or args.fork or args.fork_step or args.read_turn) and not HUB.store and not args.proposals:
         print('Trace DB is off (DUO_TRACE_DB=off); this command needs it.');return 1
     if args.evalset is not None:return evalset_cli(args.evalset)
     if args.replay is not None:return replay(args.replay or None,args.no_lessons,args.timeout,{'codex':args.codex_model,'claude':args.claude_model},args.holdout)
@@ -798,6 +839,7 @@ def main():
         for title,sid,n in done:print(f'{n:>4} turns  {sid}  {title[:70]}')
         print(f'Imported {len(done)} conversation(s). Open the viewer (python3 tools/serve_viewer.py) and pick a "chat:" session.' if done else 'No conversations with user messages found.')
         return 0
+    if args.read_turn:return read_turn(args.read_turn,reader_provider=args.reader,timeout=args.timeout,question=args.ask)
     if args.fork_step:return fork_step(args.fork_step[0],args.fork_step[1],args.edit,max(1,args.samples),args.timeout)
     if args.fork:return fork(args.fork,args.samples,args.timeout)
     if args.improve:

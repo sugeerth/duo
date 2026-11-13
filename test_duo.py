@@ -5,6 +5,7 @@ import io
 from pathlib import Path
 import tempfile
 import threading
+import sys
 import unittest
 from unittest.mock import patch
 spec=importlib.util.spec_from_file_location('duo',Path(__file__).with_name('duo.py'));duo=importlib.util.module_from_spec(spec);spec.loader.exec_module(duo)
@@ -673,4 +674,48 @@ class Tests(unittest.TestCase):
   ev=[c for c in em.call_args_list if c.args[0]=='fork.step'][0];self.assertEqual(ev.kwargs['data']['better'],3);self.assertEqual(ev.kwargs['item_id'],'12')
   self.assertIn('3/3 better',out.getvalue())
   self.assertEqual(replay.summarize(3.0,[3.1,2.0,4.0])['verdict'],'mixed: the step is not clearly decisive')
+ def test_reader_validates_output_and_answers_with_reproducible_queries(self):
+  import reader
+  steps=[{'ref':5,'tool':'Bash','target':'pytest -q','ok':False,'output':'1 failed'},{'ref':6,'tool':'Edit','target':'tests/test_x.py','ok':True,'input':'{"old_string":"assert x == 2"}'},
+         {'ref':7,'tool':'Bash','target':'pytest -q','ok':True,'output':'3 passed'}]
+  reply='Here you go:\n```json\n'+json.dumps({'summary':'Tests failed, the agent edited the test, tests passed.','outcome':'failure',
+     'mast':[{'tag':'verification','root':'reward_hack','ref':6,'why':'edited the test'},{'tag':'made_up','ref':6}],
+     'suspects':[{'ref':6,'why':'test edit'},{'ref':99,'why':'not a step'}],'loops':[],'look_first_ref':'6','flags':['unverified_finish','bogus'],
+     'hacks':[{'ref':6,'signals':['test_file_edit','nope']}],'security':[{'ref':5,'category':'secret_exposure'},{'ref':5,'category':'xss'}],
+     'error_kinds':[{'ref':5,'kind':'usage'}],'confidence':1.7})+'\n```'
+  seen=[]
+  r=reader.read(steps,lambda p:seen.append(p) or reply,request='fix the bug')
+  self.assertIn('[6] Edit tests/test_x.py',seen[0]);self.assertIn('output: 1 failed',seen[0]);self.assertNotIn('Deterministic detectors',seen[0])
+  self.assertEqual([m['tag'] for m in r['mast']],['verification']);self.assertEqual([x['ref'] for x in r['suspects']],[6]);self.assertEqual(r['look_first_ref'],6)
+  self.assertEqual(r['flags'],['unverified_finish']);self.assertEqual(r['hacks'],[{'ref':6,'signals':['test_file_edit']}]);self.assertEqual(r['security'],[{'ref':5,'category':'secret_exposure'}])
+  self.assertEqual(r['confidence'],1.0);self.assertEqual(reader.bench_pred(r),{'loops':[],'look_first_ref':6,'flags':['unverified_finish'],'hacks':[{'ref':6,'signals':['test_file_edit']}]})
+  self.assertEqual(reader.read(steps,lambda p:'no json here')['error'],'reader reply was not valid JSON');self.assertEqual(reader.bench_pred({'error':'x'}),{})
+  self.assertIn('Deterministic detectors',reader.build_prompt('t',steps,hints=['loop starting at step 5']))
+  a=reader.ask('Which checks failed?',steps,lambda p:json.dumps({'answer':'The first pytest run.','query':{'tool':'Bash','target':'pytest','ok':False}}))
+  self.assertEqual(a['refs'],[5]);self.assertTrue(a['verified'])
+  b=reader.ask('x',steps,lambda p:json.dumps({'answer':'?','query':{'target':'(['}}));self.assertEqual(b['refs'],[]);self.assertFalse(b['verified'])
+
+ def test_reader_bench_adapter_scores_and_calibrates(self):
+  sys.path.insert(0,str(Path(__file__).parent/'bench'));import predict_reader,score,reader
+  def fake(prompt):  # perfect on look-first for healthy runs, nothing else: the score must say so
+   return json.dumps({'summary':'s','outcome':'unknown','loops':[],'look_first_ref':None,'flags':[],'hacks':[],'security':[],'error_kinds':[]})
+  preds,errors,n=predict_reader.predict(fake,'dev',limit=24,workers=2)
+  self.assertEqual((errors,n,len(preds)),(0,24,24));fams={c['family'] for c,_ in predict_reader.cases('dev',24)};self.assertGreater(len(fams),8)
+  rep,md=score.report(preds,'dev','reader-fake');rows={r['metric']:r for r in rep['rows']}
+  self.assertEqual(rep['coverage']['scored'],24);self.assertEqual(rows['runs.hack.false_positive_rate_controls']['value'],0.0)
+  self.assertEqual(rows['runs.flags.recall']['value'],0.0)
+  cal=reader.calibration(rep);self.assertIn('look_first_ref',cal['fields']);self.assertEqual(cal['system'],'reader-fake')
+  with tempfile.TemporaryDirectory() as tmp,contextlib.redirect_stdout(io.StringIO()),contextlib.redirect_stderr(io.StringIO()):
+   self.assertEqual(predict_reader.main(['--caller','mock','--split','dev','--limit','12','--out-dir',tmp]),0)
+   c=json.loads((Path(tmp)/'reader-calibration.json').read_text());self.assertTrue(c['mock']);self.assertEqual(c['cases'],12)
+
+ def test_read_turn_posts_reading_with_calibration(self):
+  T={'turnxyz789':{'mode':'work:read','prompt':'why?','steps':{'claude':[{'tool':'Bash','target':'ls','ok':True,'ref':3}]},'answers':{'claude':'because'},'scores':{},'roots':{}}}
+  class Store:pass
+  ans=json.dumps({'summary':'Listed files.','outcome':'success','mast':[],'look_first_ref':3})
+  with patch.object(duo.HUB,'store',Store()),patch.object(duo.export,'turns',return_value=T),patch.object(duo,'call',return_value={'ok':True,'answer':ans}) as c,patch.object(duo,'emit') as em,contextlib.redirect_stdout(io.StringIO()) as out,contextlib.redirect_stderr(io.StringIO()):
+   self.assertEqual(duo.read_turn('turnxyz'),0)
+  self.assertTrue(c.call_args.kwargs.get('quiet'));ev=[x for x in em.call_args_list if x.args[0]=='reader.read'][0]
+  self.assertEqual(ev.kwargs['turn_id'],'turnxyz789');self.assertEqual(ev.kwargs['data']['look_first_ref'],3);self.assertIn('calibration',ev.kwargs['data'])
+  self.assertIn('success · Listed files.',out.getvalue())
 if __name__=='__main__':unittest.main()

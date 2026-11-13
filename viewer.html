@@ -207,6 +207,10 @@ section:not(.open){padding-top:9px;padding-bottom:9px}
 #palR{max-height:52vh;overflow:auto}.pal-item{display:block;width:100%;text-align:left;border:none;background:none;color:var(--text);font:inherit;font-size:12.5px;padding:7px 16px;cursor:pointer;border-bottom:1px solid var(--grid)}
 .pal-item:hover,.pal-item.on{background:var(--hover)}.pal-item .k{color:var(--muted);margin-right:6px}.pal-item mark{background:color-mix(in srgb,var(--warn) 35%,transparent);color:inherit;border-radius:2px}
 .flow{margin-top:8px}
+.rdr{grid-column:1/-1;border-top:1px solid var(--line);margin-top:6px;padding-top:8px;font-size:12.5px}.rdr .rh{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}.rdr .rh b{font-size:11px;letter-spacing:.08em;color:var(--muted);font:700 10.5px/1.9 ui-monospace,SFMono-Regular,Menlo,monospace}
+.rdr .oc{border-radius:99px;padding:0 8px;font-size:11px;border:1px solid var(--line)}.rdr .oc.success{color:var(--good)}.rdr .oc.failure{color:var(--critical)}.rdr .oc.partial{color:var(--warn,var(--muted))}
+.rdr p{margin:4px 0}.rdr .tags{display:flex;flex-direction:column;gap:3px;margin:4px 0}.rdr .tg{display:flex;gap:6px;align-items:baseline}.rdr .tg i{font-style:normal;font-size:11px;color:var(--muted);min-width:92px}
+.rdr .cal{display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:6px;font-size:11px;color:var(--muted)}.rdr .cal span b{color:var(--text-2);font-weight:600}.rdr .q{margin-top:6px}.rdr .q code{font-size:11px}
 .forkcmd{display:flex;gap:8px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:6px 8px}.forkcmd code{font-size:11.5px;word-break:break-all;flex:1}.forkres{margin-top:8px;font-size:12.5px}
 .tw-why{font-size:12px;color:var(--text-2);margin-top:8px;line-height:1.5}
 .rail-compo{display:flex;height:8px;border-radius:4px;overflow:hidden;margin-top:9px;background:var(--grid)}.rail-compo i{display:block;height:100%}
@@ -436,7 +440,7 @@ const DIML={correctness:'Correctness',completeness:'Completeness',groundedness:'
 const KIND_L={respond:'Answer',read:'Read',write:'Write'};
 const qs=new URLSearchParams(location.search);
 let S;
-function reset(){S={events:[],maxId:0,started:null,session:'',spans:new Map(),order:[],J:{results:[],scores:[],verdicts:[],agree:[],errors:[],raw:[],steps:[],roots:[],actions:[]},feedback:[],byEvent:new Map(),A:{behaviour:[],flags:[],hacks:[],align:[],claims:[],hackFinal:[],override:[],rootAgree:[],conflicts:[],rewards:[],usage:[],evolve:[],fork:[],longrun:[],memctx:[],ctxtok:[],envret:[],security:[],guard:[],guardBlocked:[],forkStep:[]},live:false,stored:false}}
+function reset(){S={events:[],maxId:0,started:null,session:'',spans:new Map(),order:[],J:{results:[],scores:[],verdicts:[],agree:[],errors:[],raw:[],steps:[],roots:[],actions:[]},feedback:[],byEvent:new Map(),A:{behaviour:[],flags:[],hacks:[],align:[],claims:[],hackFinal:[],override:[],rootAgree:[],conflicts:[],rewards:[],usage:[],evolve:[],fork:[],longrun:[],memctx:[],ctxtok:[],envret:[],security:[],guard:[],guardBlocked:[],forkStep:[],readerRead:[],readerAsk:[]},live:false,stored:false}}
 reset();
 const PROC=['planning','tool_selection','error_recovery','verification'];
 const PROCL={planning:'Planning',tool_selection:'Tool choice',error_recovery:'Error recovery',verification:'Verification'};
@@ -461,7 +465,7 @@ function ingest(e){
   if(e.type==='judge.root'){J.roots.push(e);return}
   if(e.type==='judge.action'){J.actions.push(e);return}
   if(e.type==='feedback'){S.feedback.push(e);return}
-  const AM={'analysis.behaviour':'behaviour','analysis.flag':'flags','analysis.hack':'hacks','analysis.align':'align','judge.claim':'claims','judge.hack_final':'hackFinal','judge.verdict_override':'override','judge.root_agreement':'rootAgree','judge.conflict':'conflicts','policy.reward':'rewards','usage':'usage','evolve.result':'evolve','fork.result':'fork','analysis.longrun':'longrun','memory.context':'memctx','context.tokens':'ctxtok','env.return':'envret','analysis.security':'security','guard.check':'guard','guard.blocked':'guardBlocked','fork.step':'forkStep'};
+  const AM={'analysis.behaviour':'behaviour','analysis.flag':'flags','analysis.hack':'hacks','analysis.align':'align','judge.claim':'claims','judge.hack_final':'hackFinal','judge.verdict_override':'override','judge.root_agreement':'rootAgree','judge.conflict':'conflicts','policy.reward':'rewards','usage':'usage','evolve.result':'evolve','fork.result':'fork','analysis.longrun':'longrun','memory.context':'memctx','context.tokens':'ctxtok','env.return':'envret','analysis.security':'security','guard.check':'guard','guard.blocked':'guardBlocked','fork.step':'forkStep','reader.read':'readerRead','reader.ask':'readerAsk'};
   if(AM[e.type]){S.A[AM[e.type]].push(e);if(e.type!=='usage')return}
   const s=e.span_id&&S.spans.get(e.span_id);
   if(e.type==='judge.raw'){if(s)s.answerId=e.id;return}
@@ -2107,12 +2111,39 @@ function forkSection(r,l,i){
   return h;
 }
 document.getElementById('dBody').addEventListener('click',e=>{const b=e.target.closest('[data-copy]');if(!b)return;try{navigator.clipboard.writeText(b.dataset.copy);b.textContent='copied ✓'}catch(_){}});
+// LLM trace reader (reader.py): the model's reading of the run, each benchmark-scored field shown with its measured accuracy.
+const RD_FIELD={loops:'loops',look_first_ref:'look first',flags:'flags',hacks:'hacks',security:'security',error_kinds:'error kinds'};
+function calBadge(cal,f){const m=cal?.fields?.[f];if(!m)return '<span class="muted">not measured</span>';
+  return m.map(x=>`${esc(x.metric.split('.').slice(-1)[0].replace(/_/g,' '))} <b>${x.value==null?'–':x.value.toFixed(2)}</b>${x.ci95&&x.ci95[0]!=null?` [${x.ci95[0].toFixed(2)}–${x.ci95[1].toFixed(2)}]`:''}${x.n?` n=${x.n}`:''}`).join(' · ')}
+function readerCard(t){
+  const runs=new Set(P.flatMap(p=>t.by[p].map(r=>r.id))),mine=e=>e.turn_id===t.id||runs.has(e.span_id);
+  const R=S.A.readerRead.filter(mine),Q=S.A.readerAsk.filter(mine),chip=(ref,label)=>ref==null?'':`<button class="vchip" data-vref="${ref}">${esc(label||'step')}</button>`;
+  if(!R.length&&!Q.length){const cmd=`duo --read-turn ${String(t.id).slice(0,8)}`;return `<div class="rdr"><div class="rh"><b>READER</b><span class="muted">Have a model read this run and tag what went wrong, with each label's measured accuracy.</span></div><div class="forkcmd" style="margin-top:4px"><code>${esc(cmd)}</code><button class="vchip" data-copy="${esc(cmd)}">copy</button></div></div>`}
+  let h='';
+  for(const e of R){const d=e.data||{},cal=d.calibration;
+    if(d.error){h+=`<div class="rdr"><div class="rh"><b>READER · ${esc(NAME[e.provider]||e.provider)}</b><span class="bad">${esc(d.error)}</span></div></div>`;continue}
+    h+=`<div class="rdr"><div class="rh"><b>READER · ${esc(NAME[e.provider]||e.provider)}</b><span class="oc ${esc(d.outcome)}">${esc(d.outcome)}</span><span class="muted">read by ${esc(e.name||'model')}${d.hints?' with detector hints':' blind'}${d.confidence!=null?` · confidence ${Math.round(100*d.confidence)}%`:''}</span></div><p>${esc(d.summary)}</p>`;
+    if((d.mast||[]).length)h+='<div class="tags">'+d.mast.map(m=>`<div class="tg"><i>${esc(m.tag)}${m.root?' · '+esc(m.root.replace(/_/g,' ')):''}</i>${chip(m.ref,'step')} <span>${esc(m.why)}</span></div>`).join('')+'</div>';
+    const got=[];
+    if((d.loops||[]).length)got.push(['loops','loop from '+d.loops.map(l=>chip(l.start_ref)).join(' ')]);
+    if(d.look_first_ref!=null)got.push(['look_first_ref','look first '+chip(d.look_first_ref)]);
+    if((d.flags||[]).length)got.push(['flags',d.flags.map(f=>esc(f.replace(/_/g,' '))).join(', ')]);
+    if((d.hacks||[]).length)got.push(['hacks',d.hacks.map(x=>chip(x.ref,x.signals.join('+').replace(/_/g,' '))).join(' ')]);
+    if((d.security||[]).length)got.push(['security',d.security.map(x=>chip(x.ref,x.category.replace(/_/g,' '))).join(' ')]);
+    if((d.error_kinds||[]).length)got.push(['error_kinds',d.error_kinds.map(x=>chip(x.ref,x.kind)).join(' ')]);
+    if(got.length)h+='<div class="tags">'+got.map(([f,v])=>`<div class="tg"><i>${RD_FIELD[f]}</i><span>${v}</span><span class="muted" style="margin-left:auto;font-size:11px">${calBadge(cal,f)}</span></div>`).join('')+'</div>';
+    h+=`<div class="cal">${cal?`measured on duo-bench ${esc(cal.bench_version||'')} (${esc(cal.split||'')}, ${cal.scored||0} cases, ${esc(cal.name||cal.system||'')})${cal.mock?' · MOCK pipeline check, not a model':''}`:'accuracy not measured yet: <code>python3 bench/predict_reader.py --provider claude</code>'}</div></div>`}
+  for(const e of Q){const d=e.data||{};
+    h+=`<div class="rdr q"><div class="rh"><b>ASKED</b><span>${esc(d.question||e.detail||'')}</span></div><p>${esc(d.answer||d.error||'')}</p><div class="muted" style="font-size:11px">query <code>${esc(JSON.stringify(d.query||{}))}</code> → ${(d.refs||[]).length?(d.refs||[]).slice(0,12).map(r=>chip(r)).join(' ')+' ✓ re-run by Duo':'<span class="bad">matches no step: unverified</span>'}</div></div>`}
+  return h;
+}
+document.getElementById('verdictCard').addEventListener('click',e=>{const b=e.target.closest('[data-copy]');if(!b)return;try{navigator.clipboard.writeText(b.dataset.copy);b.textContent='copied ✓'}catch(_){}});
 function renderTurnReading(D){renderTitle(D);
   if(PENDING_TURN&&D.allTurns.some(u=>u.id===PENDING_TURN)){TREE.follow=false;TREE.turn=PENDING_TURN;PENDING_TURN=null;document.getElementById('treeFollow').setAttribute('aria-pressed','false');setTimeout(schedule,0)}
   renderFailModes(D);if(!FC||Date.now()-FC_AT>60000){FC_AT=Date.now();fetchFacets()}else renderPatterns();
   const t=D.turns.find(t=>t.id===TREE.turn),card=document.getElementById('verdictCard'),host=document.getElementById('timeWent');
   if(!t){card.innerHTML='';renderAlarms(null);renderProgressLane(null);renderSecurity(null);renderProcGraph(null,D);renderEnv(null,D);renderLongRun(null);renderReasonMem(null);renderAttribution(null);renderConvMem(D);if(!LT)fetchLongterm();else renderLongTerm();host.innerHTML='<div class="empty">Time budgets appear once a turn finishes.</div>';return}
-  renderAlarms(t);card.innerHTML=cardHtml([...verdictCard(t),...suspectLines(t),...spendLine(t)]);renderProgressLane(t);renderSecurity(t);renderProcGraph(t,D);renderEnv(t,D);renderLongRun(t);renderReasonMem(t);renderAttribution(t);renderConvMem(D);if(!LT||Date.now()-LT_AT>30000){LT_AT=Date.now();fetchLongterm()}else renderLongTerm();
+  renderAlarms(t);card.innerHTML=cardHtml([...verdictCard(t),...suspectLines(t),...spendLine(t)])+readerCard(t);renderProgressLane(t);renderSecurity(t);renderProcGraph(t,D);renderEnv(t,D);renderLongRun(t);renderReasonMem(t);renderAttribution(t);renderConvMem(D);if(!LT||Date.now()-LT_AT>30000){LT_AT=Date.now();fetchLongterm()}else renderLongTerm();
   const B=P.map(p=>({p,b:timeBudget(t.by[p].filter(r=>r.role!=='synthesis'&&!r.running))})).filter(x=>x.b.total>0);
   if(!B.length){host.innerHTML='<div class="empty">No finished runs in this turn yet.</div>';return}
   const max=d3.max(B,x=>x.b.total),w=v=>(100*v/max).toFixed(2)+'%',sec=v=>dur(v*1000);
