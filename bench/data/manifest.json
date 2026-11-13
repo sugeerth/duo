@@ -3593,7 +3593,7 @@
   "trends.jsonl": "9dd8f1ad290fcb83f42bb3825c7901571152f212921f67526d43c91dcff0f6c3"
  },
  "generator": "bench/generate.py",
- "name": "duo-bench",
+ "name": "agentlens-bench",
  "seed": 7,
  "spec": "bench/SPEC.md",
  "version": "1.2.0"

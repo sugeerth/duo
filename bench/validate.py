@@ -70,7 +70,7 @@ def main(argv=None):
     a=ap.parse_args(argv)
     if a.predictions:errs=validate_predictions(a.predictions);what=a.predictions
     else:
-        errs,m=validate_data(a.extra);what=f"duo-bench {m['version']}: {len(m['cases'])} cases, {len(m.get('files',{}))} checksummed files"
+        errs,m=validate_data(a.extra);what=f"agentlens-bench {m['version']}: {len(m['cases'])} cases, {len(m.get('files',{}))} checksummed files"
     for e in errs[:50]:print('  '+e)
     print(('INVALID' if errs else 'VALID')+f': {what}'+(f' ({len(errs)} errors)' if errs else ''))
     return 1 if errs else 0

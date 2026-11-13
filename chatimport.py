@@ -1,6 +1,6 @@
 """Import chat transcripts into the trace DB so the viewer reads chat sessions like terminal sessions.
 
-`duo --import-chat FILE [--chat-provider claude|codex]`. One conversation becomes one stored session; each user
+`agentlens --import-chat FILE [--chat-provider claude|codex]`. One conversation becomes one stored session; each user
 message and the reply that follows become one turn (mode `respond:chat`) with:
 - the prompt and the answer as payloads,
 - the model's thinking, when the export carries it, as reasoning steps,
@@ -282,7 +282,7 @@ def _flag_hacks(ev,steps,provider,tid):
     for h in analysis.hack_signals(st):ev(st[0]['at'] if st else 0,'analysis.hack',provider,turn_id=tid,item_id=str(h['ref']),name=h['signal'],detail=h['target'])
 
 # ---------------------------------------------------------------- RL environment rollouts
-"""`duo --import-rollouts FILE`: RL environment rollouts as an environment session. Accepted shapes (JSON or JSONL):
+"""`agentlens --import-rollouts FILE`: RL environment rollouts as an environment session. Accepted shapes (JSON or JSONL):
 - one record per episode: {"episode"|"id", "task"|"env_task", "policy"|"model"?, "env"?, "success"?, "return"?,
   "steps": [{"action"|"tool"|"name", "input"|"args"|"target"?, "observation"|"output"|"obs"?, "reward"?, "ok"|"error"?,
              "t"|"ts"|"timestamp"?, "thought"|"reasoning"?}]}

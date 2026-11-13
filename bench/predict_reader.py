@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Measure the LLM trace reader (reader.py) on duo-bench: write public-format predictions, score them, save a calibration.
+"""Measure the LLM trace reader (reader.py) on agentlens-bench: write public-format predictions, score them, save a calibration.
 
     python3 bench/predict_reader.py --provider claude [--model M] [--split test] [--limit 40] [--hints] [--workers 4]
     python3 bench/predict_reader.py --caller mock      # pipeline check only: answers come from the detectors, not a model
@@ -40,10 +40,10 @@ def cases(split='all',limit=None):
     return out
 
 def model_caller(provider,model=None,timeout=240):
-    import duo
+    import agentlens
     def call(prompt):
-        with tempfile.TemporaryDirectory(prefix='duo-reader-') as tmp:
-            r=duo.call(provider,prompt,Path(tmp),timeout,model,quiet=True)
+        with tempfile.TemporaryDirectory(prefix='agentlens-reader-') as tmp:
+            r=agentlens.call(provider,prompt,Path(tmp),timeout,model,quiet=True)
         if not r.get('ok'):raise RuntimeError(r.get('error') or 'call failed')
         return r.get('answer') or ''
     return call

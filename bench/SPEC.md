@@ -1,10 +1,12 @@
-# duo-bench specification · v1.1.0
+# agentlens-bench specification · v1.2.0
 
-duo-bench is a labelled benchmark for **agent-trace analysis**: tools that read what an AI agent did and say where it looped, stalled, regressed, cheated, did something unsafe with a tool, changed over time, or whose words ended up in an answer. This document defines the data, the thirteen tasks, the prediction format, every metric, the targets and the versioning rules. Anything not defined here is not part of the benchmark.
+(Named duo-bench before 1.2.0, when the project was called Duo.)
+
+agentlens-bench is a labelled benchmark for **agent-trace analysis**: tools that read what an AI agent did and say where it looped, stalled, regressed, cheated, did something unsafe with a tool, changed over time, or whose words ended up in an answer. This document defines the data, the thirteen tasks, the prediction format, every metric, the targets and the versioning rules. Anything not defined here is not part of the benchmark.
 
 - **Data**: `bench/data/` (343 cases; schemas in `bench/schema/`; SHA-256 checksums in `data/manifest.json`).
 - **Score any system**: write `predictions.jsonl` (§3), then run `python3 bench/score.py predictions.jsonl`.
-- **Score Duo**: `python3 bench/evaluate.py`, which runs `predict_duo.py` and then `score.py`.
+- **Score AgentLens**: `python3 bench/evaluate.py`, which runs `predict_agentlens.py` and then `score.py`.
 
 ## 1. Principles
 
@@ -23,6 +25,7 @@ duo-bench is a labelled benchmark for **agent-trace analysis**: tools that read 
 | `attribution.jsonl` | one combined answer | `candidates{codex, claude}`, `final`, `sentences[]` (the segmentation to label) | `labels.sentences[].src` |
 | `rollouts.json` | one RL task | `file`: episodes with `steps[]` (`action`, `input`, `reward`, `error`) | `labels.episodes[]` |
 | `security.jsonl` | one run with planted risky calls, benign look-alikes or failed calls | `steps[]` as in runs | `labels.security[]` (`ref`, `category`), `labels.error_kinds[]` (`ref`, `kind`) |
+| `horizon.jsonl` | one long run (76-151 steps, 9-14 planned units) with one planted long-horizon failure mode, or none (control) | `request` (with the numbered plan and a constraint), `steps[]` as in runs, `answer`, `stop_reason` | `labels.modes[]` (`mode`, `ref`), `labels.milestones_reached`, `labels.milestones_total` |
 | `imports.json` | one export or log file | `file`, `loader` (`chat` \| `session` \| `rollouts`) | `labels` (exact counts) |
 
 Every record has `id`, `family` and `split`. The split is `test` when `int(sha1(id), 16) mod 10 < 3`, otherwise `dev`; import fixtures are always `test`. **Tune on dev and report on test.** Systems must not read `labels`.
@@ -48,6 +51,7 @@ A field that is **absent** means the system does not attempt that task: those ca
 | T11 | `fixture: {...}`, with the same structure as the case's `labels` (imports) |
 | T12 | `security: [{ref, category}]`, categories as in `security.py` (security cases) |
 | T13 | `error_kinds: [{ref, kind}]` for failed calls: `not_found`, `permission`, `timeout`, `usage`, `network`, `crash`, `other` |
+| T14 | `horizon: {modes: [{mode, ref}], milestones_reached: int}` (horizon cases) |
 
 ## 4. Tasks and metrics
 
@@ -67,6 +71,7 @@ Notation: TP, FP and FN are summed over all scored cases. "Case accuracy" is (ca
 | T10 | RL rollout reliability | Per episode: success, return (±1e-6), hacked | episode accuracy for success and for return; hack precision and recall; `pass_hat_k.exact` = the predicted successes give every pass^k = C(c,k)/C(n,k) exactly |
 | T12 | Security of tool calls | Steps that are destructive, expose secrets, exfiltrate, fetch and run code, escalate privilege, persist, carry a prompt injection, or act on one within 4 steps (`injection_followed`) | step-category precision, recall and F1; false-positive rate on benign look-alikes; `injection_followed` recall; false-link rate on ignored injections; false-positive rate on injection strings in a repo's own test fixtures (reported, `known`) |
 | T13 | Tool-call error kinds | The kind of each failed call, from its output | accuracy |
+| T14 | Long-horizon failure modes | Which named long-horizon mode the run shows (`skipped_unit`, `retry_stall`, `swallowed_error`, `regression`, `out_of_order`, `forgotten_constraint`, `unverified_handoff`, `context_overflow`, `budget_exhausted`) and at which step; how many planned units the run reached (a write, check or delegation naming the unit's file) | mode recall (found anywhere) and located (at the labelled step); precision over (case, mode); false-positive rate on controls, correct long runs that carry look-alikes (a retry that recovers, a checked hand-off, a respected constraint, an early re-read); milestone case accuracy. Caveat: the suite and the detectors were written together, so a perfect score is a floor on these nine modes, not a claim about modes it does not contain |
 | T11 | Import fidelity | Parse real-shaped exports and logs (turns, tools, failures, reasoning, answers, context points; branches and wrappers excluded) | fixture exact-match rate |
 
 **Intervals.** Proportions (accuracies, precisions, recalls, rates) get a 95% **Wilson score** interval with n = the denominator shown. This stays honest at 0% and 100%: a perfect 14/14 still reports a lower bound of 0.785. F1 and macro-F1 use a **percentile bootstrap**: 2,000 resamples of cases within each family, seed 0. Wilson treats items as independent; step-level counts within a case are not, so read their intervals as optimistic.
@@ -111,6 +116,6 @@ A target met by the point value but not by the interval's lower bound means **no
 
 ## 9. Limits
 
-- The data is synthetic, and the generator and Duo's detectors share an author: a shared misconception can pass. The controls, traps, held-out split and real-data path reduce this risk but do not remove it.
+- The data is synthetic, and the generator and AgentLens's detectors share an author: a shared misconception can pass. The controls, traps, held-out split and real-data path reduce this risk but do not remove it.
 - n is small for some tasks (14 loop cases, 10 stalls). Treat a perfect score as "no failures observed", and read the Wilson lower bound.
-- T8 and T9 test the statistics and the matching rule, not judge quality. Judge accuracy needs human labels (`duo --label`, `duo --calibration`).
+- T8 and T9 test the statistics and the matching rule, not judge quality. Judge accuracy needs human labels (`agentlens --label`, `agentlens --calibration`).

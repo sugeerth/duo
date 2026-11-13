@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate the Duo benchmark: synthetic, labelled cases for every detector Duo ships.
+"""Generate the AgentLens benchmark: synthetic, labelled cases for every detector AgentLens ships.
 
 Labels come from how each case was PLANTED, never from running a detector, so bench/evaluate.py can score the
 detectors against them. Deterministic: the same seed writes byte-identical files (tests check this).
@@ -479,7 +479,7 @@ def gen_security(rng):
     return out
 
 # ------------------------------------------------------------------ main
-# ------------------------------------------------------------------ T14 long horizons (AgentDiff's long-horizon suite, Duo's step format)
+# ------------------------------------------------------------------ T14 long horizons (AgentDiff's long-horizon suite, AgentLens's step format)
 HZ_MODES=('skipped_unit','retry_stall','swallowed_error','regression','out_of_order','forgotten_constraint','unverified_handoff','context_overflow','budget_exhausted')
 def gen_horizon(rng):
     """Long runs (one model, 9-14 planned units, 80-200 steps) correct for most of their length with ONE planted
@@ -556,7 +556,7 @@ def main(seed=SEED,out=None):
     hz=gen_horizon(random.Random(seed*1000+29))  # own stream (1.2.0)
     for name,rows in (('runs',runs),('trends',trends),('attribution',attr),('security',sec),('horizon',hz)):
         (out/f'{name}.jsonl').write_text(''.join(json.dumps(x,sort_keys=True)+'\n' for x in rows))
-    manifest={'name':'duo-bench','version':VERSION,'seed':seed,'generator':'bench/generate.py','spec':'bench/SPEC.md','cases':[]}
+    manifest={'name':'agentlens-bench','version':VERSION,'seed':seed,'generator':'bench/generate.py','spec':'bench/SPEC.md','cases':[]}
     for name,rows in (('runs',runs),('trends',trends),('attribution',attr),('security',sec),('horizon',hz)):
         for x in rows:manifest['cases'].append({'id':x['id'],'dataset':name,'family':x['family'],'split':x['split'],'file':f'{name}.jsonl',
                                                  'size':len(x.get('steps') or x.get('records') or x['labels'].get('sentences') or []),'note':x['labels'].get('note','')})

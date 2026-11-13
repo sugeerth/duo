@@ -121,9 +121,9 @@ class TraceHub:
                 self.send_body(data,'application/json')
             def do_POST(self):
                 path=self.path.split('?',1)[0]
-                # Only the duo viewer can call these: a custom header forces a CORS preflight that this server never approves,
+                # Only the agentlens viewer can call these: a custom header forces a CORS preflight that this server never approves,
                 # so other websites cannot post here; and the server only listens on 127.0.0.1.
-                if path not in hub.post_routes or self.headers.get('X-Duo')!='1':self.send_json({'error':'forbidden'},403);return
+                if path not in hub.post_routes or self.headers.get('X-AgentLens')!='1':self.send_json({'error':'forbidden'},403);return
                 try:
                     n=int(self.headers.get('Content-Length','0'));body=json.loads(self.rfile.read(min(n,65536)) or b'{}')
                     self.send_json(hub.post_routes[path](body))
@@ -148,7 +148,7 @@ class TraceHub:
                     self.send_json(snap or {'error':'unknown session'},200 if snap else 404);return
                 if self.path=='/':
                     try:data=VIEWER.read_bytes()
-                    except OSError:data=b'<!doctype html><meta charset="utf-8"><title>Duo traces</title><p>viewer.html missing; use /snapshot or /events.'
+                    except OSError:data=b'<!doctype html><meta charset="utf-8"><title>AgentLens traces</title><p>viewer.html missing; use /snapshot or /events.'
                     self.send_body(data,'text/html; charset=utf-8');return
                 if self.path=='/d3.v7.min.js':
                     try:self.send_body(D3.read_bytes(),'text/javascript; charset=utf-8')
@@ -158,7 +158,7 @@ class TraceHub:
                     with hub.condition:data=json.dumps({'session_id':hub.session_id,'started':hub.started,'events':list(hub.events)}).encode()
                     self.send_body(data,'application/json');return
                 if self.path=='/events' and session and session!=hub.session_id and hub.store:
-                    # stream a session written by another duo process by tailing the trace DB
+                    # stream a session written by another agentlens process by tailing the trace DB
                     self.send_response(200);self.send_header('Content-Type','text/event-stream');self.send_header('Cache-Control','no-cache');self.end_headers()
                     try:last=int(self.headers.get('Last-Event-ID') or q.get('after') or 0)
                     except ValueError:last=0

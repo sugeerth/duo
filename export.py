@@ -6,7 +6,7 @@ export_rl: preference data for training elsewhere (reward models, DPO/KTO on ope
   (confirmed reward hacks override). Ties and splits are skipped.
   KTO rows: one per answer, desirable = mean judge score >= 4 and no confirmed hack.
 export_otel: OTLP/JSON with OpenTelemetry GenAI semantic-convention attributes (v1.41,
-  "Development" status) so duo traces open in Phoenix, Langfuse, Datadog or Docent.
+  "Development" status) so agentlens traces open in Phoenix, Langfuse, Datadog or Docent.
 """
 import hashlib
 import json
@@ -85,13 +85,13 @@ def export_otel(store,out,session=None):
         if e['type']=='judge.result':scores[(e.get('turn_id'),e['provider'])].append(e)
     for s in sp.values():
         trace=_hex(s['session_id'],32)
-        attrs={'gen_ai.operation.name':op.get(s['kind'],'invoke_agent'),'gen_ai.agent.name':s['provider'],'duo.role':s['role'] or s['kind'],'duo.mode':s['mode'] or ''}
+        attrs={'gen_ai.operation.name':op.get(s['kind'],'invoke_agent'),'gen_ai.agent.name':s['provider'],'agentlens.role':s['role'] or s['kind'],'agentlens.mode':s['mode'] or ''}
         if s['kind']=='turn':attrs['gen_ai.conversation.id']=s['session_id']
         events=[]
         if s['kind']=='turn':
             for p in ('codex','claude'):
                 for r in scores.get((s['span_id'],p),[]):
-                    events.append({'name':'gen_ai.evaluation.result','timeUnixNano':int(r['timestamp']*1e9),'attributes':_kv({'gen_ai.evaluation.name':'duo.judge.'+str(r.get('judge')),'gen_ai.evaluation.score.value':r.get('score'),'gen_ai.agent.name':p})})
+                    events.append({'name':'gen_ai.evaluation.result','timeUnixNano':int(r['timestamp']*1e9),'attributes':_kv({'gen_ai.evaluation.name':'agentlens.judge.'+str(r.get('judge')),'gen_ai.evaluation.score.value':r.get('score'),'gen_ai.agent.name':p})})
         spans.append({'traceId':trace,'spanId':_hex(s['span_id'],16),'parentSpanId':_hex(s['parent_id'],16) if s['parent_id'] else '','name':f"{attrs['gen_ai.operation.name']} {s['provider']}",
                       'kind':1,'startTimeUnixNano':int((s['start'] or 0)*1e9),'endTimeUnixNano':int((s['end'] or s['start'] or 0)*1e9),'attributes':_kv(attrs),'events':events,
                       'status':{'code':2 if s['status']=='failed' else 1}})
@@ -103,7 +103,7 @@ def export_otel(store,out,session=None):
             if not st or st.get('span_id') not in sp:continue
             spans.append({'traceId':_hex(e['session_id'],32),'spanId':_hex(f"{e['session_id']}:{st['id']}",16),'parentSpanId':_hex(st['span_id'],16),'name':f"execute_tool {st.get('tool')}",'kind':1,
                           'startTimeUnixNano':int(st['timestamp']*1e9),'endTimeUnixNano':int(e['timestamp']*1e9),
-                          'attributes':_kv({'gen_ai.operation.name':'execute_tool','gen_ai.tool.name':st.get('tool'),'gen_ai.tool.call.id':str(st.get('item_id') or st['id']),'gen_ai.agent.name':st['provider'],'duo.tool.target':st.get('detail') or ''}),
+                          'attributes':_kv({'gen_ai.operation.name':'execute_tool','gen_ai.tool.name':st.get('tool'),'gen_ai.tool.call.id':str(st.get('item_id') or st['id']),'gen_ai.agent.name':st['provider'],'agentlens.tool.target':st.get('detail') or ''}),
                           'status':{'code':2 if e.get('passed') is False else 1}})
     doc={'resourceSpans':[{'resource':{'attributes':_kv({'service.name':'duo','telemetry.sdk.name':'duo'})},'scopeSpans':[{'scope':{'name':'duo','version':'semconv-genai-1.41'},'spans':spans}]}]}
     Path(out).write_text(json.dumps(doc));return len(spans)

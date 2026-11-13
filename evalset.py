@@ -2,7 +2,7 @@
 
 Cases are real prompts taken from the trace DB (or, opt-in, from ~/.claude/history.jsonl).
 Write tasks are never included: replaying them would modify files. Replays run both
-models on every case with the eval judge, save a scored record to ~/.duo/replays/,
+models on every case with the eval judge, save a scored record to ~/.agentlens/replays/,
 and compare against earlier records. --no-lessons gives a controlled A/B for lessons.
 """
 import datetime
@@ -15,8 +15,8 @@ import re
 
 SECRET=re.compile(r'(sk-[A-Za-z0-9]{12,}|api[_-]?key|password|passwd|secret[_-]?key|BEGIN [A-Z ]*PRIVATE KEY|ghp_[A-Za-z0-9]{20,})',re.I)
 
-def home():return Path(os.environ.get('DUO_HOME') or Path.home()/'.duo').expanduser()
-def path():return Path(os.environ.get('DUO_EVALSET') or home()/'evalset.json').expanduser()
+def home():return Path(os.environ.get('AGENTLENS_HOME') or Path.home()/'.agentlens').expanduser()
+def path():return Path(os.environ.get('AGENTLENS_EVALSET') or home()/'evalset.json').expanduser()
 def runs_dir():return home()/'replays'
 
 def load():
@@ -175,14 +175,14 @@ def render_compare(a,b,c):
         lines.append(f"  {p.title():<6} Δ {v['delta'] if v['delta'] is not None else '–'}  ({v['better']} better, {v['worse']} worse) · {ci} → {verdict}"+(f" · ~{v['needed']} cases to detect ±0.2" if v.get('needed') else ''))
     note=[]
     if a['config'].get('no_lessons')!=b['config'].get('no_lessons'):note.append('lessons on vs off: this is a controlled lessons A/B')
-    if a.get('fingerprint')!=b.get('fingerprint'):note.append('duo code changed between runs')
+    if a.get('fingerprint')!=b.get('fingerprint'):note.append('AgentLens code changed between runs')
     if note:lines.append('  Note: '+'; '.join(note))
     for f in c['flips'][:12]:lines.append(f"  flip [{f['id']}] {f['from']} → {f['to']} · {f['prompt']}")
     return '\n'.join(lines)
 
 def fingerprint():
     h=hashlib.sha1()
-    for name in ('duo.py','agents.py','judge.py','lessons.py'):
+    for name in ('agentlens.py','agents.py','judge.py','lessons.py'):
         try:h.update((Path(__file__).with_name(name)).read_bytes())
         except OSError:pass
     return h.hexdigest()[:10]

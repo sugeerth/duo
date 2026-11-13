@@ -2,7 +2,7 @@
 
 The 2025-2026 observability tools converged on one recipe (Braintrust Topics, Datadog Patterns, LangSmith Insights,
 Docent, Anthropic's Clio): extract facets per trace, embed, reduce to 2-D, cluster, label, and show per-cluster
-metrics that link back to the runs. This is the deterministic version over data Duo already records, so it needs no
+metrics that link back to the runs. This is the deterministic version over data AgentLens already records, so it needs no
 model calls and every label is explainable:
 
 - facets per run: share of each action type, length, tool-failure rate, repeated-call share, loops, the longest

@@ -47,7 +47,7 @@ def run(store,limit=10,show=print,ask=input,rng=random):
         if reply=='q':break
         if reply=='s':continue
         record(store,item,'tie' if reply=='t' else order['ab'.index(reply)]);done+=1
-    show(f'\nSaved {done} label{"s" if done!=1 else ""}. Run duo --calibration to see how the judges compare with you.')
+    show(f'\nSaved {done} label{"s" if done!=1 else ""}. Run agentlens --calibration to see how the judges compare with you.')
     return done
 
 def report(store):
@@ -85,7 +85,7 @@ def report(store):
     return {'labels':len(mine),'judges':rows,'dimensions':dims}
 
 def render(rep):
-    if not rep['labels']:return 'No labels yet. Run duo --label to label a few past turns blind.'
+    if not rep['labels']:return 'No labels yet. Run agentlens --label to label a few past turns blind.'
     lines=[f"Calibration against {rep['labels']} of your labels/preferences"]
     for r in rep['judges']:
         if r['n']:lines.append(f"  {r['judge']:<22} agrees {r['agree']}/{r['n']} = {round(100*r['rate'])}%  (95% CI {round(100*r['ci'][0])}–{round(100*r['ci'][1])}%)")

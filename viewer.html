@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Duo Model Compare</title>
+<title>AgentLens Model Compare</title>
 <style>
 :root{
   color-scheme:light;
@@ -224,7 +224,7 @@ section:not(.open){padding-top:9px;padding-bottom:9px}
 </head>
 <body class="focus-view">
 <header>
-  <h1 id="title">Duo <span class="muted" style="font-weight:400">·</span> <span><i class="sw" style="background:var(--codex)"></i> Codex</span> <span class="muted" style="font-weight:400">vs</span> <span><i class="sw" style="background:var(--claude)"></i> Claude</span></h1>
+  <h1 id="title">AgentLens <span class="muted" style="font-weight:400">·</span> <span><i class="sw" style="background:var(--codex)"></i> Codex</span> <span class="muted" style="font-weight:400">vs</span> <span><i class="sw" style="background:var(--claude)"></i> Claude</span></h1>
   <span class="live" id="live"><span class="dot"></span><span id="liveText">connecting</span></span>
   <span class="sub" id="summary"></span>
   <span class="grow"></span>
@@ -239,10 +239,10 @@ section:not(.open){padding-top:9px;padding-bottom:9px}
   <span>Judge</span><span class="seg" id="fJudge"><button data-v="all" aria-pressed="true">Panel (all)</button><button data-v="codex" aria-pressed="false">Codex as judge</button><button data-v="claude" aria-pressed="false">Claude as judge</button></span>
   <span class="grow"></span><span id="selChip"></span>
 </div>
-<div id="traceExitNotice" role="status" hidden style="padding:12px 24px;border-bottom:1px solid var(--line);background:var(--panel)">Tracing disconnected. Duo continues running. Your last trace remains available below. <button id="resumeTracing">Resume tracing</button></div>
+<div id="traceExitNotice" role="status" hidden style="padding:12px 24px;border-bottom:1px solid var(--line);background:var(--panel)">Tracing disconnected. AgentLens continues running. Your last trace remains available below. <button id="resumeTracing">Resume tracing</button></div>
 <main>
   <section class="c12" id="evalTreeSec" data-open="1">
-    <h2>Duo · one task, two execution tracks</h2>
+    <h2>AgentLens · one task, two execution tracks</h2>
     <p class="sub">Long runs stay on a shared timeline. Tool calls split off as railway tracks, with nearby calls clustered until you zoom in. The Tree view regrows each run as a tree: trunk = run time, branches = tool calls, canopy = judge score.</p>
     <div id="alarms" class="alarms" aria-live="polite"></div>
     <div id="verdictCard" class="vcard" aria-live="polite"></div>
@@ -268,7 +268,7 @@ section:not(.open){padding-top:9px;padding-bottom:9px}
     <div id="envView" class="env-sec"></div>
     <div class="tw-head"><h3>Reasoning, memory &amp; context</h3><span class="sub">How each model thinks, what it remembers, and what fills its context window as the run goes on.</span></div>
     <div id="reasonMem"></div>
-    <div class="tw-head att-sec"><h3>Answer attribution</h3><span class="sub">Where each sentence of Duo's final answer came from: Codex, Claude, both, or new wording from the synthesis step. Matched by overlapping word sequences, so a paraphrase can read as new.</span></div>
+    <div class="tw-head att-sec"><h3>Answer attribution</h3><span class="sub">Where each sentence of AgentLens's final answer came from: Codex, Claude, both, or new wording from the synthesis step. Matched by overlapping word sequences, so a paraphrase can read as new.</span></div>
     <div id="attrib" class="att-sec"></div>
     <div class="tw-head"><h3>Where the time went</h3><span class="sub">Each bar is a model's run time on one shared scale. Hatched time went to failed or repeated tool calls.</span></div>
     <div id="timeWent"></div>
@@ -278,7 +278,7 @@ section:not(.open){padding-top:9px;padding-bottom:9px}
     <div id="secPanel"></div>
     <div class="tw-head"><h3>Process graph</h3><span class="sub">Every run of this kind of task in the session, merged into one map: nodes are actions (size = how often), edges are what came next (width = how often), colour is the share of runs through that node that succeeded. ↻ counts repeats of the same action. Shows the common path and where failing runs go astray.</span></div>
     <div id="procGraph"></div>
-    <div class="tw-head"><h3>Failure modes</h3><span class="sub">Each turn's problems tagged with one vocabulary (TRAIL/MAST style: specification, reasoning, planning, execution, verification) from the judges' root causes and Duo's own detectors. Cells count turns; click one for the evidence.</span></div>
+    <div class="tw-head"><h3>Failure modes</h3><span class="sub">Each turn's problems tagged with one vocabulary (TRAIL/MAST style: specification, reasoning, planning, execution, verification) from the judges' root causes and AgentLens's own detectors. Cells count turns; click one for the evidence.</span></div>
     <div id="failModes"></div>
     <div class="tw-head"><h3>Patterns across runs</h3><span class="sub">Every stored run, all sessions, placed on one map by what it did (action mix, length, failures, repeats, loops, stalls, progress, test edits) and grouped into clusters labelled by what sets them apart. The recipe today's observability tools use, computed without model calls, so every label is explainable. Click a cluster or a point.</span></div>
     <div id="patterns"></div>
@@ -293,13 +293,13 @@ section:not(.open){padding-top:9px;padding-bottom:9px}
 <div id="labMetrics" class="lab-metrics"></div><div class="lab-grid"><article class="lab-card"><div class="lab-kicker">01 · Behavioral atlas</div><h3>Where do speed and judged quality meet?</h3><p>Each dot is one scored model/turn. Horizontal position is total run time; vertical position is judge score. Size shows tool count.</p><div id="lab-atlas" class="lab-chart"></div><div id="lab-atlas-readout" class="lab-readout"></div></article><article class="lab-card"><div class="lab-kicker">02 · Decision braid</div><h3>How does each model move through work?</h3><p>Tool steps sampled at 12 positions through each run. Curves reveal repeated phase changes; this is execution order, not time.</p><div id="lab-braid" class="lab-chart"></div><div id="lab-braid-readout" class="lab-readout"></div></article><article class="lab-card wide"><div class="lab-kicker">03 · Activity weather</div><h3>When is the agent busy with tools?</h3><p>Each row is a run, divided into 32 equal time bins. Fill shows the fraction of each bin covered by tool calls; red borders flag failed calls.</p><div id="lab-occupancy" class="lab-chart"></div><div id="lab-occupancy-readout" class="lab-readout"></div></article><article class="lab-card"><div class="lab-kicker">04 · Tool terrain</div><h3>Which tools dominate the workload?</h3><p>Rectangle area is summed completed call duration. Overlapping calls count separately. Switch to call count to compare frequency.</p><div id="lab-terrain" class="lab-chart"></div><div id="lab-terrain-readout" class="lab-readout"></div></article><article class="lab-card"><div class="lab-kicker">05 · Latency constellation</div><h3>Are slow calls rare or routine?</h3><p>Every plotted dot is a completed tool call on a log duration scale. Vertical jitter separates nearby points; red marks failed calls.</p><div id="lab-latency" class="lab-chart"></div><div id="lab-latency-readout" class="lab-readout"></div></article><article class="lab-card"><div class="lab-kicker">06 · Quality contours</div><h3>Does a strong total hide a weak dimension?</h3><p>Each line is one scored model/turn across the five judge dimensions. Missing dimensions break the line; scores are judgments, not ground truth.</p><div id="lab-rubriclab" class="lab-chart"></div><div id="lab-rubriclab-readout" class="lab-readout"></div></article><article class="lab-card"><div class="lab-kicker">07 · After the error</div><h3>What action follows a failed tool call?</h3><p>Links connect a failed call’s phase to the next tool action. This describes the next action; it does not prove that the error was diagnosed or repaired.</p><div id="lab-recovery" class="lab-chart"></div><div id="lab-recovery-readout" class="lab-readout"></div></article><article class="lab-card"><div class="lab-kicker">08 · Tool switchboard</div><h3>Which tools keep pulling the model back?</h3><p>Chord ribbons count consecutive tool transitions within each run. Loops expose repeated use; direction is recorded order, not dependency.</p><div id="lab-switchboard" class="lab-chart"></div><div id="lab-switchboard-readout" class="lab-readout"></div></article><article class="lab-card"><div class="lab-kicker">09 · Execution pace</div><h3>Do tools arrive in bursts or steadily?</h3><p>Cumulative tool starts over normalized run time. Each curve is a run; steeper segments indicate a burst of observed tool calls.</p><div id="lab-pace" class="lab-chart"></div><div id="lab-pace-readout" class="lab-readout"></div></article><article class="lab-card wide"><div class="lab-kicker">10 · Outcome matrix</div><h3>Where do the two models disagree?</h3><p>One column per judged task; rows separate models and rubric dimensions. Color intensity shows score on the fixed 1–5 scale.</p><div id="lab-mosaic" class="lab-chart"></div><div id="lab-mosaic-readout" class="lab-readout"></div></article><article class="lab-card wide"><div class="lab-kicker">11 · Agent flow graph</div><h3>What path does each model take through the tools?</h3><p>Layered graph drawing of the tool-transition digraph. Each node splits in half — left is Codex's visit share, right is Claude's; arrowed edges count consecutive transitions, dashed curves loop back to an earlier phase. Hover a node to isolate its traffic.</p><div id="lab-flow" class="lab-chart"></div><div id="lab-flow-readout" class="lab-readout"></div></article></div><details class="lab-sources"><summary>Current observability patterns &amp; reading</summary><p>Use both an overview of repeated work and a literal execution view, with evaluations linked to recorded evidence. These are useful design references, not a ranking of products:</p><a href="https://langfuse.com/docs/observability/features/agent-graphs" target="_blank" rel="noopener noreferrer">Langfuse · aggregated and expanded agent graphs</a> · <a href="https://arize.com/docs/phoenix/tracing/tutorial" target="_blank" rel="noopener noreferrer">Phoenix · traces, annotations, sessions</a> · <a href="https://www.langchain.com/langsmith/observability" target="_blank" rel="noopener noreferrer">LangSmith · agent trajectory observability</a></details></section>
   <section class="c12" id="liveSec" data-open="1">
     <h2 id="liveTitle">Live</h2>
-    <p class="note">Streams as it happens: each glyph is a step the agent just took (shape = action; ✗ failed; ◆ reasoning; the newest pulses). The pipeline below lights up as duo analyses the turn, the judges score it, the learning updates, and the next prompt is ready. The sparkline is events per second over the last minute.</p>
+    <p class="note">Streams as it happens: each glyph is a step the agent just took (shape = action; ✗ failed; ◆ reasoning; the newest pulses). The pipeline below lights up as agentlens analyses the turn, the judges score it, the learning updates, and the next prompt is ready. The sparkline is events per second over the last minute.</p>
     <div id="liveLanes" class="chart"></div>
     <div id="livePipe" class="chart" style="margin-top:6px"></div>
   </section>
   <section class="c12" id="plainSec" data-open="1">
     <h2>In plain words</h2>
-    <p class="note">What each agent is like, where they differ, what goes wrong, and what duo changes next, computed from the traces and judges on this page. Not a ranking. Click a line to jump to the chart behind it.</p>
+    <p class="note">What each agent is like, where they differ, what goes wrong, and what agentlens changes next, computed from the traces and judges on this page. Not a ranking. Click a line to jump to the chart behind it.</p>
     <div id="plain"></div>
   </section>
   <section class="c12" id="verdictSec">
@@ -355,7 +355,7 @@ section:not(.open){padding-top:9px;padding-bottom:9px}
 
   <section class="c12">
     <h2 id="prTitle">Agent PRs</h2>
-    <p class="note">What the traces taught, as reviewable changes to each agent’s own config (AGENTS.md for Codex, CLAUDE.md for Claude). Create one with <code>duo --propose REPO</code>; attach held-out evidence with <code>duo --evolve</code>; apply with <code>duo --apply ID</code> or open a draft PR with <code>duo --pr ID</code>.</p>
+    <p class="note">What the traces taught, as reviewable changes to each agent’s own config (AGENTS.md for Codex, CLAUDE.md for Claude). Create one with <code>agentlens --propose REPO</code>; attach held-out evidence with <code>agentlens --evolve</code>; apply with <code>agentlens --apply ID</code> or open a draft PR with <code>agentlens --pr ID</code>.</p>
     <div id="prBoard" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px"></div>
   </section>
 
@@ -425,7 +425,7 @@ section:not(.open){padding-top:9px;padding-bottom:9px}
   </section>
 
   <section class="c12">
-    <details id="mapBox"><summary style="cursor:pointer"><b>How duo works</b> <span class="sub" id="mapSum">— the files behind this page</span></summary>
+    <details id="mapBox"><summary style="cursor:pointer"><b>How AgentLens works</b> <span class="sub" id="mapSum">— the files behind this page</span></summary>
     <div id="miniMap" class="chart" style="margin-top:8px"></div></details>
   </section>
 </main>
@@ -436,7 +436,7 @@ section:not(.open){padding-top:9px;padding-bottom:9px}
 <script>
 'use strict';
 /* ================= model ================= */
-const P=['codex','claude'],NAME={codex:'Codex',claude:'Claude',duo:'Duo',judge:'Judge'};
+const P=['codex','claude'],NAME={codex:'Codex',claude:'Claude',duo:'AgentLens',judge:'Judge'};
 const DIMS=['correctness','completeness','groundedness','instruction_following','efficiency'];
 const DIML={correctness:'Correctness',completeness:'Completeness',groundedness:'Groundedness',instruction_following:'Instructions',efficiency:'Efficiency'};
 const KIND_L={respond:'Answer',read:'Read',write:'Write'};
@@ -447,7 +447,7 @@ reset();
 const PROC=['planning','tool_selection','error_recovery','verification'];
 const PROCL={planning:'Planning',tool_selection:'Tool choice',error_recovery:'Error recovery',verification:'Verification'};
 const LABEL={critical_error:['✗','bad','Critical error'],wasted:['↺','muted','Wasted step'],good_move:['✓','ok','Good move']};
-const TGT={prompt:'Prompt rule',tools:'Tool setup',workflow:'Duo workflow',context:'Missing context'};
+const TGT={prompt:'Prompt rule',tools:'Tool setup',workflow:'AgentLens workflow',context:'Missing context'};
 let LEARN=null;
 const F={kind:'all',judge:'all',sort:'turn',turn:null,cat:null};
 function ingest(e){
@@ -591,7 +591,7 @@ const sessQ=()=>S.session&&S.session!==current?'&session='+encodeURIComponent(S.
 async function fetchPayload(id){try{const r=await fetch('/payload?id='+id+sessQ());return r.ok?await r.json():null}catch(e){return null}}
 function payloadSlot(id,label){return id?`<div class="pl" data-pl="${id}"><button class="link">${esc(label)}</button></div>`:''}
 function hydrate(){
-  document.querySelectorAll('#dBody .pl').forEach(el=>{el.querySelector('button').onclick=async()=>{el.innerHTML='<span class="muted">loading…</span>';const p=await fetchPayload(el.dataset.pl);el.innerHTML=p&&p.text!=null?`<pre>${esc(p.text)}</pre>`:'<span class="muted">Not available. Payloads live in the trace DB (DUO_TRACE_DB) or a recent memory cache.</span>'}});
+  document.querySelectorAll('#dBody .pl').forEach(el=>{el.querySelector('button').onclick=async()=>{el.innerHTML='<span class="muted">loading…</span>';const p=await fetchPayload(el.dataset.pl);el.innerHTML=p&&p.text!=null?`<pre>${esc(p.text)}</pre>`:'<span class="muted">Not available. Payloads live in the trace DB (AGENTLENS_TRACE_DB) or a recent memory cache.</span>'}});
   document.querySelectorAll('#dBody [data-reason-run]').forEach(el=>{el.onclick=async()=>{const box=el.parentElement;box.innerHTML='<span class="muted">loading…</span>';
     try{const r=await fetch('/span_payloads?span='+el.dataset.reasonRun+sessQ());const rows=(await r.json()).filter(x=>x.kind==='reasoning');
       box.innerHTML=rows.length?rows.map((x,i)=>`<div class="sub">Step ${i+1}</div><pre>${esc(x.text)}</pre>`).join(''):'<span class="muted">No reasoning text captured for this run.</span>'}catch(e){box.innerHTML='<span class="muted">Unavailable.</span>'}}});
@@ -609,7 +609,7 @@ function showTurn(id){
   let h=`<div class="kv"><div>Task</div><div>${KIND_L[t.kind]} · <code>${esc(t.mode)}</code></div><div>Wall time</div><div>${dur((t.end-t.start)*1000)}</div><div>Status</div><div>${t.running?'running…':esc(t.status)}</div></div>`;
   h+=payloadSlot(t.promptId,'Show the prompt');
   h+='<h3>Judge</h3>';
-  if(!t.verdicts.length&&!Object.keys(t.judge).length)h+='<div class="muted">Not judged yet. In duo: <code>/judge panel</code>.</div>';
+  if(!t.verdicts.length&&!Object.keys(t.judge).length)h+='<div class="muted">Not judged yet. In AgentLens: <code>/judge panel</code>.</div>';
   for(const v of t.verdicts)h+=`<div style="margin:6px 0"><b>${esc(v.judge)} judge</b> → ${v.verdict==='tie'?'tie':sw(v.verdict)+' '+NAME[v.verdict]} <span class="pill">confidence ${pct(v.confidence)}</span> ${v.passed===false?'<span class="pill bad">flipped when order swapped</span>':'<span class="pill ok">same in both orders</span>'}<div class="sub">${esc(v.rationale)}</div></div>`;
   if(Object.keys(t.judge).length){
     h+='<table><thead><tr><th>Dimension</th>'+P.filter(p=>t.judge[p]).map(p=>`<th class="num">${sw(p)} ${NAME[p]}</th>`).join('')+'</tr></thead><tbody>';
@@ -998,10 +998,10 @@ function openRef(id){const x=S.byEvent.get(id);if(!x)return;const r=derive().all
 function renderChecks(D,K){
   const host=document.getElementById('checks');
   let C=LEARN?.checks;
-  if(!C){const {W}=K;C=[{ok:W.decisive>=20,label:'Enough head-to-head turns',detail:`${W.decisive} decisive turns; 20+ needed`},{ok:W.consistency==null||W.consistency>=.8,label:'Verdicts survive order swap',detail:W.consistency==null?'no data':pct(W.consistency)+' consistent'},{ok:null,label:'Self-learning',detail:'connect to a live duo session to see learned weights and lessons'}]}
+  if(!C){const {W}=K;C=[{ok:W.decisive>=20,label:'Enough head-to-head turns',detail:`${W.decisive} decisive turns; 20+ needed`},{ok:W.consistency==null||W.consistency>=.8,label:'Verdicts survive order swap',detail:W.consistency==null?'no data':pct(W.consistency)+' consistent'},{ok:null,label:'Self-learning',detail:'connect to a live agentlens session to see learned weights and lessons'}]}
   host.innerHTML='<div style="display:grid;grid-template-columns:1fr 1fr;gap:0 12px">'+C.map(c=>`<div class="chk" data-tip="${esc(c.detail)}"><span class="${c.ok===true?'ok':c.ok===false?'bad':'muted'}">${c.ok===true?'✓':c.ok===false?'⚠':'·'}</span><span>${esc(c.label)}</span></div>`).join('')+'</div>';
   const w=LEARN?.weights;const wh=document.getElementById('weights');
-  if(w&&!w.signals){wh.innerHTML='<div class="sub" data-tip="Duo learns which dimensions you care about from your corrections, thanks and labels (duo --label). Until then all dimensions weigh the same.">What matters to you: neutral until you give feedback ⓘ</div>'}
+  if(w&&!w.signals){wh.innerHTML='<div class="sub" data-tip="AgentLens learns which dimensions you care about from your corrections, thanks and labels (agentlens --label). Until then all dimensions weigh the same.">What matters to you: neutral until you give feedback ⓘ</div>'}
   else if(w){const dims=Object.entries(w.weights).sort((a,b)=>b[1]-a[1]);const mx=Math.max(...dims.map(d=>d[1]),1.5);
     wh.innerHTML=`<div class="sub" style="margin-bottom:4px" data-tip="Learned from ${w.signals} feedback signal${w.signals===1?'':'s'} (your corrections, thanks, labels). 1.0 = neutral; weights start neutral and move only with evidence."><b>What matters to you</b> ⓘ</div>`+dims.map(([d,v])=>`<div style="display:grid;grid-template-columns:110px 1fr 36px;gap:8px;align-items:center;font-size:12px"><span>${DIML[d]||PROCL[d]||d}</span><svg height="10" width="100%"><rect x="0" y="1" width="${Math.max(2,v/mx*100)}%" height="8" rx="2" fill="var(--text-2)" opacity="${v>1.05?1:.35}"/></svg><span class="num">${v.toFixed(2)}</span></div>`).join('')}
   else wh.innerHTML='';
@@ -1164,7 +1164,7 @@ function renderBandit(){
     y+=6}
   host.innerHTML=`<svg width="${w}" height="${y}" role="img" aria-label="Bandit arms">${svg}</svg>`;
   const routes=POL.routes||[];
-  rh.innerHTML=routes.length?`<div class="sub" style="margin-bottom:4px"><b>Routing</b>: probability Codex beats Claude per task type (needs ≥10 decisive turns and 90% confidence to route to one agent${POL.auto_route?'; applied automatically':'; recommendation only, set DUO_ROUTE=auto to apply'})</div>`+routes.map(r=>{const W=width('routes')-150;return `<div style="display:grid;grid-template-columns:70px 1fr 80px;gap:8px;align-items:center;font-size:12px" data-tip="${r.n} decisive turns · P(codex better)=${r.p_codex}"><span>${r.kind}</span><svg height="16" width="100%" viewBox="0 0 ${W} 16" preserveAspectRatio="none"><rect x="0" y="5" width="${W}" height="6" rx="3" fill="var(--grid)"/><line x1="${W*.1}" x2="${W*.1}" y1="1" y2="15" stroke="var(--muted)"/><line x1="${W*.9}" x2="${W*.9}" y1="1" y2="15" stroke="var(--muted)"/><circle cx="${W*r.p_codex}" cy="8" r="5" fill="var(--${r.p_codex>=.5?'codex':'claude'})"/></svg><span class="ink">${r.route==='both'?'run both':'→ '+NAME[r.route]}</span></div>`}).join(''):'';
+  rh.innerHTML=routes.length?`<div class="sub" style="margin-bottom:4px"><b>Routing</b>: probability Codex beats Claude per task type (needs ≥10 decisive turns and 90% confidence to route to one agent${POL.auto_route?'; applied automatically':'; recommendation only, set AGENTLENS_ROUTE=auto to apply'})</div>`+routes.map(r=>{const W=width('routes')-150;return `<div style="display:grid;grid-template-columns:70px 1fr 80px;gap:8px;align-items:center;font-size:12px" data-tip="${r.n} decisive turns · P(codex better)=${r.p_codex}"><span>${r.kind}</span><svg height="16" width="100%" viewBox="0 0 ${W} 16" preserveAspectRatio="none"><rect x="0" y="5" width="${W}" height="6" rx="3" fill="var(--grid)"/><line x1="${W*.1}" x2="${W*.1}" y1="1" y2="15" stroke="var(--muted)"/><line x1="${W*.9}" x2="${W*.9}" y1="1" y2="15" stroke="var(--muted)"/><circle cx="${W*r.p_codex}" cy="8" r="5" fill="var(--${r.p_codex>=.5?'codex':'claude'})"/></svg><span class="ink">${r.route==='both'?'run both':'→ '+NAME[r.route]}</span></div>`}).join(''):'';
   let top=null;for(const [key,list] of groups){const [p,kind]=key.split('|');const b=[...list].sort((a,b)=>b.mean-a.mean)[0];const z=list.find(a=>a.k===0);
     if(b.n>=3&&z&&b!==z){const d=b.mean-z.mean;if(!top||d>top.d)top={d,p,kind,k:b.k,m:b.mean,z:z.mean}}}
   document.getElementById('polTitle').textContent=top?`RL policy: ${top.k} lessons work best for ${NAME[top.p]} on ${top.kind} tasks (${top.m.toFixed(2)} vs ${top.z.toFixed(2)} with none)`:'RL policy: still exploring';
@@ -1174,7 +1174,7 @@ function renderClaims(D){
   const ids=new Set(D.turns.map(t=>t.id));const seen=new Map();
   for(const c of S.A.claims){if(!ids.has(c.turn_id))continue;seen.set(c.provider+'|'+c.turn_id+'|'+String(c.rationale).toLowerCase(),c)}
   const cl=[...seen.values()];const bars=document.getElementById('claimBars');
-  if(!cl.length){bars.innerHTML='<div class="empty">No claims checked yet. Judges extract claims from each answer and duo matches them to tool steps.</div>';document.querySelector('#claimTable tbody').innerHTML='';document.getElementById('claimTitle').textContent='Said vs did';return}
+  if(!cl.length){bars.innerHTML='<div class="empty">No claims checked yet. Judges extract claims from each answer and agentlens matches them to tool steps.</div>';document.querySelector('#claimTable tbody').innerHTML='';document.getElementById('claimTitle').textContent='Said vs did';return}
   const ST=[['supported','var(--good)','✓'],['unsupported','var(--warn)','?'],['contradicted','var(--critical)','✗']];
   const w=width('claimBars'),L=70;let svg=`<svg width="${w}" height="${P.length*28+4}" role="img" aria-label="Claims by status">`;const tk=[];
   P.forEach((p,i)=>{const mine=cl.filter(c=>c.provider===p);const y=4+i*28;svg+=`<text x="0" y="${y+14}" class="ink b">${NAME[p]}</text>`;if(!mine.length)return;let x0=L;
@@ -1218,7 +1218,7 @@ function renderFingerprint(D){
 function renderPRs(){
   const host=document.getElementById('prBoard');const items=(PROPS||[]).filter(Boolean);
   const cols=[['proposed','Proposed'],['tested','A/B tested'],['applied','Applied locally'],['pr_opened','Draft PR open']];
-  if(!items.length){host.innerHTML=`<div class="empty" style="grid-column:1/-1">No proposals yet. Once lessons exist: <code>duo --propose /path/to/repo</code>.</div>`;document.getElementById('prTitle').textContent='Agent PRs';return}
+  if(!items.length){host.innerHTML=`<div class="empty" style="grid-column:1/-1">No proposals yet. Once lessons exist: <code>agentlens --propose /path/to/repo</code>.</div>`;document.getElementById('prTitle').textContent='Agent PRs';return}
   const col=p=>p.status==='pr_opened'?'pr_opened':p.status==='applied'?'applied':p.evolve?'tested':'proposed';
   host.innerHTML=cols.map(([k,l])=>`<div><div class="sub" style="margin-bottom:6px"><b>${l}</b> (${items.filter(p=>col(p)===k).length})</div>`+items.filter(p=>col(p)===k).map(p=>{
     const ev=p.evolve?.compare?.models;const ab=ev?P.map(m=>ev[m]&&ev[m].delta!=null?`${NAME[m]} ${ev[m].delta>=0?'+':''}${ev[m].delta}${ev[m].improved?' ✓':''}`:'').filter(Boolean).join(' · '):'no held-out A/B yet';
@@ -1230,11 +1230,11 @@ let NEXT=null,FMAP=null;
 async function fetchNext(req){try{const r=await fetch('/next'+(req?'?request='+encodeURIComponent(req):''));if(r.ok){NEXT=await r.json();renderNext()}}catch(e){}}
 async function postLessons(body){
   const msg=document.getElementById('gMsg');
-  try{const r=await fetch('/lessons',{method:'POST',headers:{'Content-Type':'application/json','X-Duo':'1'},body:JSON.stringify(body)});
-    if(!r.ok){msg.textContent=r.status===403||r.status===404?'Controls need a live duo session or tools/serve_viewer.py.':'Could not save.';return}
-    NEXT=await r.json();msg.textContent='Saved ✓';setTimeout(()=>msg.textContent='',1500);renderNext();fetchNext(document.getElementById('gReq').value.trim());fetchLearning()}catch(e){msg.textContent='Could not reach duo.'}}
+  try{const r=await fetch('/lessons',{method:'POST',headers:{'Content-Type':'application/json','X-AgentLens':'1'},body:JSON.stringify(body)});
+    if(!r.ok){msg.textContent=r.status===403||r.status===404?'Controls need a live agentlens session or tools/serve_viewer.py.':'Could not save.';return}
+    NEXT=await r.json();msg.textContent='Saved ✓';setTimeout(()=>msg.textContent='',1500);renderNext();fetchNext(document.getElementById('gReq').value.trim());fetchLearning()}catch(e){msg.textContent='Could not reach agentlens.'}}
 function renderNext(){
-  const host=document.getElementById('nextAgents');if(!NEXT){host.innerHTML='<div class="empty">Next-prompt preview needs a live duo session (or tools/serve_viewer.py).</div>';return}
+  const host=document.getElementById('nextAgents');if(!NEXT){host.innerHTML='<div class="empty">Next-prompt preview needs a live agentlens session (or tools/serve_viewer.py).</div>';return}
   const st=NEXT.settings;
   document.querySelectorAll('#gOn button').forEach(b=>b.setAttribute('aria-pressed',String((b.dataset.v==='1')===st.enabled)));
   document.querySelectorAll('#gK button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.v===(st.k==null?'auto':String(st.k)))));
@@ -1258,7 +1258,7 @@ function renderMiniMap(){
   const host=document.getElementById('miniMap');if(!FMAP)return;
   const st=FMAP.stages,w=width('miniMap'),cw=(w-(st.length-1)*14)/st.length,ch=20,mx=Math.max(...FMAP.files.map(f=>f.lines));
   const rows=Math.max(...st.map(s=>FMAP.files.filter(f=>f.stage===s).length));const H=26+rows*(ch+4)+4;
-  let svg=`<svg width="${w}" height="${H}" role="img" aria-label="duo file map">`;
+  let svg=`<svg width="${w}" height="${H}" role="img" aria-label="AgentLens file map">`;
   st.forEach((s,i)=>{const x=i*(cw+14);svg+=`<text x="${x}" y="12" class="ink b" style="font-size:11px">${i+1}. ${s}</text>`;
     if(i<st.length-1)svg+=`<text x="${x+cw+2}" y="12" class="mut" style="font-size:11px">→</text>`;
     FMAP.files.filter(f=>f.stage===s).forEach((f,j)=>{const y=20+j*(ch+4);const col=f.status==='new'?'var(--good)':f.status==='changed'?'var(--codex)':'var(--muted)';
@@ -1351,7 +1351,7 @@ function jumpTo(id){const el=document.getElementById(id);if(!el)return;const sec
 function renderPlain(D,K){
   const host=document.getElementById('plain');if(!host)return;const {M,W}=K;const rows=[];
   const add=(icon,k,html,target)=>rows.push(`<div class="pl-row" data-jump="${target}"><span>${icon}</span><span class="k">${k}</span><span>${html}</span></div>`);
-  if(!D.allTurns.length){host.innerHTML='<div class="empty">No turns yet. Ask duo something; this page fills in live.</div>';return}
+  if(!D.allTurns.length){host.innerHTML='<div class="empty">No turns yet. Ask agentlens something; this page fills in live.</div>';return}
   // 1-2 one profile line per agent: attributes, not a ranking
   const ids=new Set(D.turns.map(t=>t.id));
   for(const p of P){
@@ -1377,7 +1377,7 @@ function renderPlain(D,K){
   const hacks=D.turns.reduce((a,t)=>a+t.hacked.length,0);
   if(prob.length||hacks)add('⚠️','Typical failure',prob.join(' · ')+(hacks?` · <span class="bad">${hacks} confirmed cheat${hacks>1?'s':''}</span>`:''),'failTitle');
   else if(Object.keys(D.turns.at(-1)?.judge||{}).length)add('✅','Typical failure','The judges found no root cause in these turns.','failTitle');
-  // 4 what duo changes next
+  // 4 what agentlens changes next
   const top=(LEARN&&LEARN.suggestions||[])[0];
   if(top){const st=top.accepted?'already active — it is added to '+NAME[top.provider]+'\'s next prompts':top.turns>=3&&top.judges.length>=2&&top.target!=='workflow'?'will be learned automatically':'waiting for more evidence';
     add('🛠️','What changes next',`“${esc(top.rule)}” for ${NAME[top.provider]||top.provider} — ${st}.`,'actTitle')}
@@ -1393,7 +1393,7 @@ foldSetup();
 function report(){
   const D=derive(),{M,W}=metrics(D);const row=(l,a,b)=>`| ${l} | ${a} | ${b} |`;
   const C=failureCases(D);const cats=[...new Set(C.map(c=>c.cat))];
-  return [`# Duo: Codex vs Claude`,``,`${D.turns.length} turns (filter: ${F.kind}, judge: ${F.judge}).`,``,`| Metric | Codex | Claude |`,`|---|---|---|`,
+  return [`# AgentLens: Codex vs Claude`,``,`${D.turns.length} turns (filter: ${F.kind}, judge: ${F.judge}).`,``,`| Metric | Codex | Claude |`,`|---|---|---|`,
     row('Judge score /5',f2(M.codex.judge),f2(M.claude.judge)),row('Head-to-head wins',W.codex,W.claude),row('Ties / split','',W.tie),
     row('Runtime evals passed',pct(M.codex.evalPass),pct(M.claude.evalPass)),row('Tool calls succeeded',pct(M.codex.toolOk),pct(M.claude.toolOk)),
     row('Median time',dur(M.codex.latency),dur(M.claude.latency)),row('Runs failed',pct(M.codex.failRate),pct(M.claude.failRate)),row('Blind retries',M.codex.retries,M.claude.retries),``,
@@ -1419,7 +1419,7 @@ function railClusters(tools,x,cutoff){
    - The verdict card: up to five lines (VERDICT, CAUSE, COST, FIX, CONF) for the timeline's turn. Each line
      restates evidence already in the trace (judge verdicts, root causes, usage, fork reruns). A line with nothing
      to say is left out. A single turn is n=1, so confidence never goes above "medium". The decisive step stays
-     "hypothesized" until `duo --fork` reruns test it.
+     "hypothesized" until `agentlens --fork` reruns test it.
    - Where the time went: run time split into productive tool time, model time between calls, and wasted time
      (failed calls, or repeats of a call that already succeeded), on one scale for both models; tools ranked by seconds. */
 function runTokens(r){const u=S.A.usage.filter(e=>e.span_id===r.id).at(-1)?.data;if(!u)return null;return (u.input_tokens||0)+(u.output_tokens||0)+(u.cache_read_input_tokens||0)+(u.cache_creation_input_tokens||0)}
@@ -1476,7 +1476,7 @@ function verdictCard(t){
     let text=`${level} (n=1): ${basis.join('; ')}`;
     if(root){const fk=S.A.fork.filter(e=>e.turn_id===t.id&&e.provider===subj),n=d3.sum(fk,e=>e.count||0),k=d3.sum(fk,e=>e.data?.improved||0);
       if(n)text+=`; the root cause is ${k*2>n?'replay-verified':k===0?'replay-refuted':'replay-mixed'} (${k}/${n} reruns with the fix improved)`;
-      else text+=t.kind==='write'?'; the root cause is a hypothesis (write turns cannot be rerun yet)':`; the root cause is a hypothesis: test it with duo --fork ${t.id.slice(0,8)}`}
+      else text+=t.kind==='write'?'; the root cause is a hypothesis (write turns cannot be rerun yet)':`; the root cause is a hypothesis: test it with agentlens --fork ${t.id.slice(0,8)}`}
     L.push({k:'CONF',text})}
   return L;
 }
@@ -1518,7 +1518,7 @@ function horizonViz(t,p,W){
   const rows=[];(function walk(n,d){rows.push({n,d});(n.children||[]).forEach(c=>walk(c,d+1))})(r.tree,0);
   const depth=d3.max(rows,x=>x.d)||0,rh=Math.min(14,46/(depth+1));let off=new Map();
   const xpos=[];let acc=0;(function lay(n,a){n._a=a;let c=a;(n.children||[]).forEach(k=>{lay(k,c);c+=k.calls})})(r.tree,0);
-  svg+=lab(14,'run')+lab(14+rh*depth,depth>1?'phases':'');
+  svg+=lab(14,depth>1?'run':'phases')+(depth>1?lab(14+rh*(depth-1),'phases'):'');
   rows.forEach(({n,d})=>{if(!d&&depth)return;const x0=X(n._a),x1=Math.max(x0+2,X(n._a+n.calls)-1),y=4+(depth?d-1:0)*rh,col=n.kind==='phase'?HZ_C[n.label]||HZ_C.other:n.label.includes('loop')?'var(--warn)':n.label.includes('failing')?'var(--critical)':'var(--muted)';
     svg+=`<g data-lref="${n.from}"><rect x="${x0}" y="${y}" width="${x1-x0}" height="${rh-2}" rx="2" fill="${col}" opacity="${n.kind==='phase'?.75:.22}" stroke="${n.modes.length?'var(--critical)':'none'}" stroke-width="1.5"/><title>${esc(n.label)} · ${n.calls} calls · ${n.seconds}s${n.failed?` · ${n.failed} failed`:''}${n.repeats?` · ${n.repeats} repeats`:''}${n.modes.length?' · '+n.modes.join(', '):''}</title></g>`});
   let y=10+rh*Math.max(1,depth);
@@ -1563,7 +1563,7 @@ function renderLongTerm(){
   const host=document.getElementById('longTerm');
   if(!LT){host.innerHTML='<div class="empty">Loading the trace DB…</div>';return}
   const R=LT.records||[],I=LT.insight||{};
-  if(!R.length){host.innerHTML='<div class="empty">No stored turns yet. Long-term insight reads the trace DB (DUO_TRACE_DB), so it appears once turns are recorded.</div>';return}
+  if(!R.length){host.innerHTML='<div class="empty">No stored turns yet. Long-term insight reads the trace DB (AGENTLENS_TRACE_DB), so it appears once turns are recorded.</div>';return}
   const day=t=>new Date(t*1000).toLocaleDateString(undefined,{month:'short',day:'numeric'});
   let h=`<div class="lt-meta">${I.turns} turns in ${I.sessions} session${I.sessions===1?'':'s'} over ${I.days} day${I.days===1?'':'s'} (${day(I.first)} to ${day(I.last)}). ${I.tested} change tests run.</div>`;
   const F=I.findings||[];
@@ -1750,7 +1750,7 @@ function renderConvMem(D){
     s+=`<title>Turn ${R.t.no}${R.carried!=null?`: carried ${R.carried} earlier turn${R.carried===1?'':'s'}, ≈${tk(R.chars)} tokens in`:': not recorded'}${R.neg?' · you corrected this turn':''}</title></g>`});
   s+='</svg>';
   const rec=rows.filter(r=>r.carried!=null),maxCar=d3.max(rec,r=>r.carried)||0,drop=rec.find((r,i)=>i&&r.carried<=rec[i-1].carried&&rec[i-1].carried===maxCar&&maxCar>0);
-  const why=rec.length?`Each turn carried up to ${maxCar} earlier turn${maxCar===1?'':'s'}${drop?`; from turn ${drop.t.no} the oldest turns start falling out of memory (Duo keeps the last 10)`:''}. Biggest carried context: ≈${tk(d3.max(rec,r=>r.chars)||0)} tokens.${rows.some(r=>r.neg)?' ✗ marks turns you corrected.':''}`:'Turns from before this version do not record what they carried.';
+  const why=rec.length?`Each turn carried up to ${maxCar} earlier turn${maxCar===1?'':'s'}${drop?`; from turn ${drop.t.no} the oldest turns start falling out of memory (AgentLens keeps the last 10)`:''}. Biggest carried context: ≈${tk(d3.max(rec,r=>r.chars)||0)} tokens.${rows.some(r=>r.neg)?' ✗ marks turns you corrected.':''}`:'Turns from before this version do not record what they carried.';
   host.innerHTML=`<div class="at-card"><div class="rm-scroll">${s}</div><div class="rm-key"><span><i style="background:var(--text);opacity:.5"></i>earlier turn still in context (darker = more recent)</span><span><i style="background:var(--claude)"></i>the turn itself (colour = winner)</span><span><i style="background:#8a919b"></i>carried in, ≈ tokens</span></div><div class="lr-why" style="margin-top:6px">${esc(why)}</div></div>`;
 }
 document.getElementById('convMem').addEventListener('click',e=>{const g=e.target.closest('[data-turn-row]');if(!g)return;TREE.follow=false;TREE.turn=g.dataset.turnRow;document.getElementById('treeFollow').setAttribute('aria-pressed','false');schedule();document.getElementById('evalTreeSec').scrollIntoView({behavior:'smooth'})});
@@ -1811,10 +1811,10 @@ function renderEnv(t,D){
 document.getElementById('envView').addEventListener('click',e=>{const g=e.target.closest('[data-env-turn]');if(!g)return;TREE.follow=false;TREE.turn=g.dataset.envTurn;document.getElementById('treeFollow').setAttribute('aria-pressed','false');schedule()});
 function renderTitle(D){
   const ps=[...new Set(D.allRuns.filter(r=>r.role!=='synthesis'&&P.includes(r.provider)).map(r=>r.provider))],el=document.getElementById('title');
-  let html=ps.length===1?`Duo <span class="muted" style="font-weight:400">·</span> <span><i class="sw" style="background:var(--${ps[0]})"></i> ${NAME[ps[0]]}</span> <span class="muted" style="font-weight:400">single-agent session</span>`
-    :'Duo <span class="muted" style="font-weight:400">·</span> <span><i class="sw" style="background:var(--codex)"></i> Codex</span> <span class="muted" style="font-weight:400">vs</span> <span><i class="sw" style="background:var(--claude)"></i> Claude</span>';
+  let html=ps.length===1?`AgentLens <span class="muted" style="font-weight:400">·</span> <span><i class="sw" style="background:var(--${ps[0]})"></i> ${NAME[ps[0]]}</span> <span class="muted" style="font-weight:400">single-agent session</span>`
+    :'AgentLens <span class="muted" style="font-weight:400">·</span> <span><i class="sw" style="background:var(--codex)"></i> Codex</span> <span class="muted" style="font-weight:400">vs</span> <span><i class="sw" style="background:var(--claude)"></i> Claude</span>';
   const envRuns=D.allRuns.filter(r=>String(r.s.mode||'').startsWith('env:'));
-  if(envRuns.length&&envRuns.length===D.allRuns.filter(r=>r.role!=='synthesis').length){const pol=[...new Set(envRuns.map(r=>r.model||NAME[r.provider]))];html=`Duo <span class="muted" style="font-weight:400">·</span> ${esc(pol.slice(0,2).join(' vs '))} <span class="muted" style="font-weight:400">RL environment</span>`}
+  if(envRuns.length&&envRuns.length===D.allRuns.filter(r=>r.role!=='synthesis').length){const pol=[...new Set(envRuns.map(r=>r.model||NAME[r.provider]))];html=`AgentLens <span class="muted" style="font-weight:400">·</span> ${esc(pol.slice(0,2).join(' vs '))} <span class="muted" style="font-weight:400">RL environment</span>`}
   if(el.dataset.v!==html){el.dataset.v=html;el.innerHTML=html}
 }
 /* ================= research-driven views (bench of 2025-2026 methods; see the research report) =================
@@ -1979,7 +1979,7 @@ function renderPatterns(){
      <span>${c.pass_rate==null?'no outcome':`pass ${pct(c.pass_rate)}`} · ${c.mean_steps_n} calls avg${c.mean_score!=null?` · judge ${c.mean_score}`:''}</span>
      ${c.new?'<em class="tag">NEW</em>':''}${c.uncovered?'<em class="tag warn">no eval coverage</em>':''}</button>`).join('');
   host.innerHTML=`<div class="at-card"><div class="env-grid"><div class="rm-scroll">${s}</div><div class="pc-list">${cards}</div></div>
-    <div class="lr-why">${R.length} runs from every stored session, ${C.length} clusters (k chosen by silhouette ${FC.silhouette}); ● Codex ■ Claude, outlined = this session. Labels name the facets that most set a cluster apart; open a run to check it, since a cluster is a hypothesis about a pattern, not proof. On the Duo benchmark these clusters recover the planted failure families with purity 0.70.</div></div>`;
+    <div class="lr-why">${R.length} runs from every stored session, ${C.length} clusters (k chosen by silhouette ${FC.silhouette}); ● Codex ■ Claude, outlined = this session. Labels name the facets that most set a cluster apart; open a run to check it, since a cluster is a hypothesis about a pattern, not proof. On the AgentLens benchmark these clusters recover the planted failure families with purity 0.70.</div></div>`;
 }
 document.getElementById('patterns').addEventListener('click',e=>{const b=e.target.closest('[data-fc]');if(b){FC_SEL=FC_SEL===+b.dataset.fc?null:+b.dataset.fc;renderPatterns();
     if(FC_SEL!=null){const c=FC.clusters.find(c=>c.id===FC_SEL),rs=FC.runs.filter(r=>r.cluster===FC_SEL);
@@ -2093,12 +2093,12 @@ function exportReport(){
   const pick=id=>{const el=document.getElementById(id);return el&&el.innerHTML.trim()?`<section>${el.outerHTML}</section>`:''};
   const styles=[...document.querySelectorAll('style')].map(x=>x.textContent).join('\n');
   const theme=document.documentElement.dataset.theme||'';
-  const html=`<!doctype html><html lang="en" data-theme="${theme}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Duo incident report · turn ${t.no}</title><style>${styles}
+  const html=`<!doctype html><html lang="en" data-theme="${theme}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AgentLens incident report · turn ${t.no}</title><style>${styles}
 body{padding:24px;max-width:1200px;margin:0 auto}section{margin:14px 0}.rail-target,.rm-hit,.vchip{cursor:default}</style></head><body>
-<h1 style="font-size:20px">Duo incident report · turn ${t.no} · ${esc(KIND_L[t.kind]||'')}</h1><p class="sub">Session ${esc(S.session||'live')} · exported ${new Date().toLocaleString()} · static snapshot from the Duo viewer; open the session in Duo for evidence.</p>
+<h1 style="font-size:20px">AgentLens incident report · turn ${t.no} · ${esc(KIND_L[t.kind]||'')}</h1><p class="sub">Session ${esc(S.session||'live')} · exported ${new Date().toLocaleString()} · static snapshot from the AgentLens viewer; open the session in AgentLens for evidence.</p>
 ${pick('alarms')}${pick('verdictCard')}${pick('railSummary')}<h2>Tree</h2>${pick('evalTree')}<h2>Progress</h2>${pick('progressLane')}<h2>Security &amp; tool calls</h2>${pick('secPanel')}<h2>Reasoning, memory &amp; context</h2>${pick('reasonMem')}
 </body></html>`;
-  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([html],{type:'text/html'}));a.download=`duo-incident-turn${t.no}.html`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([html],{type:'text/html'}));a.download=`agentlens-incident-turn${t.no}.html`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),4000);
 }
 document.getElementById('reportBtn').onclick=exportReport;
 /* search palette: '/' anywhere */
@@ -2126,10 +2126,10 @@ document.getElementById('palQ').addEventListener('input',()=>{PAL_SEL=0;palRende
 document.getElementById('palR').addEventListener('click',e=>{const b=e.target.closest('[data-k]');if(b)palGo(+b.dataset.k)});
 document.getElementById('palette').addEventListener('click',e=>{if(e.target.id==='palette')palClose()});
 
-/* ---------- fork from here (duo --fork-step; replay.py) ---------- */
+/* ---------- fork from here (agentlens --fork-step; replay.py) ---------- */
 function forkSection(r,l,i){
   const t=S.spans.get(r.turn),mode=t?.mode||'',res=S.A.forkStep.filter(e=>String(e.item_id)===String(l.eid));
-  const cmd=`duo --fork-step ${String(r.turn).slice(0,8)} ${l.eid} --samples 5 --edit "…what to do here instead…"`;
+  const cmd=`agentlens --fork-step ${String(r.turn).slice(0,8)} ${l.eid} --samples 5 --edit "…what to do here instead…"`;
   let h='<h3>Fork from here</h3>';
   if(/write/.test(mode))h+='<div class="muted">Write turns cannot be forked yet: the workspace as it was at this step is not stored.</div>';
   else h+=`<p class="sub" style="margin:4px 0">Rerun ${esc(NAME[r.provider])} from call ${i+1}, doing something else here (or deciding again), 5 times, and compare the outcomes with this run. A single replay is noisy; the distribution is the answer.</p><div class="forkcmd"><code>${esc(cmd)}</code><button class="vchip" data-copy="${esc(cmd)}">copy</button></div>`;
@@ -2148,7 +2148,7 @@ function calBadge(cal,f){const m=cal?.fields?.[f];if(!m)return '<span class="mut
 function readerCard(t){
   const runs=new Set(P.flatMap(p=>t.by[p].map(r=>r.id))),mine=e=>e.turn_id===t.id||runs.has(e.span_id);
   const R=S.A.readerRead.filter(mine),Q=S.A.readerAsk.filter(mine),chip=(ref,label)=>ref==null?'':`<button class="vchip" data-vref="${ref}">${esc(label||'step')}</button>`;
-  if(!R.length&&!Q.length){const cmd=`duo --read-turn ${String(t.id).slice(0,8)}`;return `<div class="rdr"><div class="rh"><b>READER</b><span class="muted">Have a model read this run and tag what went wrong, with each label's measured accuracy.</span></div><div class="forkcmd" style="margin-top:4px"><code>${esc(cmd)}</code><button class="vchip" data-copy="${esc(cmd)}">copy</button></div></div>`}
+  if(!R.length&&!Q.length){const cmd=`agentlens --read-turn ${String(t.id).slice(0,8)}`;return `<div class="rdr"><div class="rh"><b>READER</b><span class="muted">Have a model read this run and tag what went wrong, with each label's measured accuracy.</span></div><div class="forkcmd" style="margin-top:4px"><code>${esc(cmd)}</code><button class="vchip" data-copy="${esc(cmd)}">copy</button></div></div>`}
   let h='';
   for(const e of R){const d=e.data||{},cal=d.calibration;
     if(d.error){h+=`<div class="rdr"><div class="rh"><b>READER · ${esc(NAME[e.provider]||e.provider)}</b><span class="bad">${esc(d.error)}</span></div></div>`;continue}
@@ -2156,15 +2156,15 @@ function readerCard(t){
     if((d.mast||[]).length)h+='<div class="tags">'+d.mast.map(m=>`<div class="tg"><i>${esc(m.tag)}${m.root?' · '+esc(m.root.replace(/_/g,' ')):''}</i>${chip(m.ref,'step')} <span>${esc(m.why)}</span></div>`).join('')+'</div>';
     const got=[];
     if((d.loops||[]).length)got.push(['loops','loop from '+d.loops.map(l=>chip(l.start_ref)).join(' ')]);
-    if(d.look_first_ref!=null)got.push(['look_first_ref','look first '+chip(d.look_first_ref)]);
+    if(d.look_first_ref!=null)got.push(['look_first_ref',chip(d.look_first_ref)]);
     if((d.flags||[]).length)got.push(['flags',d.flags.map(f=>esc(f.replace(/_/g,' '))).join(', ')]);
     if((d.hacks||[]).length)got.push(['hacks',d.hacks.map(x=>chip(x.ref,x.signals.join('+').replace(/_/g,' '))).join(' ')]);
     if((d.security||[]).length)got.push(['security',d.security.map(x=>chip(x.ref,x.category.replace(/_/g,' '))).join(' ')]);
     if((d.error_kinds||[]).length)got.push(['error_kinds',d.error_kinds.map(x=>chip(x.ref,x.kind)).join(' ')]);
     if(got.length)h+='<div class="tags">'+got.map(([f,v])=>`<div class="tg"><i>${RD_FIELD[f]}</i><span>${v}</span><span class="muted" style="margin-left:auto;font-size:11px">${calBadge(cal,f)}</span></div>`).join('')+'</div>';
-    h+=`<div class="cal">${cal?`measured on duo-bench ${esc(cal.bench_version||'')} (${esc(cal.split||'')}, ${cal.scored||0} cases, ${esc(cal.name||cal.system||'')})${cal.mock?' · MOCK pipeline check, not a model':''}`:'accuracy not measured yet: <code>python3 bench/predict_reader.py --provider claude</code>'}</div></div>`}
+    h+=`<div class="cal">${cal?`measured on agentlens-bench ${esc(cal.bench_version||'')} (${esc(cal.split||'')}, ${cal.scored||0} cases, ${esc(cal.name||cal.system||'')})${cal.mock?' · MOCK pipeline check, not a model':''}`:'accuracy not measured yet: <code>python3 bench/predict_reader.py --provider claude</code>'}</div></div>`}
   for(const e of Q){const d=e.data||{};
-    h+=`<div class="rdr q"><div class="rh"><b>ASKED</b><span>${esc(d.question||e.detail||'')}</span></div><p>${esc(d.answer||d.error||'')}</p><div class="muted" style="font-size:11px">query <code>${esc(JSON.stringify(d.query||{}))}</code> → ${(d.refs||[]).length?(d.refs||[]).slice(0,12).map(r=>chip(r)).join(' ')+' ✓ re-run by Duo':'<span class="bad">matches no step: unverified</span>'}</div></div>`}
+    h+=`<div class="rdr q"><div class="rh"><b>ASKED</b><span>${esc(d.question||e.detail||'')}</span></div><p>${esc(d.answer||d.error||'')}</p><div class="muted" style="font-size:11px">query <code>${esc(JSON.stringify(d.query||{}))}</code> → ${(d.refs||[]).length?(d.refs||[]).slice(0,12).map(r=>chip(r)).join(' ')+' ✓ re-run by AgentLens':'<span class="bad">matches no step: unverified</span>'}</div></div>`}
   return h;
 }
 document.getElementById('verdictCard').addEventListener('click',e=>{const b=e.target.closest('[data-copy]');if(!b)return;try{navigator.clipboard.writeText(b.dataset.copy);b.textContent='copied ✓'}catch(_){}});
@@ -2193,7 +2193,7 @@ function renderEvalTree(D){
   const turns=D.turns,sel=document.getElementById('treeTurn'),host=document.getElementById('evalTree');
   sel.innerHTML=turns.map(t=>`<option value="${esc(t.id)}">Turn ${t.no} · ${KIND_L[t.kind]}${t.running?' · running':''}</option>`).join('');
   const t=turns.find(t=>t.id===(TREE.follow?turns.at(-1)?.id:TREE.turn))||turns.at(-1);
-  if(!t){document.getElementById('railSummary').innerHTML='';host.innerHTML='<div class="empty" style="padding:100px 20px">Execution tracks start with your first task.<br>Agent bars and tool branches appear here as Duo works.</div>';document.getElementById('treePosition').textContent='Waiting for a task';return}
+  if(!t){document.getElementById('railSummary').innerHTML='';host.innerHTML='<div class="empty" style="padding:100px 20px">Execution tracks start with your first task.<br>Agent bars and tool branches appear here as AgentLens works.</div>';document.getElementById('treePosition').textContent='Waiting for a task';return}
   TREE.turn=t.id;sel.value=t.id;
   const present=P.filter(p=>t.by[p].some(r=>r.role!=='synthesis')),solo=present.length===1;
   document.getElementById('evalTreeSec').classList.toggle('solo',solo);document.getElementById('railSummary').classList.toggle('one',solo);
@@ -2694,7 +2694,7 @@ async function load(session){
   const isCurrent=!session||session===current;
   S.live=!qs.has('static');schedule();
   if(!S.live){setLive(false,'static snapshot');return}
-  // Always stream: the current session from memory, any stored session by tailing the trace DB (follows a duo chat running elsewhere)
+  // Always stream: the current session from memory, any stored session by tailing the trace DB (follows a agentlens chat running elsewhere)
   src=new EventSource(isCurrent?'/events':'/events?session='+encodeURIComponent(session)+'&after='+S.maxId);
   src.onopen=()=>setLive(true,isCurrent?'live':'live · following the trace DB');
   src.onmessage=m=>{try{const e=JSON.parse(m.data);ingest(e);schedule();onStream(e)}catch(e){}};src.onerror=()=>setLive(false,'reconnecting');
@@ -2709,7 +2709,7 @@ async function sessions(){
     const curTurns=(r.sessions.find(s=>s.id===r.current)||{}).turns||0;const best=r.sessions.find(s=>s.id!==r.current&&s.turns>0);
     if(!curTurns&&best){DEFAULT_SESSION=best.id}
     sel.value=FOLLOW?'__follow':(qs.get('session')||'');
-    sel.title=r.db?'Trace DB: '+r.db:'Trace DB off (DUO_TRACE_DB=off)';if(!r.db)sel.disabled=true;
+    sel.title=r.db?'Trace DB: '+r.db:'Trace DB off (AGENTLENS_TRACE_DB=off)';if(!r.db)sel.disabled=true;
   }catch(e){sel.innerHTML='<option>This session</option>';sel.disabled=true}
   if(TRACING_EXITED)sel.disabled=true;
   sel.onchange=()=>{FOLLOW=sel.value==='__follow';load(FOLLOW?DEFAULT_SESSION:(sel.value||null))};

@@ -1,4 +1,4 @@
-# duo-bench: labelled data for agent-trace analysis
+# agentlens-bench: labelled data for agent-trace analysis
 
 Synthetic, organised, labelled cases for scoring tools that read agent traces: loops, stalls, progress and regressions, sessions, reward hacking, behaviour flags, trends, answer attribution, RL rollout reliability and import fidelity. Each label comes from how the case was **planted** by `generate.py`, never from a detector's output.
 
@@ -7,7 +7,7 @@ Synthetic, organised, labelled cases for scoring tools that read agent traces: l
 ## Quickstart
 
 ```sh
-python3 duo.py --bench                 # score Duo (all splits) against the committed baseline
+python3 agentlens.py --bench                 # score AgentLens (all splits) against the committed baseline
 python3 bench/evaluate.py --split test --md report.md     # held-out split, Markdown report
 python3 bench/validate.py              # schemas + SHA-256 checksums
 python3 bench/generate.py              # rebuild bench/data (byte-identical, seed 7)
@@ -15,7 +15,7 @@ python3 bench/generate.py              # rebuild bench/data (byte-identical, see
 
 ## Score your own system
 
-Any agent-trace tool can be scored; it does not need Duo.
+Any agent-trace tool can be scored; it does not need AgentLens.
 
 1. Read the inputs, never the labels: `data/runs.jsonl` (`steps`), `data/trends.jsonl` (`records`), `data/attribution.jsonl` (`candidates`, `final`, `sentences`), the files named in `data/rollouts.json` and `data/imports.json`.
 2. Write one line per case to `predictions.jsonl`. Leave out the tasks you don't attempt:
@@ -24,13 +24,13 @@ Any agent-trace tool can be scored; it does not need Duo.
    {"id": "trend-seconds-large-n20-0", "pred": {"findings": [{"provider": "claude", "metric": "seconds", "direction": "up"}]}}
    {"id": "attr-07", "pred": {"sources": ["codex", "new", "both"]}}
    ```
-3. Validate the file, then score it, comparing against Duo's baseline if you like:
+3. Validate the file, then score it, comparing against AgentLens's baseline if you like:
    ```sh
    python3 bench/validate.py --predictions predictions.jsonl
-   python3 bench/score.py predictions.jsonl --system mytool --split test --baseline bench/baselines/duo-1.1.0.json --md mytool.md
+   python3 bench/score.py predictions.jsonl --system mytool --split test --baseline bench/baselines/agentlens-1.2.0.json --md mytool.md
    ```
 
-`predict_duo.py` is the reference adapter that turns Duo's detectors into this format.
+`predict_agentlens.py` is the reference adapter that turns AgentLens's detectors into this format.
 
 ## Files
 
@@ -38,13 +38,13 @@ Any agent-trace tool can be scored; it does not need Duo.
 |---|---|
 | `SPEC.md` | formal specification (tasks, format, metrics, targets, versioning) |
 | `CHANGELOG.md` | version history |
-| `REPORT.md` | latest Duo report (`evaluate.py --md bench/REPORT.md`) |
-| `baselines/duo-1.1.0.json` | Duo's full results at 1.0.0, used for regression checks |
+| `REPORT.md` | latest AgentLens report (`evaluate.py --md bench/REPORT.md`) |
+| `baselines/agentlens-1.2.0.json` | AgentLens's full results at 1.0.0, used for regression checks |
 | `data/` | the cases, `manifest.json` (ids, families, splits, checksums) and fixture files |
 | `schema/` | JSON Schemas for every data file and for predictions |
 | `generate.py` / `validate.py` | build the data / check schemas and checksums |
 | `score.py` | score any predictions file (Wilson and bootstrap intervals, targets, baseline Δ, Markdown) |
-| `predict_duo.py` / `evaluate.py` | Duo's adapter / adapter + scorer in one step |
+| `predict_agentlens.py` / `evaluate.py` | AgentLens's adapter / adapter + scorer in one step |
 | `export_for_labeling.py` | real stored turns → run records with suggested labels, for human labelling |
 
 The CI workflow (`.github/workflows/bench.yml`) runs the unit tests, `validate.py` and `evaluate.py --fail-on-regression` on every push and pull request.
@@ -116,7 +116,7 @@ All `*_ref` values are step `ref`s in the same record.
 
 ## Results
 
-`REPORT.md` is the latest full report: every metric with n, its 95% interval, target, status, per-family results, the trend sensitivity grid and every mismatch. `baselines/duo-1.1.0.json` holds the same results as data. At 1.0.0, Duo passes all 25 targets on every split. Four limits are reported as known: hack precision 0.667 and the `legit_tests` false-positive rate (by design), paraphrase recall 0, and 1 SD trend sensitivity 0.031. Several perfect scores rest on small n (for example 14/14 loops, Wilson lower bound 0.785), so they mean "no failure observed" rather than "proven ≥ 95%".
+`REPORT.md` is the latest full report: every metric with n, its 95% interval, target, status, per-family results, the trend sensitivity grid and every mismatch. `baselines/agentlens-1.2.0.json` holds the same results as data. At 1.0.0, AgentLens passes all 25 targets on every split. Four limits are reported as known: hack precision 0.667 and the `legit_tests` false-positive rate (by design), paraphrase recall 0, and 1 SD trend sensitivity 0.031. Several perfect scores rest on small n (for example 14/14 loops, Wilson lower bound 0.785), so they mean "no failure observed" rather than "proven ≥ 95%".
 
 ## What building it fixed
 
@@ -130,7 +130,7 @@ Running the detectors against planted labels found real bugs, now fixed:
 
 - It is synthetic, and the same author wrote the generator and the detectors, so a shared misconception could pass unnoticed. The traps, the controls and the held-out split reduce that risk but do not remove it. Real labelled runs are the remedy: `export_for_labeling.py` writes real turns with the detectors' output under `suggested`. A person fills `labels` after checking the steps and sets `"reviewed": true`; `evaluate.py --extra` scores only reviewed lines.
 - Timings, file names and outputs are invented. Prompts, model text and tool outputs are placeholders. No real user data is included.
-- The trend and attribution datasets test the statistics and the matching rule, not judge quality. Judge accuracy needs human labels (`duo --label`, `duo --calibration`).
+- The trend and attribution datasets test the statistics and the matching rule, not judge quality. Judge accuracy needs human labels (`agentlens --label`, `agentlens --calibration`).
 
 ## Schema (one run record)
 

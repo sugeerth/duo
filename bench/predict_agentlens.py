@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Run Duo's detectors over the benchmark and write predictions in the public format (bench/SPEC.md).
+"""Run AgentLens's detectors over the benchmark and write predictions in the public format (bench/SPEC.md).
 
-    python3 bench/predict_duo.py --out preds.jsonl [--extra bench/data/real/*.jsonl]
+    python3 bench/predict_agentlens.py --out preds.jsonl [--extra bench/data/real/*.jsonl]
 
 This is the reference adapter: any other system is scored the same way by writing the same predictions.jsonl
 (one {"id", "pred"} per case, schema bench/schema/prediction.schema.json) and running bench/score.py.
-`system_checks()` adds Duo-specific checks that are not part of the public tasks (viewer JS == Python attribution).
+`system_checks()` adds AgentLens-specific checks that are not part of the public tasks (viewer JS == Python attribution).
 """
 import argparse
 import json
@@ -50,7 +50,7 @@ def predict_trend(case):
     return {'findings':[{'provider':f['provider'],'metric':f['metric'],'direction':'up' if f['up'] else 'down'} for f in ins['findings'] if f['kind'] in ('trend','shift')]}
 
 def predict_attribution(case):
-    """Duo segments the answer itself; the benchmark gives the segmentation, so labels are matched by position."""
+    """AgentLens segments the answer itself; the benchmark gives the segmentation, so labels are matched by position."""
     got=attribution.attribute(case['final'],case['candidates'])
     if len(got)==len(case['sentences']):return {'sources':[g['src'] for g in got]}
     return {'sources':[attribution.attribute(s,case['candidates'])[0]['src'] if attribution.sentences(s) else 'new' for s in case['sentences']]}
@@ -118,7 +118,7 @@ def guard_checks():
     """Pre-execution guard (guard.py, block mode) replayed over the security cases, one call at a time with the run's
     earlier outputs as context: it must block every action labelled injection_followed, and no benign look-alike."""
     import os,guard
-    old=os.environ.get('DUO_GUARD');os.environ['DUO_GUARD']='block';hit=n=fb=nb=0
+    old=os.environ.get('AGENTLENS_GUARD');os.environ['AGENTLENS_GUARD']='block';hit=n=fb=nb=0
     try:
         for c in jsonl(DATA/'security.jsonl'):
             want={f['ref'] for f in c['labels']['security'] if f['category']=='injection_followed'};outs=[]
@@ -127,12 +127,12 @@ def guard_checks():
                 if s['ref'] in want:n+=1;hit+=v=='block'
                 if c['family']=='sec_benign_lookalikes':nb+=1;fb+=v=='block'
     finally:
-        if old is None:os.environ.pop('DUO_GUARD',None)
-        else:os.environ['DUO_GUARD']=old
+        if old is None:os.environ.pop('AGENTLENS_GUARD',None)
+        else:os.environ['AGENTLENS_GUARD']=old
     return {'guard.blocks_injection_followed':hit/n if n else None,'guard.false_block_rate_benign':fb/nb if nb else None}
 
 def system_checks():
-    """Duo-only checks: viewer JS attribution == attribution.py; patterns-map cluster purity on the benchmark runs."""
+    """AgentLens-only checks: viewer JS attribution == attribution.py; patterns-map cluster purity on the benchmark runs."""
     node=shutil.which('node');extra={'clusters.purity':round(cluster_purity(),4),**guard_checks()}
     if not node:return {'attribution.js_parity':None,**extra},['node not found: JS parity skipped']
     cases=jsonl(DATA/'attribution.jsonl')

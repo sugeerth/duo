@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Export real stored turns into the benchmark's run format, ready for a person to label.
 
-    python3 bench/export_for_labeling.py [--db ~/.duo/traces.db] [--session ID] [--limit 20] --out bench/data/real/todo.jsonl
+    python3 bench/export_for_labeling.py [--db ~/.agentlens/traces.db] [--session ID] [--limit 20] --out bench/data/real/todo.jsonl
 
 Each line is one model run from one turn: its tool steps (same fields as bench/data/runs.jsonl) and a `labels`
 block where every field is null, plus `suggested`: what the detectors currently say. A labeller fills `labels`

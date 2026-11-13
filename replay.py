@@ -4,7 +4,7 @@ A diagnosis ("step 8 caused the failure") is a hypothesis until changing that st
 replay is noisy (changing one step changes everything after it), so a fork runs k samples and reports the
 distribution: how many reruns did better, worse or the same as the original, against the original's judge score.
 
-    duo --fork-step TURN REF [--edit "do X instead"] [--samples 5]
+    agentlens --fork-step TURN REF [--edit "do X instead"] [--samples 5]
 
 Answer and read turns only: write turns would need the workspace as it was at that step.
 """

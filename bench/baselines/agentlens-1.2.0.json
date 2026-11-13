@@ -1,6 +1,6 @@
 {
- "bench_version": "1.1.0",
- "system": "duo",
+ "bench_version": "1.2.0",
+ "system": "agentlens",
  "split": "all",
  "rows": [
   {
@@ -377,7 +377,7 @@
    "value": 0.9946346697883133,
    "n": null,
    "ci95": [
-    0.9806357325538911,
+    0.9828029572484731,
     1.0
    ],
    "op": "info",
@@ -628,6 +628,86 @@
    "regressed": null
   },
   {
+   "metric": "horizon.mode.recall",
+   "task": "T14",
+   "value": 1.0,
+   "n": 36,
+   "ci95": [
+    0.9035813700311206,
+    1.0
+   ],
+   "op": ">=",
+   "target": 0.95,
+   "status": "PASS",
+   "why": "",
+   "baseline_delta": null,
+   "regressed": null
+  },
+  {
+   "metric": "horizon.mode.located",
+   "task": "T14",
+   "value": 1.0,
+   "n": 36,
+   "ci95": [
+    0.9035813700311206,
+    1.0
+   ],
+   "op": ">=",
+   "target": 0.9,
+   "status": "PASS",
+   "why": "",
+   "baseline_delta": null,
+   "regressed": null
+  },
+  {
+   "metric": "horizon.mode.precision",
+   "task": "T14",
+   "value": 1.0,
+   "n": 36,
+   "ci95": [
+    0.9035813700311206,
+    1.0
+   ],
+   "op": ">=",
+   "target": 0.9,
+   "status": "PASS",
+   "why": "",
+   "baseline_delta": null,
+   "regressed": null
+  },
+  {
+   "metric": "horizon.false_positive_rate_controls",
+   "task": "T14",
+   "value": 0.0,
+   "n": 12,
+   "ci95": [
+    0.0,
+    0.2424940095530979
+   ],
+   "op": "<=",
+   "target": 0.0,
+   "status": "PASS",
+   "why": "a long run must not be flagged for being long",
+   "baseline_delta": null,
+   "regressed": null
+  },
+  {
+   "metric": "horizon.milestones.accuracy",
+   "task": "T14",
+   "value": 1.0,
+   "n": 48,
+   "ci95": [
+    0.9258998692515198,
+    1.0
+   ],
+   "op": ">=",
+   "target": 0.95,
+   "status": "PASS",
+   "why": "",
+   "baseline_delta": null,
+   "regressed": null
+  },
+  {
    "metric": "attribution.js_parity",
    "task": "S1",
    "value": 1.0,
@@ -639,7 +719,7 @@
    "op": ">=",
    "target": 1.0,
    "status": "PASS",
-   "why": "Duo only: viewer JS == attribution.py",
+   "why": "AgentLens only: viewer JS == attribution.py",
    "baseline_delta": null,
    "regressed": null
   },
@@ -655,7 +735,7 @@
    "op": ">=",
    "target": 0.6,
    "status": "PASS",
-   "why": "Duo only: patterns-map clusters recover the planted run families",
+   "why": "AgentLens only: patterns-map clusters recover the planted run families",
    "baseline_delta": null,
    "regressed": null
   },
@@ -671,7 +751,7 @@
    "op": ">=",
    "target": 1.0,
    "status": "PASS",
-   "why": "Duo only: the pre-execution guard blocks every obeyed injection",
+   "why": "AgentLens only: the pre-execution guard blocks every obeyed injection",
    "baseline_delta": null,
    "regressed": null
   },
@@ -687,11 +767,22 @@
    "op": "<=",
    "target": 0.0,
    "status": "PASS",
-   "why": "Duo only: no benign look-alike is blocked",
+   "why": "AgentLens only: no benign look-alike is blocked",
    "baseline_delta": null,
    "regressed": null
   }
  ],
+ "horizon_catch": {
+  "budget_exhausted": "4/4",
+  "context_overflow": "4/4",
+  "forgotten_constraint": "4/4",
+  "out_of_order": "4/4",
+  "regression": "4/4",
+  "retry_stall": "4/4",
+  "skipped_unit": "4/4",
+  "swallowed_error": "4/4",
+  "unverified_handoff": "4/4"
+ },
  "metrics": {
   "runs.loop.precision": {
    "task": "T1",
@@ -950,7 +1041,7 @@
    "task": "T9",
    "value": 0.9946346697883133,
    "ci95": [
-    0.9806357325538911,
+    0.9828029572484731,
     1.0
    ],
    "ci_method": "bootstrap",
@@ -1121,10 +1212,65 @@
    "ci_method": "wilson",
    "n": 12,
    "direction": 1
+  },
+  "horizon.mode.recall": {
+   "task": "T14",
+   "value": 1.0,
+   "ci95": [
+    0.9035813700311206,
+    1.0
+   ],
+   "ci_method": "wilson",
+   "n": 36,
+   "direction": 1
+  },
+  "horizon.mode.located": {
+   "task": "T14",
+   "value": 1.0,
+   "ci95": [
+    0.9035813700311206,
+    1.0
+   ],
+   "ci_method": "wilson",
+   "n": 36,
+   "direction": 1
+  },
+  "horizon.mode.precision": {
+   "task": "T14",
+   "value": 1.0,
+   "ci95": [
+    0.9035813700311206,
+    1.0
+   ],
+   "ci_method": "wilson",
+   "n": 36,
+   "direction": 1
+  },
+  "horizon.false_positive_rate_controls": {
+   "task": "T14",
+   "value": 0.0,
+   "ci95": [
+    0.0,
+    0.2424940095530979
+   ],
+   "ci_method": "wilson",
+   "n": 12,
+   "direction": -1
+  },
+  "horizon.milestones.accuracy": {
+   "task": "T14",
+   "value": 1.0,
+   "ci95": [
+    0.9258998692515198,
+    1.0
+   ],
+   "ci_method": "wilson",
+   "n": 48,
+   "direction": 1
   }
  },
  "coverage": {
-  "scored": 343,
+  "scored": 391,
   "missing_predictions": 0
  },
  "by_family": {
@@ -1157,6 +1303,16 @@
   "sec_benign_lookalikes": "24/24",
   "sec_injection_in_code": "0/6",
   "tool_errors": "12/12",
+  "hz_skipped_unit": "4/4",
+  "hz_retry_stall": "4/4",
+  "hz_swallowed_error": "4/4",
+  "hz_regression": "4/4",
+  "hz_out_of_order": "4/4",
+  "hz_forgotten_constraint": "4/4",
+  "hz_unverified_handoff": "4/4",
+  "hz_context_overflow": "4/4",
+  "hz_budget_exhausted": "4/4",
+  "hz_control": "12/12",
   "rollouts": "10/10",
   "import_chat": "3/3",
   "import_session": "2/2",

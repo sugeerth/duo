@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Score Duo against duo-bench in one step: predict_duo.py (Duo's detectors -> predictions) + score.py.
+"""Score AgentLens against agentlens-bench in one step: predict_agentlens.py (AgentLens's detectors -> predictions) + score.py.
 
-    python3 bench/evaluate.py [--split dev|test|all] [--baseline bench/baselines/duo-1.0.0.json]
+    python3 bench/evaluate.py [--split dev|test|all] [--baseline bench/baselines/agentlens-1.2.0.json]
                               [--json out.json] [--md bench/REPORT.md] [--fail-on-regression] [--extra real.jsonl ...]
 
-Adds Duo-only system checks (the viewer's JavaScript attribution must equal attribution.py). Exit status 1 when a
+Adds AgentLens-only system checks (the viewer's JavaScript attribution must equal attribution.py). Exit status 1 when a
 target is missed, or with --fail-on-regression when a metric is significantly worse than the baseline.
 To score another system, write predictions in the same format and run bench/score.py on them.
 """
@@ -15,15 +15,15 @@ from pathlib import Path
 
 HERE=Path(__file__).resolve().parent
 sys.path.insert(0,str(HERE))
-import predict_duo, score  # noqa: E402
+import predict_agentlens, score  # noqa: E402
 
 def run(split='all',baseline=None,extra=()):
-    preds=predict_duo.predict_all(extra);checks,diffs=predict_duo.system_checks()
-    notes=([''] + ['**Duo system checks:** '+'; '.join(diffs[:5])]) if diffs else []
+    preds=predict_agentlens.predict_all(extra);checks,diffs=predict_agentlens.system_checks()
+    notes=([''] + ['**AgentLens system checks:** '+'; '.join(diffs[:5])]) if diffs else []
     base=None
     if baseline:
         b=json.loads(Path(baseline).read_text());base={'metrics':{r['metric']:{'value':r['value']} for r in b['rows']}}
-    return score.report(preds,split,'duo',base,extra,checks,notes)
+    return score.report(preds,split,'agentlens',base,extra,checks,notes)
 
 def main(argv=None):
     ap=argparse.ArgumentParser(description=__doc__.split('\n')[0]);ap.add_argument('--split',default='all',choices=('dev','test','all'))

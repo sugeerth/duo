@@ -1,14 +1,14 @@
 """Trace reader: an LLM reads a whole run and writes what a person would want to know, in a checkable shape.
 
-    duo --read-turn TURN [--reader claude|codex]        read one stored turn, emit a reader.read event (viewer card)
-    python3 bench/predict_reader.py --provider claude    measure it: write duo-bench predictions, score with score.py
+    agentlens --read-turn TURN [--reader claude|codex]        read one stored turn, emit a reader.read event (viewer card)
+    python3 bench/predict_reader.py --provider claude    measure it: write agentlens-bench predictions, score with score.py
 
 The reader answers in JSON with two kinds of field:
   * prose a person reads: summary, outcome, MAST-style failure tags with the step they point at, suspect steps;
-  * the duo-bench public fields (loops, look_first_ref, flags, hacks, security, error_kinds). These are scored against
+  * the agentlens-bench public fields (loops, look_first_ref, flags, hacks, security, error_kinds). These are scored against
     the labelled benchmark, so every label the reader produces carries a measured accuracy, not a promise.
 
-Questions (`ask`) are answered with a QUERY over the steps (tool, target regex, ok), which Duo runs itself: the answer
+Questions (`ask`) are answered with a QUERY over the steps (tool, target regex, ok), which AgentLens runs itself: the answer
 is shown with the steps the query actually matched, so it can be re-run and checked, and an answer whose query matches
 nothing is marked unverified.
 
@@ -141,7 +141,7 @@ def read(steps,caller,request=None,answer=None,hints=False):
     return got if got is not None else {'error':'reader reply was not valid JSON','raw':str(text or '')[:400]}
 
 def bench_pred(reading,kind='run'):
-    """The public duo-bench prediction for one case (bench/SPEC.md); errors become an empty prediction (not attempted)."""
+    """The public agentlens-bench prediction for one case (bench/SPEC.md); errors become an empty prediction (not attempted)."""
     if not reading or 'error' in reading:return {}
     if kind=='security':return {'security':reading['security'],'error_kinds':reading['error_kinds']}
     return {k:reading[k] for k in ('loops','look_first_ref','flags','hacks')}
@@ -149,7 +149,7 @@ def bench_pred(reading,kind='run'):
 # ------------------------------------------------------------------ questions with reproducible queries
 ASK='''Answer a question about an AI agent's trajectory. Reply with JSON only:
 {"answer": "<= 3 sentences", "query": {"tool": "<tool name regex or null>", "target": "<regex over the step target or null>", "ok": true|false|null}}
-The query must select exactly the steps your answer rests on; Duo runs it against the trace and shows the matches.'''
+The query must select exactly the steps your answer rests on; AgentLens runs it against the trace and shows the matches.'''
 
 def run_query(q,steps):
     """Deterministic: the steps a query selects. Bad regexes select nothing."""

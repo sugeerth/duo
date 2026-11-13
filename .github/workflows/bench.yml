@@ -1,5 +1,5 @@
 name: bench
-# Unit tests, data validation, and duo-bench against the committed baseline: fails on a missed target or a
+# Unit tests, data validation, and agentlens-bench against the committed baseline: fails on a missed target or a
 # statistically significant regression (bench/SPEC.md §6).
 on:
   push:
@@ -17,11 +17,11 @@ jobs:
         with:
           node-version: '20'
       - name: Unit tests
-        run: python3 test_duo.py
+        run: python3 test_agentlens.py
       - name: Validate data, schemas and checksums
         run: python3 bench/validate.py
-      - name: Score Duo (fail on target miss or regression)
-        run: python3 bench/evaluate.py --baseline bench/baselines/duo-1.1.0.json --fail-on-regression --md bench-report.md
+      - name: Score AgentLens (fail on target miss or regression)
+        run: python3 bench/evaluate.py --baseline bench/baselines/agentlens-1.2.0.json --fail-on-regression --md bench-report.md
       - name: Publish report
         if: always()
         run: cat bench-report.md >> "$GITHUB_STEP_SUMMARY"

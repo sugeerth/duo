@@ -1,4 +1,4 @@
-"""Headless native agents with approvals rendered by the Duo host."""
+"""Headless native agents with approvals rendered by the AgentLens host."""
 import asyncio
 from collections import deque
 import json
@@ -59,7 +59,7 @@ class CodexBridge:
         def errors():
             for line in self.proc.stderr:self.errors.append(line.rstrip())
         threading.Thread(target=reader,daemon=True).start();threading.Thread(target=errors,daemon=True).start()
-        self.rpc('initialize',{'clientInfo':{'name':'duo','title':'Duo terminal','version':'0.3.0'}})
+        self.rpc('initialize',{'clientInfo':{'name':'duo','title':'AgentLens terminal','version':'0.3.0'}})
         self.send({'method':'initialized','params':{}})
     def send(self,message):
         self.proc.stdin.write(json.dumps(message)+'\n');self.proc.stdin.flush()
@@ -187,7 +187,7 @@ def claude_run(prompt,cwd,approve,notice,readonly=False,timeout=300,model=None):
             allowed=approve('Claude',tool,arguments)
             emit('approval.resolved','claude',tool=tool,status='accepted' if allowed else 'declined')
             if allowed:return PermissionResultAllow(updated_input=arguments)
-            return PermissionResultDeny(message='Declined in Duo')
+            return PermissionResultDeny(message='Declined in AgentLens')
         options=ClaudeAgentOptions(cwd=str(cwd),cli_path=shutil.which('claude'),permission_mode='default',setting_sources=['user','project','local'],can_use_tool=permission,model=model,hooks={'PreToolUse':[HookMatcher(matcher=None,hooks=[guard.claude_pre_tool_hook(HUB,emit)])]},extra_args={'no-session-persistence':None},stderr=lambda line:None)
         if readonly:
             options.tools=['Read','Glob','Grep','WebSearch','WebFetch']

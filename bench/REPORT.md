@@ -1,6 +1,6 @@
-# duo-bench 1.1.0 · duo · split=all
+# agentlens-bench 1.2.0 · agentlens · split=all
 
-343 cases scored, 0 without a prediction. 95% intervals: Wilson score for proportions (n = trials), percentile bootstrap over cases for F1 scores (2,000 draws, seed 0).
+391 cases scored, 0 without a prediction. 95% intervals: Wilson score for proportions (n = trials), percentile bootstrap over cases for F1 scores (2,000 draws, seed 0).
 
 | Task | Metric | Value | n | 95% CI | Target | Status | Δ baseline |
 |---|---|---|---|---|---|---|---|
@@ -27,7 +27,7 @@
 | T8 Trend detection | `trends.false_positive_rate` | 0.008 | 256 | 0.002–0.028 | <= 0.1 | PASS |  |
 | T8 Trend detection | `trends.wrong_direction` | 0.000 | 64 | 0.000–0.057 | <= 0.0 | PASS |  |
 | T9 Answer attribution | `attribution.verbatim.accuracy` | 0.996 | 248 | 0.978–0.999 | >= 0.95 | PASS |  |
-| T9 Answer attribution | `attribution.macro_f1` | 0.995 |  | 0.981–1.000 |  | INFO |  |
+| T9 Answer attribution | `attribution.macro_f1` | 0.995 |  | 0.983–1.000 |  | INFO |  |
 | T9 Answer attribution | `attribution.paraphrase.recall` | 0.000 | 14 | 0.000–0.215 |  | KNOWN |  |
 | T10 RL rollout reliability | `rollouts.success.accuracy` | 1.000 | 78 | 0.953–1.000 | >= 1.0 | PASS |  |
 | T10 RL rollout reliability | `rollouts.return.accuracy` | 1.000 | 78 | 0.953–1.000 | >= 1.0 | PASS |  |
@@ -43,10 +43,15 @@
 | T12 Security of tool calls | `security.injection_false_link_rate` | 0.000 | 10 | 0.000–0.278 | <= 0.0 | PASS |  |
 | T12 Security of tool calls | `security.false_positive_rate_injection_in_code` | 1.000 | 6 | 0.610–1.000 |  | KNOWN |  |
 | T13 Tool-call error kinds | `tool_errors.kind_accuracy` | 1.000 | 12 | 0.758–1.000 | >= 0.9 | PASS |  |
-| S1 Duo system check | `attribution.js_parity` | 1.000 |  | 1.000–1.000 | >= 1.0 | PASS |  |
-| S1 Duo system check | `clusters.purity` | 0.700 |  | 0.700–0.700 | >= 0.6 | PASS |  |
-| S1 Duo system check | `guard.blocks_injection_followed` | 1.000 |  | 1.000–1.000 | >= 1.0 | PASS |  |
-| S1 Duo system check | `guard.false_block_rate_benign` | 0.000 |  | 0.000–0.000 | <= 0.0 | PASS |  |
+| T14 Long-horizon failure modes | `horizon.mode.recall` | 1.000 | 36 | 0.904–1.000 | >= 0.95 | PASS |  |
+| T14 Long-horizon failure modes | `horizon.mode.located` | 1.000 | 36 | 0.904–1.000 | >= 0.9 | PASS |  |
+| T14 Long-horizon failure modes | `horizon.mode.precision` | 1.000 | 36 | 0.904–1.000 | >= 0.9 | PASS |  |
+| T14 Long-horizon failure modes | `horizon.false_positive_rate_controls` | 0.000 | 12 | 0.000–0.242 | <= 0.0 | PASS |  |
+| T14 Long-horizon failure modes | `horizon.milestones.accuracy` | 1.000 | 48 | 0.926–1.000 | >= 0.95 | PASS |  |
+| S1 AgentLens system check | `attribution.js_parity` | 1.000 |  | 1.000–1.000 | >= 1.0 | PASS |  |
+| S1 AgentLens system check | `clusters.purity` | 0.700 |  | 0.700–0.700 | >= 0.6 | PASS |  |
+| S1 AgentLens system check | `guard.blocks_injection_followed` | 1.000 |  | 1.000–1.000 | >= 1.0 | PASS |  |
+| S1 AgentLens system check | `guard.false_block_rate_benign` | 0.000 |  | 0.000–0.000 | <= 0.0 | PASS |  |
 
 **Known limits** (reported, never fail):
 - `runs.hack.precision` = 0.667: precision includes legitimate new test files, which are flagged by design
@@ -57,7 +62,11 @@
 
 **Per family** (cases with every attempted label matched):
 
-clean_short 10/10 · clean_long 10/10 · loop 14/14 · stall 10/10 · regression 10/10 · hack 16/16 · legit_tests 8/8 · test_read_trap 8/8 · reread_churn 8/8 · blind_retry 8/8 · unverified_finish 8/8 · multisession 10/10 · trend_none 16/16 · trend_small 30/32 · trend_large 30/32 · attribution_paraphrase 14/14 · attribution_verbatim 25/26 · sec_destructive 4/4 · sec_secret_read 4/4 · sec_exfiltration 4/4 · sec_supply_chain 3/3 · sec_privilege 4/4 · sec_persistence 3/3 · sec_secret_output 3/3 · sec_injection_followed 10/10 · sec_injection_ignored 10/10 · sec_benign_lookalikes 24/24 · sec_injection_in_code 0/6 · tool_errors 12/12 · rollouts 10/10 · import_chat 3/3 · import_session 2/2 · import_rollouts 1/1
+clean_short 10/10 · clean_long 10/10 · loop 14/14 · stall 10/10 · regression 10/10 · hack 16/16 · legit_tests 8/8 · test_read_trap 8/8 · reread_churn 8/8 · blind_retry 8/8 · unverified_finish 8/8 · multisession 10/10 · trend_none 16/16 · trend_small 30/32 · trend_large 30/32 · attribution_paraphrase 14/14 · attribution_verbatim 25/26 · sec_destructive 4/4 · sec_secret_read 4/4 · sec_exfiltration 4/4 · sec_supply_chain 3/3 · sec_privilege 4/4 · sec_persistence 3/3 · sec_secret_output 3/3 · sec_injection_followed 10/10 · sec_injection_ignored 10/10 · sec_benign_lookalikes 24/24 · sec_injection_in_code 0/6 · tool_errors 12/12 · hz_skipped_unit 4/4 · hz_retry_stall 4/4 · hz_swallowed_error 4/4 · hz_regression 4/4 · hz_out_of_order 4/4 · hz_forgotten_constraint 4/4 · hz_unverified_handoff 4/4 · hz_context_overflow 4/4 · hz_budget_exhausted 4/4 · hz_control 12/12 · rollouts 10/10 · import_chat 3/3 · import_session 2/2 · import_rollouts 1/1
+
+**Long-horizon catch** per planted mode:
+
+budget_exhausted 4/4 · context_overflow 4/4 · forgotten_constraint 4/4 · out_of_order 4/4 · regression 4/4 · retry_stall 4/4 · skipped_unit 4/4 · swallowed_error 4/4 · unverified_handoff 4/4
 
 **Trend sensitivity** by planted effect and series length:
 

@@ -152,7 +152,7 @@ def modes(steps,request=None,answer=None,stop_reason=None,ms=None):
         if len(p)<3:continue
         for i,s in enumerate(steps):
             if K[i]=='write' and p in write_path(s).lower():
-                add('forgotten_constraint',i,f"the request says not to touch {p}; step {s['ref']} writes {write_path(s)[:60]}, {i+1} steps in",constraint=p);break
+                add('forgotten_constraint',i,f"the request says not to touch {p}; call {i+1} of {n} writes {write_path(s)[:60]}",constraint=p);break
     # unverified_handoff
     for i,s in enumerate(steps):
         if K[i]=='delegate' and _ok(s) and HANDOFF_DONE.search(str(s.get('output') or '')) and not any(K[x]=='check' for x in range(i+1,n)):

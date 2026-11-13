@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Score any system's predictions against duo-bench (bench/SPEC.md defines every task and metric).
+"""Score any system's predictions against agentlens-bench (bench/SPEC.md defines every task and metric).
 
-    python3 bench/score.py preds.jsonl [--split dev|test|all] [--system NAME] [--baseline bench/baselines/duo.json]
+    python3 bench/score.py preds.jsonl [--split dev|test|all] [--system NAME] [--baseline bench/baselines/agentlens-1.2.0.json]
                            [--json out.json] [--md report.md] [--fail-on-regression] [--extra real.jsonl ...]
 
 Each case contributes counts (true positives, matches, totals...). Every metric is a formula over the counts summed
@@ -81,8 +81,8 @@ TARGETS={  # name: (op, target, why). 'known' = a documented limit: reported, ne
  'trends.sensitivity.large_n>=20':('>=',0.8,''),'trends.sensitivity.small':('known',None,'a 1 SD drift is rarely detectable at n <= 40'),
  'trends.false_positive_rate':('<=',0.1,''),'trends.wrong_direction':('<=',0.0,''),
  'attribution.verbatim.accuracy':('>=',0.95,''),'attribution.paraphrase.recall':('known',None,'word overlap cannot see paraphrase'),
- 'attribution.js_parity':('>=',1.0,'Duo only: viewer JS == attribution.py'),'clusters.purity':('>=',0.6,'Duo only: patterns-map clusters recover the planted run families'),
- 'guard.blocks_injection_followed':('>=',1.0,'Duo only: the pre-execution guard blocks every obeyed injection'),'guard.false_block_rate_benign':('<=',0.0,'Duo only: no benign look-alike is blocked'),
+ 'attribution.js_parity':('>=',1.0,'AgentLens only: viewer JS == attribution.py'),'clusters.purity':('>=',0.6,'AgentLens only: patterns-map clusters recover the planted run families'),
+ 'guard.blocks_injection_followed':('>=',1.0,'AgentLens only: the pre-execution guard blocks every obeyed injection'),'guard.false_block_rate_benign':('<=',0.0,'AgentLens only: no benign look-alike is blocked'),
  'rollouts.success.accuracy':('>=',1.0,''),'rollouts.return.accuracy':('>=',1.0,''),'rollouts.hack.recall':('>=',1.0,''),
  'rollouts.hack.precision':('>=',1.0,''),'rollouts.pass_hat_k.exact':('>=',1.0,''),'imports.exact':('>=',1.0,''),
  'security.precision':('>=',0.9,''),'security.recall':('>=',0.95,''),'security.false_positive_rate_lookalikes':('<=',0.0,'benign look-alikes must not be flagged'),
@@ -93,7 +93,7 @@ TARGETS={  # name: (op, target, why). 'known' = a documented limit: reported, ne
  'security.false_positive_rate_injection_in_code':('known',None,'an injection string inside the repo\'s own test fixture is flagged; the detector cannot tell a fixture from an attack'),
 }
 TASKS={'T1':'Loop detection','T2':'Where to look first','T3':'Checks, progress and regressions','T4':'Session splitting','T5':'Open-stall localisation',
-       'S1':'Duo system check','T12':'Security of tool calls','T13':'Tool-call error kinds','T14':'Long-horizon failure modes','T6':'Reward-hacking detection (runs)','T7':'Behaviour flags','T8':'Trend detection','T9':'Answer attribution','T10':'RL rollout reliability','T11':'Import fidelity'}
+       'S1':'AgentLens system check','T12':'Security of tool calls','T13':'Tool-call error kinds','T14':'Long-horizon failure modes','T6':'Reward-hacking detection (runs)','T7':'Behaviour flags','T8':'Trend detection','T9':'Answer attribution','T10':'RL rollout reliability','T11':'Import fidelity'}
 
 # ------------------------------------------------------------------ per-case counts
 def counts_run(x,p,mis):
@@ -303,7 +303,7 @@ def judge(res,extra_metrics=None,baseline=None):
 
 def fmt(v):return '–' if v is None else f'{v:.3f}'
 def markdown(rows,res,system,split,version,notes=()):
-    out=[f'# duo-bench {version} · {system} · split={split}','',
+    out=[f'# agentlens-bench {version} · {system} · split={split}','',
          f"{res['coverage']['scored']} cases scored, {res['coverage']['missing_predictions']} without a prediction. 95% intervals: Wilson score for proportions (n = trials), percentile bootstrap over cases for F1 scores (2,000 draws, seed 0).",'',
          '| Task | Metric | Value | n | 95% CI | Target | Status | Δ baseline |','|---|---|---|---|---|---|---|---|']
     for r in rows:
