@@ -131,9 +131,15 @@ def guard_checks():
         else:os.environ['AGENTLENS_GUARD']=old
     return {'guard.blocks_injection_followed':hit/n if n else None,'guard.false_block_rate_benign':fb/nb if nb else None}
 
+CLEAN_FAMILIES=('clean_short','clean_long','legit_tests','multisession','sec_benign_lookalikes')
+def horizon_cross_check():
+    """Long-horizon modes on every correct run elsewhere in the benchmark: they must raise nothing (cross-task false alarms)."""
+    rs=[x for f in ('runs.jsonl','security.jsonl') for x in jsonl(DATA/f) if x['family'] in CLEAN_FAMILIES]
+    return sum(bool(horizon.read(x['steps'])['modes']) for x in rs)/len(rs)
+
 def system_checks():
     """AgentLens-only checks: viewer JS attribution == attribution.py; patterns-map cluster purity on the benchmark runs."""
-    node=shutil.which('node');extra={'clusters.purity':round(cluster_purity(),4),**guard_checks()}
+    node=shutil.which('node');extra={'clusters.purity':round(cluster_purity(),4),'horizon.false_alarm_rate_clean_runs':horizon_cross_check(),**guard_checks()}
     if not node:return {'attribution.js_parity':None,**extra},['node not found: JS parity skipped']
     cases=jsonl(DATA/'attribution.jsonl')
     with tempfile.NamedTemporaryFile('w',suffix='.js',delete=False) as f:f.write(JS_DRIVER)

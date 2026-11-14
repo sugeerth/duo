@@ -11,9 +11,11 @@ check. This module reads one model's tool steps for a turn, deterministically, t
 2. LONG-HORIZON FAILURE MODES, each with the step where it shows and the rule that found it:
      skipped_unit          a planned unit never reached, and the final answer claims the work is done
      retry_stall           the same failing call re-issued RETRY_MIN+ times, then abandoned (never succeeds)
-     swallowed_error       a check or write fails and its target is never returned to
+     swallowed_error       a check or write fails, its target is never returned to, and the agent moved on (wrote,
+                           shipped or claimed done); a failing check in a read-only diagnosis is information, not this
      regression            a check passes, a later write follows, and that check is never re-run
-     out_of_order          shipped (commit/push/deploy/publish) after a write with no passing check in between
+     out_of_order          shipped (commit/push/deploy/publish) after a code write with no passing check in between
+                           (removing build output is not a code write)
      forgotten_constraint  the request says not to touch X; a write to X comes later
      unverified_handoff    a sub-agent reports done and nothing checks after it
      context_overflow      a stretch of REDERIVE_MIN+ calls that repeat earlier successful calls, REDERIVE_GAP+ steps later
@@ -59,6 +61,12 @@ def write_path(s):
     if s.get('tool') in ('Edit','Write','MultiEdit','NotebookEdit','fileChange','apply_patch'):return t.split(',')[0].strip()
     hits=PATH.findall(t)
     return hits[-1] if hits else t
+
+BUILD_DIR=re.compile(r'(^|/)(build|dist|out|node_modules|\.cache|__pycache__|target|coverage)(/|$)')
+def code_write(s):
+    """A write that changes code or docs (a file path), not cleaning build output or making a directory."""
+    p=write_path(s)
+    return bool(PATH.search(p)) and not BUILD_DIR.search(p)
 
 def _key(s):
     k=kind(s)
@@ -125,8 +133,9 @@ def modes(steps,request=None,answer=None,stop_reason=None,ms=None):
         if _ok(s) or K[i] not in ('check','write') or keys[i] in stalled_keys:continue
         tgt=write_path(s) if K[i]=='write' else keys[i][1]
         later=steps[i+1:]
-        back=any(_key(x)==keys[i] or (K[i]=='write' and kind(x)=='write' and write_path(x)==tgt) for x in later)
-        if not back and i<n-1:add('swallowed_error',i,f"{'check' if K[i]=='check' else 'write'} failed and was never returned to: {str(tgt)[:80]}")
+        back=any(_key(x)==keys[i] or (K[i]=='write' and kind(x)=='write' and write_path(x)==tgt) or (K[i]=='check' and kind(x)=='check' and not PATH.search(_key(x)[1])) for x in later)  # a later whole-suite run covers a failed check
+        moved_on=any(K[x] in ('write','ship') for x in range(i+1,n)) or bool(answer and CLAIM_DONE.search(str(answer)))
+        if not back and i<n-1 and moved_on:add('swallowed_error',i,f"{'check' if K[i]=='check' else 'write'} failed and was never returned to: {str(tgt)[:80]}")
     # regression: a file written, then a check C passes, then the file is written again late, and after that C is never
     # re-run and no whole-suite check runs (some other check does, so the agent believed it verified)
     full=lambda i:K[i]=='check' and not PATH.search(keys[i][1])
@@ -143,7 +152,7 @@ def modes(steps,request=None,answer=None,stop_reason=None,ms=None):
     # out_of_order: ship after a write with no passing check between
     w=None
     for i,k in enumerate(K):
-        if k=='write':w=i
+        if k=='write' and code_write(steps[i]):w=i
         elif k=='check' and _ok(steps[i]):w=None
         elif k=='ship' and w is not None:add('out_of_order',i,'shipped before the latest write was checked',write_ref=steps[w]['ref']);break
     # forgotten_constraint

@@ -31,6 +31,7 @@ import judge as evaljudge
 import analysis
 import longrun
 import horizon
+import fleet
 import longterm
 import facets
 import guard
@@ -919,6 +920,7 @@ def chat():
     HUB.routes['/policy']=lambda q=None:policy.summary()
     HUB.routes['/longterm']=lambda q=None:longterm.snapshot(HUB.store)
     HUB.routes['/facets']=lambda q=None:facets.snapshot(HUB.store)
+    HUB.routes['/fleet']=lambda q=None:fleet.snapshot(HUB.store)
     HUB.routes['/next']=next_preview
     HUB.post_routes['/lessons']=lessons_update
     HUB.routes['/filemap']=lambda q=None:file_map_data()

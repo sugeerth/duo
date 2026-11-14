@@ -50,6 +50,7 @@
 | T14 Long-horizon failure modes | `horizon.milestones.accuracy` | 1.000 | 48 | 0.926–1.000 | >= 0.95 | PASS |  |
 | S1 AgentLens system check | `attribution.js_parity` | 1.000 |  | 1.000–1.000 | >= 1.0 | PASS |  |
 | S1 AgentLens system check | `clusters.purity` | 0.700 |  | 0.700–0.700 | >= 0.6 | PASS |  |
+| S1 AgentLens system check | `horizon.false_alarm_rate_clean_runs` | 0.000 |  | 0.000–0.000 | <= 0.0 | PASS |  |
 | S1 AgentLens system check | `guard.blocks_injection_followed` | 1.000 |  | 1.000–1.000 | >= 1.0 | PASS |  |
 | S1 AgentLens system check | `guard.false_block_rate_benign` | 0.000 |  | 0.000–0.000 | <= 0.0 | PASS |  |
 

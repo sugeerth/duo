@@ -1,12 +1,13 @@
 """Standalone viewer over the trace DB (no chat session needed): python3 tools/serve_viewer.py [PORT]"""
 import os,sys,time
 sys.path.insert(0,os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-import agentlens,traces,tracestore,learning,policy,propose,longterm,facets
+import agentlens,traces,tracestore,learning,policy,propose,longterm,facets,fleet
 traces.HUB.attach_store(tracestore.open_default())
 traces.HUB.routes['/learning']=lambda q=None:learning.snapshot(traces.HUB.store)
 traces.HUB.routes['/policy']=lambda q=None:policy.summary()
 traces.HUB.routes['/longterm']=lambda q=None:longterm.snapshot(traces.HUB.store)
 traces.HUB.routes['/facets']=lambda q=None:facets.snapshot(traces.HUB.store)
+traces.HUB.routes['/fleet']=lambda q=None:fleet.snapshot(traces.HUB.store)
 traces.HUB.routes['/proposals']=lambda q=None:[propose.get(p['id']) or p for p in propose.load_index()]
 traces.HUB.routes['/next']=agentlens.next_preview
 traces.HUB.routes['/filemap']=lambda q=None:agentlens.file_map_data()

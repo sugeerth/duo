@@ -141,6 +141,13 @@ It is validated against the vocabularies and the run's real step numbers.
 
 The long-run panel draws all three under the bursts: an icicle of the subdivisions, ▲ at each mode, and the plan's units, reached or not. Bench task T14 measures it.
 
+**Fleet: every run, and what caught it** (`fleet.py`, `/fleet`): every stored run in every session as one strip, with its phases in order (look, write, check, ship, delegate) and ▲ where a long-horizon mode shows. Strip length is the run's step count (log scale), and a click opens the run.
+- The dots on the left are six instruments, and each run shows which fired: grade below pass, an unreached planned unit, a long-horizon mode, a high/critical security finding, a loop, and a guard block (or a risky call that ran unchecked).
+- The bars above the dots count how many problem runs each instrument caught; the dark part is runs only that instrument caught.
+- The headline is AgentDiff's finding, computed on your own traces: how many problem runs were graded a pass and caught only by something else.
+
+**At scale** (`bench/scale.py`): the long-horizon detectors are streamed over a procedurally generated corpus, one run in memory at a time. [bench/SCALE.md](bench/SCALE.md) has the million-step result and how to reproduce it.
+
 **Guard, alarms, data flow, spend, reports, search:**
 - **Guard** (`guard.py`): every approval request from Codex or Claude is checked before it runs, using the same rules as the security review, plus the injection taint rule.
   - `AGENTLENS_GUARD=warn` (default) puts the findings in the approval prompt.

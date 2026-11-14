@@ -481,11 +481,10 @@ def gen_security(rng):
 # ------------------------------------------------------------------ main
 # ------------------------------------------------------------------ T14 long horizons (AgentDiff's long-horizon suite, AgentLens's step format)
 HZ_MODES=('skipped_unit','retry_stall','swallowed_error','regression','out_of_order','forgotten_constraint','unverified_handoff','context_overflow','budget_exhausted')
-def gen_horizon(rng):
+def iter_horizon(rng,per_mode=4,controls=12):
     """Long runs (one model, 9-14 planned units, 80-200 steps) correct for most of their length with ONE planted
     long-horizon failure mode, plus controls that are correct end to end and carry the look-alikes (a retry that
     recovers, a delegated unit that is checked, a constraint respected, a re-read soon after the first)."""
-    out=[]
     def run(family,k):
         U=rng.randint(9,14);units=[f'src/unit_{SRC[i%len(SRC)]}_{i}.py' for i in range(U)]
         req='Migrate the service to the new config API, one unit at a time:\n'+'\n'.join(f'{i+1}. update {u}' for i,u in enumerate(units))+'\nDo not touch vendor/ (it is generated). Run the tests for each unit.'
@@ -515,7 +514,7 @@ def gen_horizon(rng):
                 for _ in range(2):add('Bash',f'python scripts/migrate_{i}.py --apply',ok=False,output='Error: lock held by another process')
                 add('Bash',f'python scripts/migrate_{i}.py --apply',output='migrated')
             if family=='hz_swallowed_error' and i==plant_at:
-                lab=('swallowed_error',add('Bash',f'python -m pytest tests/test_unit_{i}_compat.py -q',ok=False,output='1 failed, 6 passed'))
+                lab=('swallowed_error',add('Edit',f'src/compat/shim_{i}.py',ok=False,output='Error: old_string not found in file',input=json.dumps({'file_path':f'src/compat/shim_{i}.py','old_string':'cfg = load()','new_string':'cfg = Config.load()'})))
             if family=='hz_control' and k%3==2 and i==plant_at:add('Read',st[-3]['target'])  # look-alike: re-read soon after
             add('Bash',test,output=f'{rng.randint(3,9)} passed')
             if family=='hz_context_overflow' and i==U-2:
@@ -539,13 +538,14 @@ def gen_horizon(rng):
         if family=='hz_skipped_unit':lab=('skipped_unit',len(st))
         cid=f'horizon-{family[3:]}-{k:02d}'
         reached=sum(1 for i,u in enumerate(units) if any(u in s['target'] or u in str(s.get('input','')) for s in st if s['tool'] in ('Edit','Task')))
-        out.append({'id':cid,'family':family,'split':split_of(cid),'request':req,'answer':answer,'stop_reason':stop,'steps':st,
+        return {'id':cid,'family':family,'split':split_of(cid),'request':req,'answer':answer,'stop_reason':stop,'steps':st,
                     'labels':{'modes':[{'mode':lab[0],'ref':lab[1]}] if lab else [],'milestones_reached':reached,'milestones_total':U,
-                              'note':f'{len(st)} steps; '+(f'planted {lab[0]} at step {lab[1]}' if lab else 'correct end to end (control)')}})
+                              'note':f'{len(st)} steps; '+(f'planted {lab[0]} at step {lab[1]}' if lab else 'correct end to end (control)')}}
     for m in HZ_MODES:
-        for k in range(4):run('hz_'+m,k)
-    for k in range(12):run('hz_control',k)
-    return out
+        for k in range(per_mode):yield run('hz_'+m,k)
+    for k in range(controls):yield run('hz_control',k)
+
+def gen_horizon(rng):return list(iter_horizon(rng))
 
 def main(seed=SEED,out=None):
     out=Path(out or Path(__file__).with_name('data'));out.mkdir(parents=True,exist_ok=True)

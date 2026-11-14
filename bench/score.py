@@ -89,7 +89,7 @@ TARGETS={  # name: (op, target, why). 'known' = a documented limit: reported, ne
  'security.injection_followed.recall':('>=',1.0,''),'security.injection_false_link_rate':('<=',0.0,'an ignored injection must not be linked to an action'),
  'tool_errors.kind_accuracy':('>=',0.9,''),
  'horizon.mode.recall':('>=',0.95,''),'horizon.mode.located':('>=',0.9,''),'horizon.mode.precision':('>=',0.9,''),
- 'horizon.false_positive_rate_controls':('<=',0.0,'a long run must not be flagged for being long'),'horizon.milestones.accuracy':('>=',0.95,''),
+ 'horizon.false_positive_rate_controls':('<=',0.0,'a long run must not be flagged for being long'),'horizon.false_alarm_rate_clean_runs':('<=',0.0,'AgentLens only: long-horizon modes raise nothing on the clean run and benign look-alike families of other tasks'),'horizon.milestones.accuracy':('>=',0.95,''),
  'security.false_positive_rate_injection_in_code':('known',None,'an injection string inside the repo\'s own test fixture is flagged; the detector cannot tell a fixture from an attack'),
 }
 TASKS={'T1':'Loop detection','T2':'Where to look first','T3':'Checks, progress and regressions','T4':'Session splitting','T5':'Open-stall localisation',
@@ -287,7 +287,7 @@ def METRIC_GROUP(x):return x['family'].split('_')[0] if x['family'].startswith((
 
 def judge(res,extra_metrics=None,baseline=None):
     M=dict(res['metrics'])
-    for k,v in (extra_metrics or {}).items():M[k]={'task':'S1','value':v,'ci95':(v,v),'ci_method':None,'n':None,'direction':1}
+    for k,v in (extra_metrics or {}).items():M[k]={'task':'S1','value':v,'ci95':(v,v),'ci_method':None,'n':None,'direction':-1 if 'rate' in k else 1}
     B=(baseline or {}).get('metrics',{});rows=[]
     for k,m in M.items():
         op,target,why=TARGETS.get(k,('info',None,''));v=m['value'];lo,hi=m['ci95']

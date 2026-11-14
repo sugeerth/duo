@@ -207,6 +207,8 @@ section:not(.open){padding-top:9px;padding-bottom:9px}
 #palR{max-height:52vh;overflow:auto}.pal-item{display:block;width:100%;text-align:left;border:none;background:none;color:var(--text);font:inherit;font-size:12.5px;padding:7px 16px;cursor:pointer;border-bottom:1px solid var(--grid)}
 .pal-item:hover,.pal-item.on{background:var(--hover)}.pal-item .k{color:var(--muted);margin-right:6px}.pal-item mark{background:color-mix(in srgb,var(--warn) 35%,transparent);color:inherit;border-radius:2px}
 .flow{margin-top:8px}
+.fl-head{font-size:13.5px;margin:2px 0 8px;max-width:980px}.fl-head b{font-weight:650}.fl-wrap{max-height:560px;overflow:auto;border:1px solid var(--line);border-radius:8px;background:var(--panel)}
+.fl-wrap svg .fr{cursor:pointer}.fl-wrap svg .fr:hover rect.bg{fill:var(--surface)}.fl-key{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:11.5px;color:var(--muted);margin-top:6px}.fl-key i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
 .hz{margin-top:8px;border-top:1px dashed var(--line);padding-top:6px}.hz h5{margin:0 0 2px;font:700 10.5px/1.9 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.08em;color:var(--muted)}
 .hz .hzm{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12px;margin-top:4px}.hz .hzm span b{color:var(--critical);font-weight:600}.hz svg g[data-lref]{cursor:pointer}
 .rdr{grid-column:1/-1;border-top:1px solid var(--line);margin-top:6px;padding-top:8px;font-size:12.5px}.rdr .rh{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}.rdr .rh b{font-size:11px;letter-spacing:.08em;color:var(--muted);font:700 10.5px/1.9 ui-monospace,SFMono-Regular,Menlo,monospace}
@@ -280,6 +282,8 @@ section:not(.open){padding-top:9px;padding-bottom:9px}
     <div id="procGraph"></div>
     <div class="tw-head"><h3>Failure modes</h3><span class="sub">Each turn's problems tagged with one vocabulary (TRAIL/MAST style: specification, reasoning, planning, execution, verification) from the judges' root causes and AgentLens's own detectors. Cells count turns; click one for the evidence.</span></div>
     <div id="failModes"></div>
+    <div class="tw-head"><h3>Fleet: every run, and what caught it</h3><span class="sub">Every stored run in all sessions, as one strip: its phases in order (look, write, check, ship, delegate), ▲ where a long-horizon failure mode shows. The dots on the left are the instruments that fired on that run. The bars above them count how many problem runs each instrument caught; the dark part is runs that only this instrument caught. At length the grade is the weakest instrument: a run can pass it and still have skipped work. Click a run to open it.</span></div>
+    <div id="fleet"></div>
     <div class="tw-head"><h3>Patterns across runs</h3><span class="sub">Every stored run, all sessions, placed on one map by what it did (action mix, length, failures, repeats, loops, stalls, progress, test edits) and grouped into clusters labelled by what sets them apart. The recipe today's observability tools use, computed without model calls, so every label is explainable. Click a cluster or a point.</span></div>
     <div id="patterns"></div>
     <div class="tw-head"><h3>Conversation memory</h3><span class="sub">The chat session as memory: each row is a turn, and filled cells are the earlier turns it still carried in its context. The bar is how much was carried in (≈ tokens). Click a row to open that turn.</span></div>
@@ -1508,7 +1512,7 @@ function lrAxis(r,W,L){
   return {at,segs};
 }
 // Long horizon (horizon.py): milestones through the plan, named long-horizon failure modes, and the run subdivided.
-const HZ_C={look:'var(--muted)',write:'var(--text-2)',check:'var(--good)',ship:'var(--warn)',delegate:'var(--judge)',other:'var(--line)'};
+const HZ_C={look:'#9aa7b4',write:'#3d74d6',check:'#2e9e5b',ship:'#e09a1a',delegate:'#8b5fd1',other:'#cfd4da'};
 function horizonViz(t,p,W){
   const e=S.A.horizon.filter(e=>e.turn_id===t.id&&e.provider===p).at(-1);if(!e||!e.data)return '';
   const r=e.data,ms=r.milestones,L=70,X=v=>L+(W-L-12)*v/Math.max(1,r.steps-1);
@@ -1535,6 +1539,32 @@ function horizonViz(t,p,W){
   const mm=(r.modes||[]).map(m=>`<span><b>${esc(m.mode.replace(/_/g,' '))}</b> <button class="vchip" data-lref="${m.ref}">step</button> ${esc(m.why)}</span>`).join('');
   return `<div class="hz"><h5>LONG HORIZON</h5><div style="overflow-x:auto">${svg}</div><div class="lr-why">${esc(e.rationale||'')}</div>${mm?`<div class="hzm">${mm}</div>`:''}</div>`;
 }
+// Fleet (fleet.py /fleet): every stored run as a strip + the catch matrix in the gutter.
+let FL=null,FL_AT=0;
+const FL_I=[['grade','G','grade below pass','var(--muted)'],['milestones','M','a planned unit never reached','var(--warn)'],['modes','F','long-horizon failure mode','var(--critical)'],['security','S','high/critical security finding','var(--critical)'],['loops','L','loop over bursts','var(--warn)'],['guard','B','guard blocked, or risky call ran unchecked','var(--judge)']];
+async function fetchFleet(){try{const r=await fetch('/fleet');if(r.ok){FL=await r.json();FL_AT=Date.now();renderFleet()}}catch(e){}}
+function renderFleet(){
+  const host=document.getElementById('fleet');if(!host)return;
+  if(!FL){host.innerHTML='<div class="empty">Loading every stored run…</div>';return}
+  const R=FL.rows.slice().sort((a,b)=>b.risk-a.risk||(b.ts||0)-(a.ts||0)),M=FL.matrix;const LMAX=Math.log1p(Math.max(1,...FL.rows.map(r=>r.steps)));
+  if(!R.length){host.innerHTML='<div class="empty">No stored runs with tool calls yet. The fleet fills in from the trace DB.</div>';return}
+  const W=Math.max(640,host.clientWidth-2),CW=15,G=FL_I.length*CW+10,NUM=86,X0=G+8,X1=W-NUM,RH=11,TOP=58,H=TOP+R.length*RH+6;
+  const maxc=Math.max(1,...FL_I.map(([k])=>M.by_instrument[k]||0));
+  let svg=`<svg width="${W}" height="${H}" role="img" aria-label="All stored runs as strips, with the instruments that caught each">`;
+  FL_I.forEach(([k,l,why,c],i)=>{const n=M.by_instrument[k]||0,o=M.only[k]||0,x=6+i*CW,h=38*n/maxc,ho=38*o/maxc;
+    svg+=`<g><rect x="${x}" y="${44-h}" width="${CW-4}" height="${h}" fill="${c}" opacity=".35"/><rect x="${x}" y="${44-ho}" width="${CW-4}" height="${ho}" fill="${c}"/><text x="${x+(CW-4)/2}" y="${55}" text-anchor="middle" class="mut" style="font-size:10px;font-weight:700">${l}</text><title>${esc(k)}: caught ${n} of ${M.problems} problem runs; ${o} caught by nothing else (${esc(why)})</title></g>`});
+  svg+=`<text x="${X0}" y="${50}" class="mut" style="font-size:10.5px">${R.length} runs · each from start to end; length = steps (log scale)</text><text x="${W-6}" y="${50}" text-anchor="end" class="mut" style="font-size:10.5px">steps · grade</text>`;
+  R.forEach((r,j)=>{const y=TOP+j*RH,tot=d3.sum(r.phases,p=>p[1])||1,SW=(X1-X0)*Math.max(.04,Math.log1p(r.steps)/LMAX);let x=X0,g=`<g class="fr" data-frun="${esc(r.session||'')}|${esc(r.turn)}"><rect class="bg" x="0" y="${y-1}" width="${W}" height="${RH}" fill="transparent"/>`;
+    FL_I.forEach(([k,l,why,c],i)=>{if(r.fired.includes(k))g+=`<circle cx="${6+i*CW+(CW-4)/2}" cy="${y+RH/2-1}" r="3.4" fill="${c}"/>`;else g+=`<circle cx="${6+i*CW+(CW-4)/2}" cy="${y+RH/2-1}" r="1.2" fill="var(--line)"/>`});
+    r.phases.forEach(([kd,n,f])=>{const w=SW*n/tot;g+=`<rect x="${x}" y="${y}" width="${Math.max(.6,w-.4)}" height="${RH-3}" fill="${HZ_C[kd]||HZ_C.other}" opacity="${kd==='other'?.5:.8}"/>`;if(f)g+=`<rect x="${x}" y="${y+RH-4}" width="${Math.max(.6,w-.4)}" height="1.6" fill="var(--critical)"/>`;x+=w});
+    r.marks.forEach(([fr,m])=>{const mx=X0+SW*fr;g+=`<path d="M${mx},${y-1}l3.5,${RH-2}h-7z" fill="var(--critical)" stroke="var(--panel)" stroke-width=".8"/>`});
+    g+=`<text x="${W-6}" y="${y+RH-3}" text-anchor="end" class="mut" style="font-size:9.5px">${r.steps}${r.grade!=null?' · '+r.grade.toFixed(1):''}</text>`;
+    g+=`<title>${esc(NAME[r.provider]||r.provider)} · ${r.steps} steps${r.grade!=null?' · grade '+r.grade:''}${r.fired.length?' · caught by '+r.fired.join(', '):' · nothing fired'}${r.modes.length?'\n'+r.modes.map(m=>m.replace(/_/g,' ')).join(', '):''}${r.why?'\n'+r.why:''}\n${r.prompt||''}</title></g>`;svg+=g});
+  svg+='</svg>';
+  const key=Object.entries(HZ_C).map(([k,c])=>`<span><i style="background:${c}"></i>${k}</span>`).join('')+`<span><i style="background:var(--critical);height:2px"></i>failed calls</span><span>▲ failure mode</span>`+FL_I.map(([k,l,why])=>`<span><b>${l}</b> ${esc(why)}</span>`).join('');
+  host.innerHTML=`<p class="fl-head"><b>${esc(M.headline)}</b> ${M.clean} of ${M.runs} runs are clean on every instrument.</p><div class="fl-wrap">${svg}</div><div class="fl-key">${key}</div>`;
+}
+document.getElementById('fleet').addEventListener('click',e=>{const g=e.target.closest('[data-frun]');if(!g)return;const [sid,tid]=g.dataset.frun.split('|');openRunAnywhere(sid,tid)});
 function renderLongRun(t){
   const host=document.getElementById('longRun');
   const reads=t?P.map(p=>({p,e:S.A.longrun.filter(e=>e.turn_id===t.id&&e.provider===p).at(-1)})).filter(x=>x.e&&x.e.data):[];
@@ -2170,7 +2200,7 @@ function readerCard(t){
 document.getElementById('verdictCard').addEventListener('click',e=>{const b=e.target.closest('[data-copy]');if(!b)return;try{navigator.clipboard.writeText(b.dataset.copy);b.textContent='copied ✓'}catch(_){}});
 function renderTurnReading(D){renderTitle(D);
   if(PENDING_TURN&&D.allTurns.some(u=>u.id===PENDING_TURN)){TREE.follow=false;TREE.turn=PENDING_TURN;PENDING_TURN=null;document.getElementById('treeFollow').setAttribute('aria-pressed','false');setTimeout(schedule,0)}
-  renderFailModes(D);if(!FC||Date.now()-FC_AT>60000){FC_AT=Date.now();fetchFacets()}else renderPatterns();
+  renderFailModes(D);if(!FC||Date.now()-FC_AT>60000){FC_AT=Date.now();fetchFacets()}else renderPatterns();if(!FL||Date.now()-FL_AT>60000){FL_AT=Date.now();fetchFleet()}else renderFleet();
   const t=D.turns.find(t=>t.id===TREE.turn),card=document.getElementById('verdictCard'),host=document.getElementById('timeWent');
   if(!t){card.innerHTML='';renderAlarms(null);renderProgressLane(null);renderSecurity(null);renderProcGraph(null,D);renderEnv(null,D);renderLongRun(null);renderReasonMem(null);renderAttribution(null);renderConvMem(D);if(!LT)fetchLongterm();else renderLongTerm();host.innerHTML='<div class="empty">Time budgets appear once a turn finishes.</div>';return}
   renderAlarms(t);card.innerHTML=cardHtml([...verdictCard(t),...suspectLines(t),...spendLine(t)])+readerCard(t);renderProgressLane(t);renderSecurity(t);renderProcGraph(t,D);renderEnv(t,D);renderLongRun(t);renderReasonMem(t);renderAttribution(t);renderConvMem(D);if(!LT||Date.now()-LT_AT>30000){LT_AT=Date.now();fetchLongterm()}else renderLongTerm();

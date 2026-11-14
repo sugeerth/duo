@@ -733,4 +733,34 @@ class Tests(unittest.TestCase):
   cs=[json.loads(l) for l in (Path(__file__).parent/'bench'/'data'/'horizon.jsonl').read_text().splitlines()]
   ctl=[c for c in cs if not c['labels']['modes']];self.assertGreaterEqual(len(ctl),10);self.assertTrue(all(len(c['steps'])>=70 for c in cs))
   self.assertFalse(any(horizon.read(c['steps'],c['request'],c['answer'],c['stop_reason'])['modes'] for c in ctl))
+ def test_fleet_rows_and_catch_matrix(self):
+  import fleet,tracestore
+  with tempfile.TemporaryDirectory() as tmp:
+   st=tracestore.TraceStore(Path(tmp)/'f.db');st.session('s1',1000.0,'/r');n=[0]
+   def ev(ts,kind,prov='duo',span=None,payload=None,**f):
+    n[0]+=1;e={'session_id':'s1','id':n[0],'timestamp':ts,'type':kind,'provider':prov,**({'span_id':span} if span else {}),**f}
+    if payload:e['chars']=len(payload)
+    st.event(e,payload,kind if payload else None);return e
+   def turn(tid,req,calls,ans,score):
+    ev(1000,'span.start',span=tid,span_kind='turn',mode='work:write');ev(1000,'prompt',span=tid,payload=req)
+    sid=tid+'claude';ev(1001,'span.start','claude',span=sid,parent_id=tid,span_kind='agent',role='writer')
+    for i,(tool,tgt,ok) in enumerate(calls):
+     ev(1002+i,'tool.started','claude',span=sid,tool=tool,detail=tgt,item_id=f'{tid}{i}');ev(1002.5+i,'tool.completed','claude',span=sid,tool=tool,item_id=f'{tid}{i}',passed=ok)
+    ev(1100,'answer','claude',span=sid,payload=ans);ev(1101,'judge.result','claude',turn_id=tid,score=score)
+   turn('t1','1. fix src/a.py\n2. fix src/b.py',[('Read','src/a.py',True),('Edit','src/a.py',True),('Bash','pytest -q',True)],'All units done.',4.6)
+   turn('t2','1. fix src/a.py\n2. fix src/b.py',[('Edit','src/a.py',True),('Bash','pytest -q',True),('Edit','src/b.py',True),('Bash','pytest -q',True)],'All units done.',4.7)
+   turn('t3','Fix it.',[('Edit','src/c.py',True),('Bash','pytest -q',False)],'It still fails.',2.0)
+   st.flush(5);fleet._CACHE['data']=None;d=fleet.snapshot(st)
+  R={r['turn']:r for r in d['rows']}
+  self.assertEqual(set(R['t1']['fired']),{'milestones','modes'});self.assertIn('skipped_unit',R['t1']['modes'])
+  self.assertEqual(R['t2']['fired'],[]);self.assertEqual(R['t3']['fired'],['grade'])
+  self.assertEqual([p[0] for p in R['t2']['phases']],['write','check','write','check'])
+  M=d['matrix'];self.assertEqual((M['problems'],M['graded_pass_but_caught'],M['clean']),(2,1,1))
+  self.assertIn('1 of those were graded a pass',M['headline'])
+
+ def test_scale_streams_and_catches(self):
+  sys.path.insert(0,str(Path(__file__).parent/'bench'));import scale
+  r=scale.run(2,6)
+  self.assertEqual(r['runs'],24);self.assertEqual(r['caught'],r['known_failures']);self.assertEqual(r['controls_flagged'],0)
+  self.assertEqual(r['milestones_exact'],24);self.assertGreater(r['steps'],1500);self.assertIn('known failures caught',scale.report(r))
 if __name__=='__main__':unittest.main()
