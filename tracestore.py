@@ -1,4 +1,4 @@
-"""Durable trace store: one SQLite file for every Duo session.
+"""Durable trace store: one SQLite file for every AgentLens session.
 
 Schema follows the OpenTelemetry GenAI shape (session -> span -> event) plus two
 trace-specific tables: payloads (reasoning, tool input/output, answers, prompts,
@@ -6,7 +6,7 @@ fetched on demand, never streamed) and judge_scores (one row per judge x model x
 dimension, so model comparisons are a single SQL query).
 
 Writes go through a background thread so tracing never blocks an agent.
-Location: ~/.duo/traces.db, override with DUO_TRACE_DB=/path, disable with DUO_TRACE_DB=off.
+Location: ~/.agentlens/traces.db, override with AGENTLENS_TRACE_DB=/path, disable with AGENTLENS_TRACE_DB=off.
 """
 import json
 import os
@@ -29,16 +29,16 @@ CREATE INDEX IF NOT EXISTS judge_cmp ON judge_scores(provider,dimension);
 PAYLOAD_CHARS=20000  # per payload; reasoning and tool output beyond this are truncated
 
 def default_path():
-    value=os.environ.get('DUO_TRACE_DB','')
+    value=os.environ.get('AGENTLENS_TRACE_DB','')
     if value.lower() in ('off','0','none','false'):return None
-    return Path(value).expanduser() if value else Path.home()/'.duo'/'traces.db'
+    return Path(value).expanduser() if value else Path.home()/'.agentlens'/'traces.db'
 
 class TraceStore:
     def __init__(self,path):
         self.path=Path(path);self.path.parent.mkdir(parents=True,exist_ok=True)
         self.queue=queue.Queue();self.lock=threading.Lock()
         with self.connect() as db:db.executescript(SCHEMA)
-        threading.Thread(target=self._writer,daemon=True,name='duo-tracestore').start()
+        threading.Thread(target=self._writer,daemon=True,name='agentlens-tracestore').start()
     def connect(self):
         db=sqlite3.connect(self.path,timeout=10,check_same_thread=False);db.execute('PRAGMA journal_mode=WAL');return db
     # --- writes (async) ---
@@ -112,8 +112,10 @@ class TraceStore:
         return [{'session_id':sid,'id':i,'timestamp':ts,'type':kind,'provider':p,'span_id':sp,**json.loads(d)} for sid,i,ts,p,sp,d in rows]
     def events_since(self,session_id,after,limit=2000):
         """Live tail: events of one session newer than `after` (used by /events?session=…)."""
-        with self.lock,self.connect() as db:
-            rows=db.execute('SELECT id,ts,type,provider,span_id,data FROM events WHERE session_id=? AND id>? ORDER BY id LIMIT ?',(session_id,after,limit)).fetchall()
+        try:
+            with self.lock,self.connect() as db:
+                rows=db.execute('SELECT id,ts,type,provider,span_id,data FROM events WHERE session_id=? AND id>? ORDER BY id LIMIT ?',(session_id,after,limit)).fetchall()
+        except sqlite3.Error:return []  # DB removed or closing mid-tail; the SSE loop just sees no news
         out=[]
         for id_,ts,kind,provider,span_id,data in rows:
             e={'id':id_,'timestamp':ts,'session_id':session_id,'type':kind,'provider':provider,**json.loads(data)}

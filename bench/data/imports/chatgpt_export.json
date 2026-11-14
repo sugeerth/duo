@@ -1,0 +1,122 @@
+[
+ {
+  "title": "Branchy chat",
+  "current_node": "a2",
+  "mapping": {
+   "root": {
+    "message": null,
+    "parent": null
+   },
+   "u1": {
+    "parent": "root",
+    "message": {
+     "author": {
+      "role": "user"
+     },
+     "content": {
+      "content_type": "text",
+      "parts": [
+       "First question"
+      ]
+     },
+     "create_time": 1767000560.0
+    }
+   },
+   "a1_old": {
+    "parent": "u1",
+    "message": {
+     "author": {
+      "role": "assistant"
+     },
+     "content": {
+      "content_type": "text",
+      "parts": [
+       "Abandoned answer"
+      ]
+     },
+     "create_time": 1767000565.0
+    }
+   },
+   "th": {
+    "parent": "u1",
+    "message": {
+     "author": {
+      "role": "assistant"
+     },
+     "content": {
+      "content_type": "thoughts",
+      "thoughts": [
+       {
+        "content": "Weighing options."
+       }
+      ]
+     },
+     "create_time": 1767000566.0
+    }
+   },
+   "a1": {
+    "parent": "th",
+    "message": {
+     "author": {
+      "role": "assistant"
+     },
+     "content": {
+      "content_type": "text",
+      "parts": [
+       "Kept answer"
+      ]
+     },
+     "create_time": 1767000569.0,
+     "metadata": {
+      "model_slug": "gpt-bench"
+     }
+    }
+   },
+   "sys": {
+    "parent": "a1",
+    "message": {
+     "author": {
+      "role": "system"
+     },
+     "content": {
+      "content_type": "text",
+      "parts": [
+       "system note"
+      ]
+     },
+     "create_time": 1767000570.0
+    }
+   },
+   "u2": {
+    "parent": "sys",
+    "message": {
+     "author": {
+      "role": "user"
+     },
+     "content": {
+      "content_type": "text",
+      "parts": [
+       "Second question"
+      ]
+     },
+     "create_time": 1767000620.0
+    }
+   },
+   "a2": {
+    "parent": "u2",
+    "message": {
+     "author": {
+      "role": "assistant"
+     },
+     "content": {
+      "content_type": "text",
+      "parts": [
+       "Second answer"
+      ]
+     },
+     "create_time": 1767000630.0
+    }
+   }
+  }
+ }
+]

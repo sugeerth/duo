@@ -1,0 +1,194 @@
+[
+ {
+  "episode": 0,
+  "task": "task-08",
+  "policy": "policy-c",
+  "env": "bench-env",
+  "success": false,
+  "return": -0.05,
+  "steps": [
+   {
+    "action": "read",
+    "input": "src/task-08.py",
+    "reward": 0
+   },
+   {
+    "action": "run",
+    "input": "pytest -q",
+    "reward": -0.05,
+    "error": true
+   },
+   {
+    "action": "edit",
+    "input": "src/task-08.py",
+    "reward": 0.05
+   },
+   {
+    "action": "run",
+    "input": "pytest -q",
+    "reward": -0.05,
+    "error": true
+   }
+  ]
+ },
+ {
+  "episode": 1,
+  "task": "task-08",
+  "policy": "policy-c",
+  "env": "bench-env",
+  "success": false,
+  "return": -0.05,
+  "steps": [
+   {
+    "action": "read",
+    "input": "src/task-08.py",
+    "reward": 0
+   },
+   {
+    "action": "run",
+    "input": "pytest -q",
+    "reward": -0.05,
+    "error": true
+   },
+   {
+    "action": "edit",
+    "input": "src/task-08.py",
+    "reward": 0.05
+   },
+   {
+    "action": "run",
+    "input": "pytest -q",
+    "reward": -0.05,
+    "error": true
+   }
+  ]
+ },
+ {
+  "episode": 2,
+  "task": "task-08",
+  "policy": "policy-c",
+  "env": "bench-env",
+  "success": false,
+  "return": -0.05,
+  "steps": [
+   {
+    "action": "read",
+    "input": "src/task-08.py",
+    "reward": 0
+   },
+   {
+    "action": "run",
+    "input": "pytest -q",
+    "reward": -0.05,
+    "error": true
+   },
+   {
+    "action": "edit",
+    "input": "src/task-08.py",
+    "reward": 0.05
+   },
+   {
+    "action": "run",
+    "input": "pytest -q",
+    "reward": -0.05,
+    "error": true
+   }
+  ]
+ },
+ {
+  "episode": 3,
+  "task": "task-08",
+  "policy": "policy-c",
+  "env": "bench-env",
+  "success": false,
+  "return": -0.05,
+  "steps": [
+   {
+    "action": "read",
+    "input": "src/task-08.py",
+    "reward": 0
+   },
+   {
+    "action": "run",
+    "input": "pytest -q",
+    "reward": -0.05,
+    "error": true
+   },
+   {
+    "action": "edit",
+    "input": "src/task-08.py",
+    "reward": 0.05
+   },
+   {
+    "action": "run",
+    "input": "pytest -q",
+    "reward": -0.05,
+    "error": true
+   }
+  ]
+ },
+ {
+  "episode": 4,
+  "task": "task-08",
+  "policy": "policy-c",
+  "env": "bench-env",
+  "success": false,
+  "return": -0.05,
+  "steps": [
+   {
+    "action": "read",
+    "input": "src/task-08.py",
+    "reward": 0
+   },
+   {
+    "action": "run",
+    "input": "pytest -q",
+    "reward": -0.05,
+    "error": true
+   },
+   {
+    "action": "edit",
+    "input": "src/task-08.py",
+    "reward": 0.05
+   },
+   {
+    "action": "run",
+    "input": "pytest -q",
+    "reward": -0.05,
+    "error": true
+   }
+  ]
+ },
+ {
+  "episode": 5,
+  "task": "task-08",
+  "policy": "policy-c",
+  "env": "bench-env",
+  "success": false,
+  "return": -0.05,
+  "steps": [
+   {
+    "action": "read",
+    "input": "src/task-08.py",
+    "reward": 0
+   },
+   {
+    "action": "run",
+    "input": "pytest -q",
+    "reward": -0.05,
+    "error": true
+   },
+   {
+    "action": "edit",
+    "input": "src/task-08.py",
+    "reward": 0.05
+   },
+   {
+    "action": "run",
+    "input": "pytest -q",
+    "reward": -0.05,
+    "error": true
+   }
+  ]
+ }
+]

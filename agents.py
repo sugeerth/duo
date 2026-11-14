@@ -1,4 +1,4 @@
-"""Headless native agents with approvals rendered by the Duo host."""
+"""Headless native agents with approvals rendered by the AgentLens host."""
 import asyncio
 from collections import deque
 import json
@@ -59,7 +59,7 @@ class CodexBridge:
         def errors():
             for line in self.proc.stderr:self.errors.append(line.rstrip())
         threading.Thread(target=reader,daemon=True).start();threading.Thread(target=errors,daemon=True).start()
-        self.rpc('initialize',{'clientInfo':{'name':'duo','title':'Duo terminal','version':'0.3.0'}})
+        self.rpc('initialize',{'clientInfo':{'name':'duo','title':'AgentLens terminal','version':'0.3.0'}})
         self.send({'method':'initialized','params':{}})
     def send(self,message):
         self.proc.stdin.write(json.dumps(message)+'\n');self.proc.stdin.flush()
@@ -72,6 +72,7 @@ class CodexBridge:
         method=event['method'];params=event.get('params',{})
         emit('approval.requested','codex',method=method,request_id=str(event['id']))
         if method in ('item/commandExecution/requestApproval','item/fileChange/requestApproval'):
+            self.approved_items=getattr(self,'approved_items',set());self.approved_items.add(params.get('itemId'))
             allowed=self.approve('Codex',method,params)
             result={'decision':'accept' if allowed else 'decline'}
         elif method=='item/permissions/requestApproval':
@@ -106,7 +107,8 @@ class CodexBridge:
         started=time.monotonic()
         try:
             self.start()
-            params={'cwd':self.cwd,'ephemeral':True,'approvalPolicy':'on-request','sandbox':'read-only' if readonly else 'workspace-write'}
+            import guard
+            params={'cwd':self.cwd,'ephemeral':True,'approvalPolicy':guard.codex_policy(),'sandbox':'read-only' if readonly else 'workspace-write'}
             if model:params['model']=model
             thread=self.rpc('thread/start',params)['thread']['id']
             self.rpc('turn/start',{'threadId':thread,'input':[{'type':'text','text':prompt}]})
@@ -128,6 +130,10 @@ class CodexBridge:
                     elif method=='item/started':
                         emit('tool.started','codex',tool=kind,item_id=item.get('id'),detail=tool_detail(item),payload_kind='tool_input',
                              payload=as_text({k:v for k,v in item.items() if k not in BULKY}))
+                        if kind in ('commandExecution','fileChange') and item.get('id') not in getattr(self,'approved_items',set()):
+                            import guard
+                            from traces import HUB
+                            guard.unchecked('codex',kind,item,emit,HUB)
                     else:
                         exit_code=item.get('exitCode')
                         ok=item.get('status') in (None,'completed') and exit_code in (None,0)
@@ -159,6 +165,9 @@ def codex_run(prompt,cwd,approve,notice,readonly=False,timeout=300,model=None):
 
 def claude_run(prompt,cwd,approve,notice,readonly=False,timeout=300,model=None):
     if str(VENDOR) not in sys.path:sys.path.insert(0,str(VENDOR))
+    import guard
+    from traces import HUB
+    from claude_agent_sdk import HookMatcher
     from claude_agent_sdk import ClaudeAgentOptions,ClaudeSDKClient,PermissionResultAllow,PermissionResultDeny,AssistantMessage,ResultMessage,TextBlock,ToolUseBlock,UserMessage,ToolResultBlock
     try:from claude_agent_sdk import ThinkingBlock
     except ImportError:ThinkingBlock=None
@@ -178,8 +187,8 @@ def claude_run(prompt,cwd,approve,notice,readonly=False,timeout=300,model=None):
             allowed=approve('Claude',tool,arguments)
             emit('approval.resolved','claude',tool=tool,status='accepted' if allowed else 'declined')
             if allowed:return PermissionResultAllow(updated_input=arguments)
-            return PermissionResultDeny(message='Declined in Duo')
-        options=ClaudeAgentOptions(cwd=str(cwd),cli_path=shutil.which('claude'),permission_mode='default',setting_sources=['user','project','local'],can_use_tool=permission,model=model,extra_args={'no-session-persistence':None},stderr=lambda line:None)
+            return PermissionResultDeny(message='Declined in AgentLens')
+        options=ClaudeAgentOptions(cwd=str(cwd),cli_path=shutil.which('claude'),permission_mode='default',setting_sources=['user','project','local'],can_use_tool=permission,model=model,hooks={'PreToolUse':[HookMatcher(matcher=None,hooks=[guard.claude_pre_tool_hook(HUB,emit)])]},extra_args={'no-session-persistence':None},stderr=lambda line:None)
         if readonly:
             options.tools=['Read','Glob','Grep','WebSearch','WebFetch']
             options.disallowed_tools=['Bash','Write','Edit','NotebookEdit','Agent','Task','Skill']

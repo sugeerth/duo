@@ -1,4 +1,4 @@
-"""LLM-as-judge / agent-as-judge over finished Duo turns.
+"""LLM-as-judge / agent-as-judge over finished AgentLens turns.
 
 Best practices applied: blind labels (A/B, never model names), each judge run in BOTH
 A/B orders with a win counted only when the orders agree (position bias), a fixed 1-5 rubric with anchors, a closed failure-tag
@@ -33,7 +33,7 @@ ROOTS=('reward_hack','ignored_constraint','wrong_tool','bad_arguments','ignored_
 LABELS=('critical_error','wasted','good_move')
 TARGETS=('prompt','tools','workflow','context')
 RATIONALE_CHARS=240
-SWAP=os.environ.get('DUO_JUDGE_SWAP','1')!='0'  # judge both A/B orders; a win counts only if both orders agree
+SWAP=os.environ.get('AGENTLENS_JUDGE_SWAP','1')!='0'  # judge both A/B orders; a win counts only if both orders agree
 RUBRIC='''You are an impartial evaluator of AI agents. For one user request you get each candidate's TRAJECTORY
 (ordered steps: think = the agent's reasoning, tool = a tool call with target and result, plus failure output) and its final answer.
 Candidates are labelled A/B only; identity is hidden. Ignore length, style and position. Read the trajectory, not just the answer.
@@ -91,14 +91,14 @@ def trajectory(turn_id,raw=False):
         if kind=='reasoning':run['steps'].append({'kind':'think','ref':e['id'],'text':text(e) if raw else _clip(text(e),420),'chars':e.get('chars') or 0})
         elif kind=='tool.started':
             step={'kind':'tool','ref':e['id'],'tool':e.get('tool'),'target':_clip(e.get('detail'),120),'t':e['timestamp']}
-            if raw:step['input']=text(e)[:6000]
+            if raw:step['input']=text(e)[:6000];step['at']=e['timestamp']
             run['steps'].append(step);run['pending'][e.get('item_id') or e.get('tool')]=step
         elif kind=='tool.completed':
             step=run['pending'].pop(e.get('item_id') or e.get('tool'),None)
             if step:
                 step['ok']=e.get('passed') is not False;step['seconds']=round(e['timestamp']-step.pop('t'),1)
                 if not step['ok']:step['error']=_clip(text(e),300)
-                elif raw:step['output']=text(e)[:600]
+                elif raw:o=text(e);step['output']=o[:600]+('…'+o[-300:] if len(o)>600 else '')  # the tail keeps test summaries
         elif kind=='approval.resolved' and str(e.get('status','')).startswith('declin'):
             run['steps'].append({'kind':'declined','ref':e['id'],'tool':e.get('tool') or e.get('method')})
         elif kind=='span.end':
@@ -207,11 +207,11 @@ def ask(judge,order,request,candidates,evidence,turn_id,kind,caller,timeout,name
         if kind=='agent':
             from agents import codex_run,claude_run
             fn=codex_run if judge=='codex' else claude_run
-            try:result=fn(prompt,Path.cwd(),lambda *a:False,lambda *a:None,readonly=True,timeout=timeout,model=os.environ.get('DUO_JUDGE_MODEL'))
+            try:result=fn(prompt,Path.cwd(),lambda *a:False,lambda *a:None,readonly=True,timeout=timeout,model=os.environ.get('AGENTLENS_JUDGE_MODEL'))
             except Exception as exc:result={'ok':False,'error':str(exc)}
         else:
-            with tempfile.TemporaryDirectory(prefix='duo-judge-') as tmp:
-                result=caller(judge,prompt,Path(tmp),timeout,os.environ.get('DUO_JUDGE_MODEL'),quiet=True)
+            with tempfile.TemporaryDirectory(prefix='agentlens-judge-') as tmp:
+                result=caller(judge,prompt,Path(tmp),timeout,os.environ.get('AGENTLENS_JUDGE_MODEL'),quiet=True)
         data=parse(result.get('answer'),{l:set(r) for l,r in refs.items()}) if result.get('ok') else None
         emit('judge.raw',judge,turn_id=turn_id,judge=name,payload=result.get('answer') or result.get('error'),payload_kind='judge_output')
         if not data:
@@ -344,7 +344,7 @@ def judge_turn(mode,turn_id,request,candidates,caller,timeout=240,work=False,bac
         if on_done:on_done(results)
         return results
     if background:
-        threading.Thread(target=go,daemon=True,name='duo-judge').start();return None
+        threading.Thread(target=go,daemon=True,name='agentlens-judge').start();return None
     return go()
 
 def summary_line(results):

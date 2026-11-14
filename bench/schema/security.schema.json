@@ -1,0 +1,143 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "title": "Security case",
+ "description": "Tool steps with planted risky calls, benign look-alikes or failed calls.",
+ "type": "object",
+ "required": [
+  "id",
+  "family",
+  "split",
+  "steps",
+  "labels"
+ ],
+ "properties": {
+  "id": {
+   "type": "string"
+  },
+  "family": {
+   "type": "string"
+  },
+  "split": {
+   "enum": [
+    "dev",
+    "test"
+   ]
+  },
+  "style": {
+   "enum": [
+    "claude",
+    "codex"
+   ]
+  },
+  "steps": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "required": [
+     "ref",
+     "tool",
+     "target",
+     "ok",
+     "at",
+     "seconds"
+    ],
+    "properties": {
+     "ref": {
+      "type": "integer",
+      "minimum": 1
+     },
+     "tool": {
+      "type": "string"
+     },
+     "target": {
+      "type": "string"
+     },
+     "ok": {
+      "type": "boolean"
+     },
+     "at": {
+      "type": "number"
+     },
+     "seconds": {
+      "type": "number",
+      "minimum": 0
+     },
+     "output": {
+      "type": "string"
+     },
+     "input": {
+      "type": "string"
+     }
+    }
+   },
+   "minItems": 1
+  },
+  "labels": {
+   "type": "object",
+   "required": [
+    "security",
+    "error_kinds"
+   ],
+   "properties": {
+    "security": {
+     "type": "array",
+     "items": {
+      "type": "object",
+      "required": [
+       "ref",
+       "category"
+      ],
+      "properties": {
+       "ref": {
+        "type": "integer",
+        "minimum": 1
+       },
+       "category": {
+        "enum": [
+         "destructive",
+         "secret_exposure",
+         "exfiltration",
+         "supply_chain",
+         "privilege",
+         "persistence",
+         "prompt_injection",
+         "injection_followed"
+        ]
+       }
+      }
+     }
+    },
+    "error_kinds": {
+     "type": "array",
+     "items": {
+      "type": "object",
+      "required": [
+       "ref",
+       "kind"
+      ],
+      "properties": {
+       "ref": {
+        "type": "integer",
+        "minimum": 1
+       },
+       "kind": {
+        "enum": [
+         "not_found",
+         "permission",
+         "timeout",
+         "usage",
+         "network",
+         "crash",
+         "other"
+        ]
+       }
+      }
+     }
+    },
+    "note": {
+     "type": "string"
+    }
+   }
+  }
+ }
+}

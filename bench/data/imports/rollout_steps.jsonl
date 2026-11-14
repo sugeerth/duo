@@ -1,0 +1,4 @@
+{"episode": "a", "task": "t1", "action": "look", "reward": 0.5}
+{"episode": "a", "action": "act", "reward": 0.5, "success": true}
+{"episode": "b", "task": "t1", "action": "look", "reward": 0}
+{"episode": "b", "action": "act", "reward": -1, "success": false}

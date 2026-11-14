@@ -1,0 +1,91 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "title": "Attribution case",
+ "type": "object",
+ "required": [
+  "id",
+  "family",
+  "split",
+  "candidates",
+  "final",
+  "sentences",
+  "labels"
+ ],
+ "properties": {
+  "id": {
+   "type": "string"
+  },
+  "family": {
+   "type": "string"
+  },
+  "split": {
+   "enum": [
+    "dev",
+    "test"
+   ]
+  },
+  "candidates": {
+   "type": "object",
+   "required": [
+    "codex",
+    "claude"
+   ],
+   "properties": {
+    "codex": {
+     "type": "string"
+    },
+    "claude": {
+     "type": "string"
+    }
+   }
+  },
+  "final": {
+   "type": "string"
+  },
+  "sentences": {
+   "type": "array",
+   "items": {
+    "type": "string"
+   },
+   "minItems": 1
+  },
+  "labels": {
+   "type": "object",
+   "required": [
+    "sentences"
+   ],
+   "properties": {
+    "sentences": {
+     "type": "array",
+     "items": {
+      "type": "object",
+      "required": [
+       "text",
+       "src",
+       "paraphrase"
+      ],
+      "properties": {
+       "text": {
+        "type": "string"
+       },
+       "src": {
+        "enum": [
+         "codex",
+         "claude",
+         "both",
+         "new"
+        ]
+       },
+       "paraphrase": {
+        "type": "boolean"
+       }
+      }
+     }
+    },
+    "note": {
+     "type": "string"
+    }
+   }
+  }
+ }
+}

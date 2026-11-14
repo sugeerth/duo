@@ -1,0 +1,105 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "title": "Long-horizon case",
+ "description": "T14: one long run with at most one planted long-horizon failure mode (or none, a control).",
+ "type": "object",
+ "required": [
+  "id",
+  "family",
+  "split",
+  "request",
+  "steps",
+  "labels"
+ ],
+ "properties": {
+  "id": {
+   "type": "string"
+  },
+  "family": {
+   "type": "string"
+  },
+  "split": {
+   "enum": [
+    "dev",
+    "test"
+   ]
+  },
+  "request": {
+   "type": "string"
+  },
+  "answer": {
+   "type": [
+    "string",
+    "null"
+   ]
+  },
+  "stop_reason": {
+   "type": [
+    "string",
+    "null"
+   ]
+  },
+  "steps": {
+   "type": "array",
+   "minItems": 1,
+   "items": {
+    "type": "object",
+    "required": [
+     "ref",
+     "tool",
+     "target",
+     "ok"
+    ],
+    "properties": {
+     "ref": {
+      "type": "integer",
+      "minimum": 1
+     },
+     "tool": {
+      "type": "string"
+     },
+     "target": {
+      "type": "string"
+     },
+     "ok": {
+      "type": "boolean"
+     }
+    }
+   }
+  },
+  "labels": {
+   "type": "object",
+   "required": [
+    "modes",
+    "milestones_reached",
+    "milestones_total"
+   ],
+   "properties": {
+    "modes": {
+     "type": "array",
+     "items": {
+      "type": "object",
+      "required": [
+       "mode",
+       "ref"
+      ],
+      "properties": {
+       "mode": {
+        "type": "string"
+       },
+       "ref": {
+        "type": "integer"
+       }
+      }
+     }
+    },
+    "milestones_reached": {
+     "type": "integer"
+    },
+    "milestones_total": {
+     "type": "integer"
+    }
+   }
+  }
+ }
+}
