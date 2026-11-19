@@ -10,7 +10,7 @@
 /* Layout: one column of decisions — what it is, the one line to paste, what you get free vs Pro. */
 :root{
   --bg:#f7f7f4;--panel:#ffffff;--ink:#121212;--ink-2:#55544f;--line:#e3e2dc;
-  --write:#3d74d6;--check:#2e9e5b;--look:#9aa7b4;--ship:#e09a1a;--fail:#d03b3b;--claude:#eb6834;
+  --write:#3d74d6;--delegate:#8b5fd1;--check:#2e9e5b;--look:#9aa7b4;--ship:#e09a1a;--fail:#d03b3b;--claude:#eb6834;
   --display:"Space Grotesk",ui-sans-serif,system-ui,sans-serif;--body:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;--mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
 }
 @media (prefers-color-scheme:dark){:root{--bg:#121315;--panel:#1a1b1e;--ink:#f1f1ee;--ink-2:#a9a8a2;--line:#2c2d31;--look:#6f7b87;color-scheme:dark}}
@@ -26,6 +26,10 @@ h1{font-size:clamp(32px,4.6vw,48px);line-height:1.06}h2{font-size:24px}
 .strips{display:flex;flex-direction:column;gap:6px;padding:18px;background:var(--panel);border:1px solid var(--line);border-radius:12px}
 .strips div{height:11px;border-radius:3px;display:flex;overflow:hidden}.strips span{height:100%}
 .strips .m{position:relative}.strips em{position:absolute;top:-3px;width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:15px solid var(--fail)}
+.rings{display:flex;flex-wrap:wrap;gap:14px;align-items:center;justify-content:center;padding:22px;background:var(--panel);border:1px solid var(--line);border-radius:12px}
+.ring{position:relative;width:var(--s);height:var(--s);border-radius:50%}
+.ring::before{content:"";position:absolute;inset:0;border-radius:50%;background:var(--g);-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 7px),#000 calc(100% - 6px));mask:radial-gradient(farthest-side,transparent calc(100% - 7px),#000 calc(100% - 6px))}
+.ring em{position:absolute;left:50%;top:50%;width:0;height:0;transform:rotate(var(--a)) translateY(calc(var(--s) / -2 - 7px)) translateX(-5px);border-left:5px solid transparent;border-right:5px solid transparent;border-top:8px solid var(--fail)}
 .cap{font:12px/1.4 var(--mono);color:var(--ink-2);margin-top:8px}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:22px;display:flex;flex-direction:column;gap:12px}
 form{display:flex;gap:8px;flex-wrap:wrap}input{flex:1 1 220px;min-width:0;font:inherit;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}
@@ -44,8 +48,8 @@ thead th:last-child{color:var(--write)}
 .msg{color:var(--fail);min-height:1.2em;margin:0;font-size:14px}.ok{color:var(--check)}
 .small{font-size:13px;color:var(--ink-2)}
 footer{max-width:980px;margin:0 auto;padding-block:0 40px;font-size:13px;color:var(--ink-2)}
-@media (prefers-reduced-motion:no-preference){.strips div{animation:grow .9s ease-out both}.strips div:nth-child(2){animation-delay:.08s}.strips div:nth-child(3){animation-delay:.16s}.strips div:nth-child(4){animation-delay:.24s}.strips div:nth-child(5){animation-delay:.32s}.strips div:nth-child(6){animation-delay:.4s}
-@keyframes grow{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}}
+@media (prefers-reduced-motion:no-preference){.ring{animation:spin-in .9s cubic-bezier(.2,.7,.2,1) both}.ring:nth-child(2n){animation-delay:.1s}.ring:nth-child(3n){animation-delay:.2s}
+@keyframes spin-in{from{transform:rotate(-90deg) scale(.85);opacity:.4}to{transform:none;opacity:1}}}
 </style>
 </head>
 <body>
@@ -57,15 +61,8 @@ footer{max-width:980px;margin:0 auto;padding-block:0 40px;font-size:13px;color:v
       <p class="lede">Paste one line on your machine. Every Claude Code and Codex session streams here: each tool call on a live tree, alarms when a run loops or touches something risky, and a security review of every command.</p>
     </div>
     <div>
-      <div class="strips" aria-label="Example: four runs drawn as strips of look, write and check phases">
-        <div><span style="flex:5;background:var(--look)"></span><span style="flex:1;background:var(--write)"></span><span style="flex:1;background:var(--check)"></span><span style="flex:4;background:var(--look)"></span><span style="flex:1;background:var(--write)"></span><span style="flex:1;background:var(--check)"></span></div>
-        <div class="m"><span style="flex:3;background:var(--look)"></span><span style="flex:2;background:var(--write)"></span><span style="flex:1;background:var(--check)"></span><span style="flex:3;background:var(--look)"></span><span style="flex:1;background:var(--write)"></span><span style="flex:1;background:var(--ship)"></span><em style="left:84%"></em></div>
-        <div><span style="flex:2;background:var(--look)"></span><span style="flex:1;background:var(--write)"></span><span style="flex:1;background:var(--check)"></span><span style="flex:2;background:var(--look)"></span><span style="flex:1;background:var(--write)"></span><span style="flex:1;background:var(--check)"></span><span style="flex:2;background:var(--look)"></span></div>
-        <div class="m"><span style="flex:4;background:var(--look)"></span><span style="flex:1;background:var(--write)"></span><span style="flex:4;background:var(--fail);opacity:.75"></span><span style="flex:2;background:var(--look)"></span><em style="left:38%"></em></div>
-        <div><span style="flex:3;background:var(--look)"></span><span style="flex:1;background:var(--write)"></span><span style="flex:1;background:var(--check)"></span><span style="flex:1;background:var(--write)"></span><span style="flex:1;background:var(--check)"></span></div>
-        <div><span style="flex:6;background:var(--look)"></span><span style="flex:2;background:var(--write)"></span><span style="flex:1;background:var(--check)"></span></div>
-      </div>
-      <div class="cap">look · <span style="color:var(--write)">write</span> · <span style="color:var(--check)">check</span> · <span style="color:var(--ship)">ship</span> · <span style="color:var(--fail)">▲ failure mode</span></div>
+      <div class="rings" aria-label="Example: runs drawn as rings of look, write and check phases, with a failure mode marked"><span class="ring" style="--s:52px;--g:conic-gradient(var(--look) 0 18%,var(--write) 18% 26%,var(--check) 26% 34%,var(--look) 34% 66%,var(--write) 66% 72%,var(--check) 72% 80%,var(--look) 80%)"></span><span class="ring" style="--s:64px;--g:conic-gradient(var(--look) 0 30%,var(--write) 30% 40%,var(--check) 40% 46%,var(--look) 46% 82%,var(--write) 82% 88%,var(--ship) 88%)"><em style="--a:316.8deg"></em></span><span class="ring" style="--s:40px;--g:conic-gradient(var(--write) 0 22%,var(--check) 22% 34%,var(--look) 34% 60%,var(--write) 60% 76%,var(--check) 76%)"></span><span class="ring" style="--s:70px;--g:conic-gradient(var(--look) 0 36%,var(--write) 36% 42%,var(--fail) 42% 70%,var(--look) 70%)"><em style="--a:144.0deg"></em></span><span class="ring" style="--s:46px;--g:conic-gradient(var(--look) 0 40%,var(--write) 40% 55%,var(--check) 55% 70%,var(--write) 70% 80%,var(--check) 80%)"></span><span class="ring" style="--s:58px;--g:conic-gradient(var(--look) 0 50%,var(--write) 50% 64%,var(--check) 64% 76%,var(--look) 76%)"></span><span class="ring" style="--s:34px;--g:conic-gradient(var(--write) 0 40%,var(--check) 40% 70%,var(--look) 70%)"></span><span class="ring" style="--s:62px;--g:conic-gradient(var(--look) 0 44%,var(--delegate) 44% 60%,var(--look) 60% 92%,var(--ship) 92%)"><em style="--a:208.8deg"></em></span></div>
+      <div class="cap">ring size = steps · look · <span style="color:var(--write)">write</span> · <span style="color:var(--check)">check</span> · <span style="color:var(--ship)">ship</span> · <span style="color:var(--fail)">▲ failure mode</span></div>
     </div>
   </section>
 

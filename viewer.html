@@ -208,14 +208,20 @@ section:not(.open){padding-top:9px;padding-bottom:9px}
 .pal-item:hover,.pal-item.on{background:var(--hover)}.pal-item .k{color:var(--muted);margin-right:6px}.pal-item mark{background:color-mix(in srgb,var(--warn) 35%,transparent);color:inherit;border-radius:2px}
 .flow{margin-top:8px}
 .pw{position:relative;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--panel);min-height:180px;display:grid}
-.pw-s{min-height:120px}.pw-ghost{position:absolute;inset:14px;display:flex;flex-direction:column;gap:7px;filter:blur(2px);opacity:.55}
-.pw-ghost i{display:block;height:9px;border-radius:3px;background:linear-gradient(90deg,#9aa7b4 0 30%,#3d74d6 30% 34%,#2e9e5b 34% 38%,#9aa7b4 38% 70%,#3d74d6 70% 73%,#2e9e5b 73% 77%,#9aa7b4 77%)}
-.pw-ghost i:nth-child(2n){width:72%}.pw-ghost i:nth-child(3n){width:88%}
+.pw-s{min-height:120px}.pw-ghost{position:absolute;inset:14px;display:flex;flex-wrap:wrap;align-content:flex-start;gap:10px;filter:blur(2px);opacity:.55}
+.pw-ghost i{display:block;width:38px;height:38px;border-radius:50%;background:conic-gradient(#3d74d6 0 12%,#2e9e5b 12% 20%,#9aa7b4 20% 62%,#3d74d6 62% 70%,#2e9e5b 70% 78%,#9aa7b4 78%);-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 6px),#000 calc(100% - 5px));mask:radial-gradient(farthest-side,transparent calc(100% - 6px),#000 calc(100% - 5px))}
+.pw-ghost i:nth-child(2n){width:28px;height:28px}.pw-ghost i:nth-child(3n){width:46px;height:46px}
 .pw-body{position:relative;margin:auto;max-width:460px;text-align:center;padding:18px;background:color-mix(in srgb,var(--panel) 88%,transparent);border-radius:10px;display:flex;flex-direction:column;gap:6px;align-items:center}
 .pw-body p{margin:0;color:var(--text-2);font-size:13px}.pw-tag{font:700 10px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.12em;padding:4px 7px;border-radius:99px;background:var(--text);color:var(--panel)}
 .pw-soon{margin-top:6px;font-weight:650;color:var(--text-2);border:1px dashed var(--line);border-radius:8px;padding:8px 12px}.pw-go{margin-top:6px;border:0;border-radius:8px;padding:9px 14px;font-weight:650;background:var(--codex);color:#fff;cursor:pointer}.pw-go:focus-visible{outline:2px solid var(--text);outline-offset:2px}.pw-go:disabled{opacity:.7;cursor:default}
+.fr-chips{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 12px}.fr-chip{display:inline-flex;gap:6px;align-items:center;border:1px solid var(--line);background:var(--panel);border-radius:99px;padding:4px 10px;font:inherit;font-size:12.5px;color:var(--text);cursor:pointer}
+.fr-chip i{width:9px;height:9px;border-radius:50%}.fr-chip b{font-variant-numeric:tabular-nums}.fr-chip span{color:var(--muted);font-size:11.5px}.fr-chip.on{border-color:var(--text);background:var(--hover)}
+.fr-grp{margin:0 0 14px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--panel)}.fr-missed{border-color:color-mix(in srgb,var(--critical) 45%,var(--line));box-shadow:inset 3px 0 0 var(--critical)}
+.fr-gh{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline;margin-bottom:6px}.fr-gh b{font-size:13.5px}.fr-n{font:700 12px/1 ui-monospace,SFMono-Regular,Menlo,monospace;padding:3px 7px;border-radius:99px;background:var(--hover)}
+.fr-cells{display:flex;flex-wrap:wrap;gap:2px 4px;align-items:flex-end}.fr-cell{border:0;background:none;padding:2px 3px;border-radius:8px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:0;color:var(--muted);font:10px/1.2 ui-monospace,SFMono-Regular,Menlo,monospace;transition:opacity .15s}
+.fr-cell:hover,.fr-cell:focus-visible{background:var(--hover);outline:none}.fr-cell:focus-visible{box-shadow:0 0 0 2px var(--text)}.fr-cell.dim{opacity:.16}
 .fl-head{font-size:13.5px;margin:2px 0 8px;max-width:980px}.fl-head b{font-weight:650}.fl-wrap{max-height:560px;overflow:auto;border:1px solid var(--line);border-radius:8px;background:var(--panel)}
-.fl-wrap svg .fr{cursor:pointer}.fl-wrap svg .fr:hover rect.bg{fill:var(--surface)}.fl-key{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:11.5px;color:var(--muted);margin-top:6px}.fl-key i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+.fl-wrap svg .fr{cursor:pointer}.fl-wrap svg .fr:hover rect.bg{fill:var(--surface)}.fl-key{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:11.5px;color:var(--muted);margin-top:6px}.fl-key i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;vertical-align:-1px}
 .hz{margin-top:8px;border-top:1px dashed var(--line);padding-top:6px}.hz h5{margin:0 0 2px;font:700 10.5px/1.9 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.08em;color:var(--muted)}
 .hz .hzm{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12px;margin-top:4px}.hz .hzm span b{color:var(--critical);font-weight:600}.hz svg g[data-lref]{cursor:pointer}
 .rdr{grid-column:1/-1;border-top:1px solid var(--line);margin-top:6px;padding-top:8px;font-size:12.5px}.rdr .rh{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}.rdr .rh b{font-size:11px;letter-spacing:.08em;color:var(--muted);font:700 10.5px/1.9 ui-monospace,SFMono-Regular,Menlo,monospace}
@@ -289,7 +295,7 @@ section:not(.open){padding-top:9px;padding-bottom:9px}
     <div id="procGraph"></div>
     <div class="tw-head"><h3>Failure modes</h3><span class="sub">Each turn's problems tagged with one vocabulary (TRAIL/MAST style: specification, reasoning, planning, execution, verification) from the judges' root causes and AgentLens's own detectors. Cells count turns; click one for the evidence.</span></div>
     <div id="failModes"></div>
-    <div class="tw-head"><h3>Fleet: every run, and what caught it</h3><span class="sub">Every stored run in all sessions, as one strip: its phases in order (look, write, check, ship, delegate), ▲ where a long-horizon failure mode shows. The dots on the left are the instruments that fired on that run. The bars above them count how many problem runs each instrument caught; the dark part is runs that only this instrument caught. At length the grade is the weakest instrument: a run can pass it and still have skipped work. Click a run to open it.</span></div>
+    <div class="tw-head"><h3>Fleet: every run, and what caught it</h3><span class="sub">Every stored run in all sessions is one ring: its size is the number of steps, and its arcs are its phases in order, clockwise from the top (look, write, check, ship, delegate). ▲ marks where a long-horizon failure mode shows. Runs are grouped by what caught them; the first group is the one to read: runs that passed the grade and still went wrong. Click an instrument to highlight what it caught, or a ring to open the run.</span></div>
     <div id="fleet"></div>
     <div class="tw-head"><h3>Patterns across runs</h3><span class="sub">Every stored run, all sessions, placed on one map by what it did (action mix, length, failures, repeats, loops, stalls, progress, test edits) and grouped into clusters labelled by what sets them apart. The recipe today's observability tools use, computed without model calls, so every label is explainable. Click a cluster or a point.</span></div>
     <div id="patterns"></div>
@@ -1554,36 +1560,48 @@ const PW_INFO={fleet:['Fleet and catch matrix','Every run you have recorded as o
   longterm:['Long-term trends','Each model across every stored session, with a change stated only when it survives a significance test.'],
   horizon:['Long-horizon reading','Plan milestones, nine named long-horizon failure modes at their step, and the run folded into phases.']};
 function paywallHtml(k,small){const [t,d]=PW_INFO[k]||['Pro feature',''],pr=(window.AGENTLENS_PAYWALL||{}).price||'';
-  return `<div class="pw${small?' pw-s':''}"><div class="pw-ghost" aria-hidden="true">${'<i></i>'.repeat(small?3:7)}</div><div class="pw-body"><span class="pw-tag">PRO</span><b>${esc(t)}</b><p>${esc(d)}</p>${(window.AGENTLENS_PAYWALL||{}).payments===false?'<span class="pw-soon">Pro is coming soon</span>':`<button class="pw-go" data-upgrade="${esc(k)}">Unlock with Pro${pr?' · '+esc(pr):''}</button>`}</div></div>`}
+  return `<div class="pw${small?' pw-s':''}"><div class="pw-ghost" aria-hidden="true">${'<i></i>'.repeat(small?10:40)}</div><div class="pw-body"><span class="pw-tag">PRO</span><b>${esc(t)}</b><p>${esc(d)}</p>${(window.AGENTLENS_PAYWALL||{}).payments===false?'<span class="pw-soon">Pro is coming soon</span>':`<button class="pw-go" data-upgrade="${esc(k)}">Unlock with Pro${pr?' · '+esc(pr):''}</button>`}</div></div>`}
 function paywall(k){const host=document.getElementById({fleet:'fleet',patterns:'patterns',longterm:'longTerm'}[k]);if(host)host.innerHTML=paywallHtml(k)}
 document.addEventListener('click',async e=>{const b=e.target.closest('[data-upgrade]');if(!b)return;b.disabled=true;b.textContent='Opening checkout…';
   try{const r=await fetch('/api/checkout',{method:'POST',headers:{'Content-Type':'application/json','X-AgentLens':'1'},body:'{}'});const j=await r.json();
     if(j.url){location.href=j.url;return}b.textContent=j.error||'Checkout is not available right now'}catch(_){b.textContent='Checkout is not available right now'}});
 // Fleet (fleet.py /fleet): every stored run as a strip + the catch matrix in the gutter.
 let FL=null,FL_AT=0;
-const FL_I=[['grade','G','grade below pass','var(--muted)'],['milestones','M','a planned unit never reached','var(--warn)'],['modes','F','long-horizon failure mode','var(--critical)'],['security','S','high/critical security finding','var(--critical)'],['loops','L','loop over bursts','var(--warn)'],['guard','B','guard blocked, or risky call ran unchecked','var(--judge)']];
+const FL_I=[['modes','Failure modes','a named long-horizon failure mode','#d03b3b'],['security','Security','a high or critical security finding','#b8327a'],['milestones','Milestones','a planned unit never reached','#e09a1a'],['loops','Loops','a loop over bursts','#2b9aa0'],['guard','Guard','the guard blocked a call, or a risky call ran unchecked','#8b5fd1'],['grade','Grade','graded below pass','#6b7280']];
+let FL_HI=null;
 async function fetchFleet(){if(PW('fleet')){paywall('fleet');return}try{const r=await fetch('/fleet');if(r.ok){FL=await r.json();FL_AT=Date.now();renderFleet()}}catch(e){}}
-function renderFleet(){if(PW('fleet')){paywall('fleet');return}
+const FL_G=[['missed','Passed the grade, caught by something else','The outcome looked fine. Another instrument found the problem.'],
+  ['graded','The grade caught it','Graded below pass; the other dots show what else fired.'],
+  ['unjudged','Not graded, caught by an instrument','No judge scored these runs; an instrument still fired.'],
+  ['clean','Clean on every instrument','Nothing fired.']];
+function flGroup(r){if(!r.fired.length)return 'clean';if(r.fired.includes('grade'))return 'graded';return r.grade!=null?'missed':'unjudged'}
+function flRing(r,LMAX){
+  const rad=7+12*Math.log1p(r.steps)/LMAX,S=2*(rad+8),c=S/2,tot=d3.sum(r.phases,p=>p[1])||1,arc=d3.arc().innerRadius(rad-2.6).outerRadius(rad+2.6);
+  let a=0,g=`<circle cx="${c}" cy="${c}" r="${rad}" fill="none" stroke="var(--line)" stroke-width="5.2"/>`;
+  r.phases.forEach(([kd,n,f])=>{const a1=a+2*Math.PI*n/tot;g+=`<path transform="translate(${c},${c})" d="${arc({startAngle:a,endAngle:Math.max(a+.02,a1-.012)})}" fill="${HZ_C[kd]||HZ_C.other}" opacity="${kd==='other'?.55:.92}"/>`;
+    a=a1});
+  r.marks.forEach(([fr])=>{const m=2*Math.PI*fr,x=c+Math.sin(m)*(rad+5.4),y=c-Math.cos(m)*(rad+5.4),deg=m*180/Math.PI;
+    g+=`<path transform="translate(${x},${y}) rotate(${deg})" d="M0,3.2L-3,-2.6H3Z" fill="var(--critical)" stroke="var(--panel)" stroke-width=".7"/>`});
+  const top=FL_I.find(([k])=>r.fired.includes(k));if(top)g+=`<circle cx="${c}" cy="${c}" r="${Math.min(4.2,rad-4)}" fill="${top[3]}"/>`;
+  return `<svg width="${S}" height="${S}" viewBox="0 0 ${S} ${S}" aria-hidden="true">${g}</svg>`}
+function renderFleet(){
+  if(PW('fleet')){paywall('fleet');return}
   const host=document.getElementById('fleet');if(!host)return;
   if(!FL){host.innerHTML='<div class="empty">Loading every stored run…</div>';return}
-  const R=FL.rows.slice().sort((a,b)=>b.risk-a.risk||(b.ts||0)-(a.ts||0)),M=FL.matrix;const LMAX=Math.log1p(Math.max(1,...FL.rows.map(r=>r.steps)));
+  const R=FL.rows,M=FL.matrix;
   if(!R.length){host.innerHTML='<div class="empty">No stored runs with tool calls yet. The fleet fills in from the trace DB.</div>';return}
-  const W=Math.max(640,host.clientWidth-2),CW=15,G=FL_I.length*CW+10,NUM=86,X0=G+8,X1=W-NUM,RH=11,TOP=58,H=TOP+R.length*RH+6;
-  const maxc=Math.max(1,...FL_I.map(([k])=>M.by_instrument[k]||0));
-  let svg=`<svg width="${W}" height="${H}" role="img" aria-label="All stored runs as strips, with the instruments that caught each">`;
-  FL_I.forEach(([k,l,why,c],i)=>{const n=M.by_instrument[k]||0,o=M.only[k]||0,x=6+i*CW,h=38*n/maxc,ho=38*o/maxc;
-    svg+=`<g><rect x="${x}" y="${44-h}" width="${CW-4}" height="${h}" fill="${c}" opacity=".35"/><rect x="${x}" y="${44-ho}" width="${CW-4}" height="${ho}" fill="${c}"/><text x="${x+(CW-4)/2}" y="${55}" text-anchor="middle" class="mut" style="font-size:10px;font-weight:700">${l}</text><title>${esc(k)}: caught ${n} of ${M.problems} problem runs; ${o} caught by nothing else (${esc(why)})</title></g>`});
-  svg+=`<text x="${X0}" y="${50}" class="mut" style="font-size:10.5px">${R.length} runs · each from start to end; length = steps (log scale)</text><text x="${W-6}" y="${50}" text-anchor="end" class="mut" style="font-size:10.5px">steps · grade</text>`;
-  R.forEach((r,j)=>{const y=TOP+j*RH,tot=d3.sum(r.phases,p=>p[1])||1,SW=(X1-X0)*Math.max(.04,Math.log1p(r.steps)/LMAX);let x=X0,g=`<g class="fr" data-frun="${esc(r.session||'')}|${esc(r.turn)}"><rect class="bg" x="0" y="${y-1}" width="${W}" height="${RH}" fill="transparent"/>`;
-    FL_I.forEach(([k,l,why,c],i)=>{if(r.fired.includes(k))g+=`<circle cx="${6+i*CW+(CW-4)/2}" cy="${y+RH/2-1}" r="3.4" fill="${c}"/>`;else g+=`<circle cx="${6+i*CW+(CW-4)/2}" cy="${y+RH/2-1}" r="1.2" fill="var(--line)"/>`});
-    r.phases.forEach(([kd,n,f])=>{const w=SW*n/tot;g+=`<rect x="${x}" y="${y}" width="${Math.max(.6,w-.4)}" height="${RH-3}" fill="${HZ_C[kd]||HZ_C.other}" opacity="${kd==='other'?.5:.8}"/>`;if(f)g+=`<rect x="${x}" y="${y+RH-4}" width="${Math.max(.6,w-.4)}" height="1.6" fill="var(--critical)"/>`;x+=w});
-    r.marks.forEach(([fr,m])=>{const mx=X0+SW*fr;g+=`<path d="M${mx},${y-1}l3.5,${RH-2}h-7z" fill="var(--critical)" stroke="var(--panel)" stroke-width=".8"/>`});
-    g+=`<text x="${W-6}" y="${y+RH-3}" text-anchor="end" class="mut" style="font-size:9.5px">${r.steps}${r.grade!=null?' · '+r.grade.toFixed(1):''}</text>`;
-    g+=`<title>${esc(NAME[r.provider]||r.provider)} · ${r.steps} steps${r.grade!=null?' · grade '+r.grade:''}${r.fired.length?' · caught by '+r.fired.join(', '):' · nothing fired'}${r.modes.length?'\n'+r.modes.map(m=>m.replace(/_/g,' ')).join(', '):''}${r.why?'\n'+r.why:''}\n${r.prompt||''}</title></g>`;svg+=g});
-  svg+='</svg>';
-  const key=Object.entries(HZ_C).map(([k,c])=>`<span><i style="background:${c}"></i>${k}</span>`).join('')+`<span><i style="background:var(--critical);height:2px"></i>failed calls</span><span>▲ failure mode</span>`+FL_I.map(([k,l,why])=>`<span><b>${l}</b> ${esc(why)}</span>`).join('');
-  host.innerHTML=`<p class="fl-head"><b>${esc(M.headline)}</b> ${M.clean} of ${M.runs} runs are clean on every instrument.</p><div class="fl-wrap">${svg}</div><div class="fl-key">${key}</div>`;
+  const LMAX=Math.log1p(Math.max(1,...R.map(r=>r.steps)));
+  const chips=FL_I.filter(([k])=>(M.by_instrument[k]||0)||k==='grade').map(([k,l,why,c])=>`<button class="fr-chip${FL_HI===k?' on':''}" data-flhi="${k}" aria-pressed="${FL_HI===k}" title="${esc(why)}"><i style="background:${c}"></i>${esc(l)} <b>${M.by_instrument[k]||0}</b>${M.only[k]?`<span>${M.only[k]} only here</span>`:''}</button>`).join('');
+  let h=`<p class="fl-head"><b>${esc(M.headline)}</b> ${M.clean} of ${M.runs} runs are clean on every instrument.</p><div class="fr-chips" role="group" aria-label="Highlight the runs an instrument caught">${chips}</div>`;
+  for(const [g,title,sub] of FL_G){
+    const rs=R.filter(r=>flGroup(r)===g).sort((a,b)=>b.risk-a.risk||b.steps-a.steps);if(!rs.length)continue;
+    h+=`<div class="fr-grp fr-${g}"><div class="fr-gh"><b>${esc(title)}</b><span class="fr-n">${rs.length}</span><span class="sub">${esc(sub)}</span></div><div class="fr-cells">`+
+      rs.map(r=>`<button class="fr-cell${FL_HI&&!r.fired.includes(FL_HI)?' dim':''}" data-frun="${esc(r.session||'')}|${esc(r.turn)}" title="${esc(`${NAME[r.provider]||r.provider} · ${r.steps} steps${r.grade!=null?' · grade '+r.grade:''}${r.fired.length?' · caught by '+r.fired.join(', '):' · nothing fired'}${r.modes.length?'\n'+r.modes.map(m=>m.replace(/_/g,' ')).join(', '):''}${r.why?'\n'+r.why:''}\n${r.prompt||''}`)}">${flRing(r,LMAX)}<span>${r.steps}</span></button>`).join('')+'</div></div>'}
+  const key=Object.entries(HZ_C).map(([k,c])=>`<span><i style="background:${c}"></i>${k}</span>`).join('');
+  h+=`<div class="fl-key">${key}<span><b style="color:var(--critical)">▲</b> where a failure mode shows</span><span>centre dot = the strongest instrument that fired</span><span>ring size = steps (log) · arcs run clockwise from the top, start to end</span></div>`;
+  host.innerHTML=h;
 }
+document.getElementById('fleet').addEventListener('click',e=>{const c=e.target.closest('[data-flhi]');if(c){FL_HI=FL_HI===c.dataset.flhi?null:c.dataset.flhi;renderFleet()}});
 document.getElementById('fleet').addEventListener('click',e=>{const g=e.target.closest('[data-frun]');if(!g)return;const [sid,tid]=g.dataset.frun.split('|');openRunAnywhere(sid,tid)});
 function renderLongRun(t){
   const host=document.getElementById('longRun');
