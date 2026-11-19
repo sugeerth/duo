@@ -136,8 +136,8 @@ section:not(.open){padding-top:9px;padding-bottom:9px}
 #evalTreeSec h2{font-size:22px;letter-spacing:-.5px}
 .tree-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:14px 0}
 .tree-toolbar input{flex:1;min-width:100px;accent-color:var(--codex)}
-#evalTree{height:360px;overflow:auto;background-image:radial-gradient(var(--line) .8px,transparent .8px);background-size:20px 20px;border:1px solid var(--line);border-radius:12px}
-#evalTree svg{overflow:hidden} .tree-node{cursor:pointer;outline:none}.tree-node:hover rect,.tree-node:focus rect{stroke:var(--text);stroke-width:2}
+#evalTree{height:360px;overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:12px}
+#evalTree svg{overflow:hidden} .tree-node{cursor:pointer;outline:none}.tree-node:hover rect,.tree-node:focus rect{stroke:var(--text);stroke-width:2}.tree-node:hover circle,.tree-node:focus-visible circle{filter:brightness(1.12) drop-shadow(0 0 0 var(--text))}.tree-node:focus-visible{outline:2px solid var(--text);outline-offset:2px;border-radius:4px}
 @keyframes treeAppear{from{opacity:0}to{opacity:1}}
 .tree-node.newest{animation:treeAppear .35s ease-out}
 @media(prefers-reduced-motion:reduce){.tree-node.newest{animation:none}}
@@ -278,7 +278,7 @@ section:not(.open){padding-top:9px;padding-bottom:9px}
 <main>
   <section class="c12" id="evalTreeSec" data-open="1">
     <h2>AgentLens · one task, two execution tracks</h2>
-    <p class="sub">Long runs stay on a shared timeline. Tool calls split off as railway tracks, with nearby calls clustered until you zoom in. The Tree view regrows each run as a tree: trunk = run time, branches = tool calls, canopy = judge score.</p>
+    <p class="sub">Each line is one agent's run on a shared clock, and each dot is a tool call: looking above the line, changing and checking below it. The steps that matter are named. Click any dot for the evidence.</p>
     <div id="alarms" class="alarms" aria-live="polite"></div>
     <div id="verdictCard" class="vcard" aria-live="polite"></div>
     <div id="railSummary" class="rail-summary"></div>
@@ -298,7 +298,7 @@ section:not(.open){padding-top:9px;padding-bottom:9px}
     <div id="progressLane"></div>
     <div class="diff-head"><h3>Step diff — where the runs diverge</h3><span class="sub" id="diffSentence"></span></div>
     <div id="stepDiff" aria-label="Step-aligned comparison of both models on this turn"></div>
-    <div class="tree-caption"><span>━ Task bar</span><span style="color:var(--codex)">● Codex</span><span style="color:var(--claude)">● Claude</span><span>◆ Reasoning</span><span class="ok">✓ Passed</span><span class="bad">✗ Failed</span><span>Branches = tool calls · clustered calls expand with zoom · click for evidence</span></div>
+    
     <div class="tw-head env-sec"><h3>Rewards &amp; rollouts</h3><span class="sub">Every episode of this task in the environment. Lines are cumulative reward by step (green = success, red = failure; the selected episode is bold). pass@k = chance at least one of k episodes succeeds; pass^k = chance all k do.</span></div>
     <div id="envView" class="env-sec"></div>
     <div class="tw-head"><h3>Reasoning, memory &amp; context</h3><span class="sub">How each model thinks, what it remembers, and what fills its context window as the run goes on.</span></div>
@@ -2417,152 +2417,148 @@ function treeMarks(t){
 }
 let S_FORK=new Map();
 function maxLenFor(laneH){return laneH/2-22}
+function treeLabel(l){
+  const d=unwrapCmd(l.detail||'').trim(),ph=phaseOf(l);
+  if(ph==='verify'||ph==='run'){const w=d.replace(/^cd\s+\S+\s*&&\s*/,'').replace(/^python3?\s+-m\s+/,'').split(/\s+/);return (w[0]||short(l.tool)).split('/').pop()+(w[1]&&!w[1].startsWith('-')&&(w[0]+w[1]).length<18?' '+w[1].split('/').pop():'')}
+  const base=d.split(/[\s,]/)[0].split('/').pop();return base?base.slice(0,22):short(l.tool)}
+// Tree view. One rule: every mark is readable on its own. Trunk = the run on a shared clock; a dot on a stem = a
+// tool call (above = looking, below = changing and checking); a number in a dot = that many calls in a row;
+// only steps that matter are named. Idle time is cut out and said so on the axis.
 function renderGrowthTree(t,span,cutoff,host){
   const runs=t.runs.filter(r=>r.start<=cutoff),M=treeMarks(t),tips=new Map();S_FORK=new Map(S.A.forkStep.filter(e=>e.turn_id===t.id).map(e=>[+e.item_id,e.data||{}]));
-  const n=Math.max(1,runs.length),laneH=Math.min(190,Math.max(130,480/n));
-  const w=Math.max(760,host.clientWidth),h=70+laneH*n+104;
-  const svg=d3.create('svg').attr('width',w).attr('height',h).attr('role','group').attr('aria-label','Turn '+t.no+' execution trees: trunks are agent runs, branches are tool calls');
+  const ordered=[...runs.filter(r=>r.provider==='codex'),...runs.filter(r=>r.provider==='claude'),...runs.filter(r=>!P.includes(r.provider))];
+  const n=Math.max(1,runs.length),base=n===1?156:Math.min(156,Math.max(128,440/n)),LH=ordered.map(r=>r.tools.some(l=>l.t<=cutoff)?base:60),tops=[];
+  const TOP=40;{let y=TOP;for(const v of LH){tops.push(y);y+=v}}const lanes=d3.sum(LH)||base,w=Math.max(760,host.clientWidth),h=TOP+lanes+70;
+  const svg=d3.create('svg').attr('width',w).attr('height',h).attr('role','group').attr('aria-label','Turn '+t.no+': each line is an agent run, each dot a tool call');
   function target(g,label,action){g.attr('class','tree-node rail-target').attr('tabindex',0).attr('role','button').attr('aria-label',label).on('click',action).on('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();action()}});g.append('title').text(label);return g}
-  svg.append('text').attr('x',14).attr('y',24).attr('class','ink b').text('TASK '+t.no+' · '+KIND_L[t.kind]);
-  svg.append('text').attr('x',14).attr('y',40).attr('class','mut').text(dur(span*1000)+' total · trunk length = run time (idle stretches pinched) · girth = tool activity · branch = call, colour = phase');
-  let lx=w-430;for(const ph of LAB_PHASES){svg.append('circle').attr('cx',lx).attr('cy',h-16).attr('r',4).attr('fill',LAB_COLORS[ph]);svg.append('text').attr('x',lx+8).attr('y',h-12).attr('class','mut').text(ph);lx+=ph.length*7+30}
-  svg.append('text').attr('x',lx+6).attr('y',h-12).attr('class','mut').text('✗ failed · ◆ reasoning · ★ winner');
-  {let bx=14;const BL=[['progress','✓ progress burst'],['loop','↻ loop'],['failing','! failing burst'],['filler','quiet burst']];for(const [k,l] of BL){svg.append('rect').attr('x',bx).attr('y',h-94).attr('width',14).attr('height',5).attr('rx',2).attr('fill',LR_C[k]);svg.append('text').attr('x',bx+18).attr('y',h-89).attr('class','mut').text(l);bx+=l.length*6.4+34}
-   svg.append('text').attr('x',14).attr('y',h-71).attr('class','mut').text('● check fruit (big = progress) · ┄ withered = failed or repeated call · ◎ root cause · ▼ look first · ┆ graft = first divergence · roots = memory carried in');
-   svg.append('text').attr('x',bx).attr('y',h-89).attr('class','mut').text('● security dot (red critical · orange high · amber medium) · purple dashes = injection → action');}
-  if(!runs.length){svg.append('text').attr('x',w/2).attr('y',h/2).attr('text-anchor','middle').attr('class','mut').text('Trees grow once the agents start running.');host.replaceChildren(svg.node());return 0}
-  // --- shared gap-constricted scale, built from the FULL turn (stable during replay) ---
-  const x0=150,W=w-x0-150,relDur=r=>Math.max(.001,r.end-r.start);
-  const maxDur=Math.max(...runs.map(relDur)),gapMin=Math.max(6,maxDur*.08),GAPW=22;
+  svg.append('text').attr('x',16).attr('y',26).attr('class','ink b').style('font-size','13px').text('Task '+t.no+' · '+KIND_L[t.kind]);
+  svg.append('text').attr('x',w-16).attr('y',26).attr('text-anchor','end').attr('class','mut').text(dur(span*1000));
+  if(!runs.length){svg.append('text').attr('x',w/2).attr('y',h/2).attr('text-anchor','middle').attr('class','mut').text('The tree grows once the agents start running.');host.replaceChildren(svg.node());return 0}
+  // shared clock with idle stretches cut out (built from the full turn, so it is stable during replay)
+  const x0=150,W=w-x0-104,relDur=r=>Math.max(.001,r.end-r.start);
+  const maxDur=Math.max(...runs.map(relDur)),gapMin=Math.max(6,maxDur*.08),GAPW=40;
   let iv=[[0,Math.min(1,maxDur)]];
   for(const r of runs){iv.push([relDur(r)-.5,relDur(r)]);
     for(const l of r.tools)iv.push([l.t-r.start,l.t-r.start+Math.max(.3,(l.dur||300)/1000)]);
     for(const q of r.reasoning)iv.push([q.t-r.start,q.t-r.start+.4]);}
   iv=iv.map(([a,b])=>[Math.max(0,Math.min(a,maxDur)),Math.max(0,Math.min(b,maxDur))]).sort((p,q)=>p[0]-q[0]);
   const B=[];for(const [a,b] of iv){const c=B.at(-1);if(c&&a-c[1]<gapMin)c[1]=Math.max(c[1],b);else B.push([a,b])}
-  const active=d3.sum(B,s=>s[1]-s[0]),kx=(W-GAPW*(B.length-1))/Math.max(.001,active);
+  const active=d3.sum(B,x=>x[1]-x[0]),kx=(W-GAPW*(B.length-1))/Math.max(.001,active);
   const seg=[];let xc=x0;
-  B.forEach((s,i)=>{seg.push({a:s[0],b:s[1],xa:xc,k:kx});xc+=(s[1]-s[0])*kx;
-    if(i<B.length-1){seg.push({a:s[1],b:B[i+1][0],xa:xc,k:GAPW/Math.max(.001,B[i+1][0]-s[1]),gap:true});xc+=GAPW}});
-  const X=t=>{for(const s of seg)if(t<=s.b||s===seg.at(-1))return s.xa+(Math.max(s.a,Math.min(t,s.b))-s.a)*s.k;return xc};
-  const inGap=t=>seg.some(s=>s.gap&&t>s.a&&t<s.b);
-  // axis: a tick at each activity block edge; a pinch badge inside each gap
-  for(const s of seg){if(s.gap){const gx=(s.xa+GAPW/2);
-      svg.append('path').attr('d',`M${gx-7},${h-46} q3,-5 7,0 q4,5 7,0`).attr('stroke','var(--text-2)').attr('fill','none');
-      svg.append('text').attr('x',gx).attr('y',h-30).attr('text-anchor','middle').attr('class','mut').text('+'+dur((s.b-s.a)*1000));continue}
-    svg.append('line').attr('x1',s.xa).attr('x2',s.xa).attr('y1',56).attr('y2',h-48).attr('stroke','var(--line)').attr('stroke-dasharray','3,6').attr('opacity',.6);
-    const prev=seg[seg.indexOf(s)-1];
-    if((s.b-s.a)*s.k>58&&!(prev&&prev.gap))svg.append('text').attr('x',s.xa).attr('y',h-30).attr('text-anchor','middle').attr('class','mut').text(dur(s.a*1000));}
-  svg.append('text').attr('x',xc).attr('y',h-30).attr('text-anchor','middle').attr('class','mut').text(dur(maxDur*1000));
-  svg.append('text').attr('x',14).attr('y',h-12).attr('class','mut').text('Trunks share a start line (compare shape and speed) · 〜 pinch = idle time removed · Railway shows real wall-clock overlap.');
-  let visible=0;
-  const ordered=[...runs.filter(r=>r.provider==='codex'),...runs.filter(r=>r.provider==='claude'),...runs.filter(r=>!P.includes(r.provider))];
+  B.forEach((x,i)=>{seg.push({a:x[0],b:x[1],xa:xc,k:kx});xc+=(x[1]-x[0])*kx;
+    if(i<B.length-1){seg.push({a:x[1],b:B[i+1][0],xa:xc,k:GAPW/Math.max(.001,B[i+1][0]-x[1]),gap:true});xc+=GAPW}});
+  const X=tt=>{for(const g of seg)if(tt<=g.b||g===seg.at(-1))return g.xa+(Math.max(g.a,Math.min(tt,g.b))-g.a)*g.k;return xc};
+  // axis: one hairline, start and end, and what was cut out
+  const ay=h-52;svg.append('line').attr('x1',x0).attr('x2',xc).attr('y1',ay).attr('y2',ay).attr('stroke','var(--line)');
+  const atext=(x,txt,anchor)=>svg.append('text').attr('x',x).attr('y',ay+15).attr('text-anchor',anchor||'middle').attr('class','mut').style('font-size','11px').text(txt);
+  atext(x0,'0','start');atext(xc,dur(maxDur*1000),'end');let lastLab=x0+18;
+  for(const g of seg){if(!g.gap)continue;const gx=g.xa+GAPW/2;
+    svg.append('rect').attr('x',g.xa+3).attr('y',TOP).attr('width',GAPW-6).attr('height',lanes).attr('fill','var(--hover)').attr('opacity',.55);
+    const txt=dur((g.b-g.a)*1000)+' idle';if(gx-txt.length*3>lastLab+6&&gx+txt.length*3<xc-40){atext(gx,txt);lastLab=gx+txt.length*3}}
+  let visible=0;const boxes=[],used={phases:new Set(),fail:false,check:false,sec:false,repeat:false,think:false,loop:false,count:false};
+  const place=(x,y,txt,opts={})=>{const wd=txt.length*6.1+4;for(const [anchor,dx] of [['start',9],['end',-9]]){const bx0=anchor==='start'?x+dx:x+dx-wd,box=[bx0-2,y-11,bx0+wd+2,y+4];
+      if(box[0]<x0-6||box[2]>w-8)continue;if(boxes.some(o=>box[0]<o[2]&&box[2]>o[0]&&box[1]<o[3]&&box[3]>o[1]))continue;boxes.push(box);
+      svg.append('text').attr('x',x+dx).attr('y',y).attr('text-anchor',anchor).style('font-size','11px').style('font-weight',opts.bold?650:500).attr('fill',opts.fill||'var(--text-2)').style('paint-order','stroke').style('stroke','var(--panel)').style('stroke-width','3px').text(txt);return true}return false};
+  const pending=[];  // labels are placed after every mark is drawn, most important first
   ordered.forEach((r,li)=>{
-    const p=r.provider,c=`var(--${P.includes(p)?p:'judge'})`,ty=66+laneH*li+laneH/2;
+    const p=r.provider,c=`var(--${P.includes(p)?p:'judge'})`,laneH=LH[li],ty=tops[li]+laneH/2;
     const finRel=Math.min(r.end,cutoff)-r.start,endX=X(finRel);
-    const spans=r.tools.map(l=>[l.t-r.start,l.t-r.start+Math.max(.2,(l.dur||200)/1000)]).sort((a,b)=>a[0]-b[0]);
-    const hw=Math.max(.4,maxDur/50);
-    const cov=tt=>{let o=0;for(const [a,b] of spans){const lo=Math.max(a,tt-hw),hi=Math.min(b,tt+hw);if(hi>lo)o+=hi-lo;if(a>tt+hw)break}return Math.min(1,o/(2*hw))};
-    const S=72,pts=d3.range(S+1).map(i=>{const tt=finRel*i/S;
-      let th=2.2+5.4*cov(tt);if(inGap(tt))th=1.3;if(i>S-3)th*=(S-i)/3+.2;if(i===0)th*=.7;
-      return {x:X(tt),th}});
-    const area=d3.area().x(d=>d.x).y0(d=>ty-d.th).y1(d=>ty+d.th).curve(d3.curveBasis);
+    if(li)svg.append('line').attr('x1',16).attr('x2',w-16).attr('y1',tops[li]).attr('y2',tops[li]).attr('stroke','var(--grid)');
+    // who
+    const envRun=String(r.s.mode||'').startsWith('env:'),nl=r.s.lessons||0,hist=M.hist;
+    svg.append('text').attr('x',16).attr('y',ty-2).attr('class','b').style('font-size','13px').attr('fill',c).text(envRun?(r.model||'policy').slice(0,16):NAME[p]);
+    const sub=envRun?String(r.s.mode).slice(4,30):[ordered.filter(o=>o.provider===p).length>1?r.role:'',r.model||''].filter(Boolean).join(' · ');if(sub)svg.append('text').attr('x',16).attr('y',ty+13).attr('class','mut').style('font-size','11px').text(sub.slice(0,20));
+    if(nl||hist){const g=svg.append('text').attr('x',16).attr('y',ty+(sub?27:13)).attr('class','mut').style('font-size','10.5px').text(`${nl?nl+' lesson'+(nl===1?'':'s'):''}${nl&&hist?' · ':''}${hist?hist+' turn'+(hist===1?'':'s')+' in memory':''}`);g.append('title').text('Long-term memory carried into this run')}
+    // trunk: solid where the agent was active, thin through the idle cuts
     const trunk=target(svg.append('g'),NAME[p]+' '+r.role+' · '+dur(finRel*1000)+(r.model?' · '+r.model:'')+(r.running&&TREE.progress===100?' · running':''),()=>showRun(r.id));
-    trunk.append('path').attr('d',area(pts)).attr('fill',c).attr('opacity',.82);
-    trunk.append('path').attr('d',area.y0(d=>ty-d.th*.35).y1(d=>ty-d.th*.05)(pts)).attr('fill','#fff').attr('opacity',.25);
-    area.y0(d=>ty-d.th).y1(d=>ty+d.th);
-    {const nl=r.s.lessons||0,hist=M.hist,nRoots=nl+(hist?1:0);
-     const rg=target(svg.append('g'),nRoots?`Roots = long-term memory carried in: ${nl} playbook lesson${nl===1?'':'s'}${hist?` and ${hist} earlier turn${hist===1?'':'s'} of conversation`:''}`:'No long-term memory carried in: no lessons, no earlier turns',()=>showRun(r.id));
-     if(!nRoots)rg.append('path').attr('d',`M${x0},${ty} q-8,0 -12,3`).attr('stroke',c).attr('fill','none').attr('stroke-width',1.2).attr('opacity',.35);
-     for(let k=0;k<nRoots;k++){const isHist=hist&&k===nRoots-1,a=(k-(nRoots-1)/2)*Math.min(14,40/Math.max(1,nRoots)),len=16+(isHist?8:4)+((k*7)%3)*3;
-       rg.append('path').attr('d',`M${x0},${ty} q${-len*.5},${a*.3} ${-len},${a}`).attr('stroke',isHist?'var(--text-2)':c).attr('fill','none').attr('stroke-width',isHist?2.2:1.6).attr('opacity',.7);
-       rg.append('circle').attr('cx',x0-len).attr('cy',ty+a).attr('r',2.2).attr('fill',isHist?'var(--text-2)':c)}
-     if(nRoots)svg.append('text').attr('x',x0-26).attr('y',ty+28).attr('text-anchor','end').attr('class','mut').style('font-size','10.5px').text(`${nl} lesson${nl===1?'':'s'}${hist?' · '+hist+' turns':''} in`)}
-    const R=M.lr[p],rel=a=>Math.max(0,Math.min(finRel,a-r.start)),mine=(a,b)=>b>=r.start-1&&a<=r.end+1&&a<=cutoff;
+    trunk.append('line').attr('x1',x0).attr('x2',endX).attr('y1',ty).attr('y2',ty).attr('stroke',c).attr('stroke-width',1).attr('opacity',.45);
+    for(const g of seg){if(g.gap)continue;const xa=g.xa,xb=Math.min(endX,g.xa+(g.b-g.a)*g.k);if(xb>xa)trunk.append('line').attr('x1',xa).attr('x2',xb).attr('y1',ty).attr('y2',ty).attr('stroke',c).attr('stroke-width',3).attr('stroke-linecap','round')}
+    trunk.append('rect').attr('x',x0).attr('y',ty-6).attr('width',Math.max(4,endX-x0)).attr('height',12).attr('fill','transparent').attr('stroke','none');
+    const R=M.lr[p],rel=a=>Math.max(0,Math.min(finRel,a-r.start)),mine=(a,b)=>b>=r.start-1&&a<=r.end+1&&a<=cutoff,REACH=laneH/2-14;
     if(R){
-      for(const b of R.bursts.filter(b=>mine(b.start,b.end))){const xa=X(rel(b.start)),xb=Math.max(xa+3,X(rel(b.end)));
-        const g=target(svg.append('g'),`${b.status} burst · ${b.calls} calls · ${dur((b.end-b.start)*1000)}${b.repeat_share!=null?' · '+Math.round(100*b.repeat_share)+'% repeats earlier calls':''}`,()=>openRef(b.ref));
-        g.append('rect').attr('x',xa).attr('y',ty+9).attr('width',xb-xa).attr('height',4).attr('rx',2).attr('fill',LR_C[b.status]).attr('opacity',b.status==='filler'?.5:.9)}
-      const st=R.stall;if(st&&R.checks.length&&st.calls>=5&&mine(st.start,st.end)){const xa=X(rel(st.start)),xb=X(rel(st.end));
-        const g=target(svg.append('g'),`Stall: ${dur(st.wall*1000)} and ${st.calls} calls with no check newly passing${st.open?' (still open)':''}`,()=>openRef(st.ref));
-        g.append('rect').attr('x',xa).attr('y',ty-11).attr('width',Math.max(2,xb-xa)).attr('height',22).attr('fill','var(--muted)').attr('opacity',.12);
-        g.append('path').attr('d',`M${xa},${ty+maxLenFor(laneH)+2}v5H${Math.max(xa+4,xb)}v-5`).attr('fill','none').attr('stroke','var(--muted)').attr('stroke-width',1.3);g.append('text').attr('x',xa).attr('y',ty+maxLenFor(laneH)+19).attr('class','mut').text('stall '+dur(st.wall*1000)+(st.open?' (open)':'')+' · no check newly passing')}
-      for(const L of R.loops.filter(L=>mine(L.start,L.end))){const xa=X(rel(L.start)),xb=X(rel(L.end)),k=Math.max(2,Math.round((xb-xa)/14));
-        let d=`M${xa},${ty}`;for(let i=1;i<=k;i++){const xm=xa+(xb-xa)*(i-.5)/k,xe=xa+(xb-xa)*i/k;d+=` Q${xm},${ty+(i%2?-12:12)} ${xe},${ty}`}
+      for(const L of R.loops.filter(L=>mine(L.start,L.end))){const xa=X(rel(L.start)),xb=Math.max(xa+8,X(rel(L.end)));used.loop=true;
         const g=target(svg.append('g'),`Loop: ${L.bursts} bursts repeating earlier calls without progress for ${dur(L.wall*1000)} (${L.calls} calls)`,()=>openRef(L.ref));
-        g.append('path').attr('d',d).attr('fill','none').attr('stroke','var(--warn)').attr('stroke-width',2.6).attr('stroke-linecap','round');
-        g.append('text').attr('x',xa).attr('y',ty-maxLenFor(laneH)-4).attr('class','b').attr('fill','var(--warn)').text('↻ loop '+dur(L.wall*1000))}
-      const lf=R.look_first;if(lf&&lf.at>=r.start-1&&lf.at<=r.end+1&&lf.at<=cutoff){const lx2=X(rel(lf.at));
-        const g=target(svg.append('g'),'Look first: '+lf.why,()=>openRef(lf.ref));
-        g.append('path').attr('d',`M${lx2-6},${ty-24}h12l-6,9z`).attr('fill','var(--critical)');
-        g.append('text').attr('x',lx2+8).attr('y',ty-17).attr('class','b').attr('fill','var(--critical)').text('look first')}
+        g.append('rect').attr('x',xa).attr('y',ty-REACH).attr('width',xb-xa).attr('height',REACH*2).attr('rx',6).attr('fill','var(--warn)').attr('opacity',.1);
+        pending.push({pri:7,x:xa-4,y:ty-REACH+13,txt:'loop · '+dur(L.wall*1000),fill:'var(--warn)',bold:true,force:true})}
+      const st=R.stall;if(st&&R.checks.length&&st.calls>=5&&mine(st.start,st.end)&&!R.loops.length){const xa=X(rel(st.start)),xb=X(rel(st.end));
+        const g=target(svg.append('g'),`Stall: ${dur(st.wall*1000)} and ${st.calls} calls with no check newly passing${st.open?' (still open)':''}`,()=>openRef(st.ref));
+        g.append('path').attr('d',`M${xa},${ty+REACH-3}v4H${Math.max(xa+4,xb)}v-4`).attr('fill','none').attr('stroke','var(--muted)').attr('stroke-width',1.2);
+        pending.push({pri:3,x:xa-9,y:ty+REACH+13,txt:'stall '+dur(st.wall*1000)+(st.open?', still open':''),fill:'var(--muted)',force:true})}
     }
-    const envRun=String(r.s.mode||'').startsWith('env:');
-    svg.append('text').attr('x',x0-26).attr('y',ty-2).attr('text-anchor','end').attr('class','b').attr('fill',c).text(envRun?(r.model||'policy'):NAME[p]+(ordered.filter(o=>o.provider===p).length>1?' · '+r.role:''));
-    if(envRun)svg.append('text').attr('x',x0-26).attr('y',ty+13).attr('text-anchor','end').attr('class','mut').text(String(r.s.mode).slice(4,30));
-    else if(r.model)svg.append('text').attr('x',x0-26).attr('y',ty+13).attr('text-anchor','end').attr('class','mut').text(r.model);
-    const maxLen=maxLenFor(laneH);
+    // calls: consecutive calls of one phase that would overlap merge into one dot with a count
     const tools=r.tools.filter(l=>l.t<=cutoff);visible+=tools.length;
-    // long runs: consecutive calls of one tool closer than 5 px merge into one thicker branch (xN); anything marked stays single
     const seen=new Set(),groups=[];
-    tools.forEach(l=>{const key=l.tool+'|'+l.detail,wither=l.passed===false||(!!l.detail&&seen.has(key));if(l.passed!==false)seen.add(key);
-      const marked=M.sec.has(l.eid)||M.hacks.has(l.eid)||M.roots.has(l.eid)||M.crit.has(l.eid)||M.checks.has(l.eid)||l.passed===false||!!l.reward,bx=Math.min(endX-2,X(l.t-r.start)),last=groups.at(-1);
-      if(last&&!marked&&!last.marked&&last.tool===l.tool&&bx-last.bx1<5){last.n++;last.bx1=bx;last.dur+=l.dur||0;last.wither+=wither?1:0}
-      else groups.push({l,tool:l.tool,n:1,bx,bx1:bx,dur:l.dur||0,wither:wither?1:0,marked})});
-    groups.forEach((G,i)=>{const l=G.l,bx=G.bx,side=i%2?1:-1,sway=((i*37)%7-3)/14;
-      const len=Math.min(maxLen,20+50*Math.sqrt(Math.min(G.dur||120,20000)/20000)+(G.n>1?Math.min(14,G.n):0));
-      const ex=bx+len*(.5+sway),ey=ty-side*len,chk=M.checks.get(l.eid),root=M.roots.has(l.eid),crit=M.crit.has(l.eid);
-      const withered=G.wither===G.n&&l.passed!==false;
-      const col=l.passed===false?'var(--critical)':withered?'var(--muted)':(LAB_COLORS[phaseOf(l)]||'var(--judge)');
-      const label=short(l.tool)+(G.n>1?` ×${G.n} (${dur(G.dur)} total${G.wither?', '+G.wither+' failed or repeated':''})`:(l.detail?' · '+l.detail:'')+' · '+dur(l.dur))+(l.passed===false?' · failed':withered?' · repeat of a call that already succeeded':'')+(chk?` · check ${chk.ok?'passed':'failed'}${chk.passed!=null?' ('+chk.passed+' passed)':''}${chk.progress?' · progress':''}${chk.regression?' · regression':''}`:'')+(l.reward?` · reward ${l.reward>0?'+':''}${l.reward}`:'')+(M.hacks.has(l.eid)?' · reward-hacking signal: '+M.hacks.get(l.eid):'')+(root?" · judges' root cause":crit?' · critical error':'');
+    tools.forEach(l=>{const key=l.tool+'|'+l.detail,repeat=l.passed!==false&&!!l.detail&&seen.has(key);if(l.passed!==false)seen.add(key);
+      const ph=phaseOf(l),marked=M.sec.has(l.eid)||M.hacks.has(l.eid)||M.roots.has(l.eid)||M.crit.has(l.eid)||M.checks.has(l.eid)||l.passed===false||!!l.reward||S_FORK.has(l.eid)||(R&&R.look_first&&R.look_first.ref===l.eid);
+      const bx=Math.min(endX-2,X(l.t-r.start)),last=groups.at(-1);
+      if(last&&!marked&&!last.marked&&last.ph===ph&&bx-last.bx1<11){last.n++;last.bx1=bx;last.dur+=l.dur||0;last.rep+=repeat?1:0;last.items.push(l)}
+      else groups.push({l,ph,n:1,bx,bx1:bx,dur:l.dur||0,rep:repeat?1:0,marked,items:[l]})});
+    const lastX={'-1':[-99,-99,-99],'1':[-99,-99,-99]};
+    groups.forEach(G=>{const l=G.l,side=(G.ph==='inspect'||G.ph==='plan')?-1:1,cx=(G.bx+G.bx1)/2;
+      const chk=M.checks.get(l.eid),root=M.roots.has(l.eid),crit=M.crit.has(l.eid),failed=l.passed===false,sec=M.sec.get(l.eid),hack=M.hacks.get(l.eid),look=R&&R.look_first&&R.look_first.ref===l.eid;
+      const rr=G.n>1?Math.min(11,5.5+Math.sqrt(G.n)*1.5):(chk||failed?6:4.5);
+      let lev=lastX[side].findIndex(x=>cx-x>rr*2+5);if(lev<0)lev=lastX[side].indexOf(Math.min(...lastX[side]));lastX[side][lev]=cx;
+      const len=Math.min(REACH-rr,22+lev*17),ex=cx+len*.3,ey=ty+side*len;
+      const allRep=G.rep===G.n,col=failed?'var(--critical)':chk?(chk.ok?'var(--good)':'var(--critical)'):LAB_COLORS[G.ph]||'var(--judge)';
+      if(!failed&&!chk)used.phases.add(G.ph);if(failed||(chk&&!chk.ok))used.fail=true;if(chk&&chk.ok)used.check=true;if(sec)used.sec=true;if(allRep)used.repeat=true;
+      const label=short(l.tool)+(G.n>1?` ×${G.n} · ${G.ph} · ${dur(G.dur)} total${G.rep?' · '+G.rep+' repeat an earlier call':''}\n`+G.items.slice(0,8).map(x=>'  '+(x.detail||short(x.tool))).join('\n')+(G.n>8?'\n  …':''):(l.detail?' · '+l.detail:'')+' · '+dur(l.dur))+(failed?' · failed':allRep&&G.n===1?' · repeat of a call that already succeeded':'')+(chk?` · check ${chk.ok?'passed':'failed'}${chk.passed!=null?' ('+chk.passed+' passed)':''}${chk.progress?' · progress':''}${chk.regression?' · regression':''}`:'')+(l.reward?` · reward ${l.reward>0?'+':''}${l.reward}`:'')+(hack?' · reward-hacking signal: '+hack:'')+(root?" · judges' root cause":crit?' · critical error':'')+(sec?'\nSECURITY: '+sec.all.map(x=>`${x.severity} ${SECL[x.category]||x.category}: ${x.why}`).join('\n'):'');
       const g=target(svg.append('g'),label,()=>showTool(r.id,r.tools.indexOf(l)));
-      g.append('path').attr('d',`M${bx},${ty} Q${bx+len*(.1+sway*.5)},${ty-side*len*.5} ${ex},${ey}`).attr('fill','none').attr('stroke',col).attr('stroke-width',G.n>1?Math.min(7,2.4+Math.sqrt(G.n)):2.4).attr('stroke-linecap','round').attr('stroke-dasharray',withered?'3 3':null).attr('opacity',withered?.7:1);
-      const ang=Math.atan2(-side*len*.5,len*(.4+sway))*180/Math.PI;
-      const maxR=d3.max(r.tools,x=>Math.abs(x.reward||0))||1;
-      if(l.reward){const rr=3.5+6*Math.sqrt(Math.abs(l.reward)/maxR);g.append('circle').attr('cx',ex).attr('cy',ey).attr('r',rr).attr('fill',l.reward>0?'var(--good)':'var(--critical)').attr('stroke','var(--panel)').attr('stroke-width',1.2);g.append('text').attr('x',ex+rr+3).attr('y',ey+4).attr('class','mut').style('font-size','10px').text((l.reward>0?'+':'')+(+l.reward).toFixed(2))}
-      else if(chk){const rr=chk.progress?7:5;g.append('circle').attr('cx',ex).attr('cy',ey).attr('r',rr).attr('fill',chk.ok?'var(--good)':'var(--critical)').attr('stroke',chk.progress||chk.regression?'var(--text)':'none').attr('stroke-width',1.4);
-        g.append('text').attr('x',ex).attr('y',ey+3.5).attr('text-anchor','middle').style('font-size','9px').style('fill','#fff').style('font-weight',700).text(chk.ok?'✓':'✗')}
-      else if(l.passed===false){g.append('circle').attr('cx',ex).attr('cy',ey).attr('r',4.5).attr('fill',col);g.append('text').attr('x',ex+4).attr('y',ey-6).attr('fill','var(--critical)').attr('class','b').text('✗')}
-      else g.append('ellipse').attr('cx',ex).attr('cy',ey).attr('rx',withered?4:6).attr('ry',withered?2:3).attr('transform',`rotate(${ang},${ex},${ey})`).attr('fill',col).attr('opacity',withered?.5:.9);
-      if(G.n>1)g.append('text').attr('x',ex+6).attr('y',ey+(side>0?-4:12)).attr('class','mut').style('font-size','10px').text('×'+G.n);
-      if(root||crit){g.append('circle').attr('cx',ex).attr('cy',ey).attr('r',root?10.5:8.5).attr('fill','none').attr('stroke','var(--critical)').attr('stroke-width',root?2:1.2);
-        if(root)g.append('text').attr('x',ex+13).attr('y',ey+4).attr('class','b').attr('fill','var(--critical)').text('root cause')}
-      if(M.hacks.has(l.eid)){g.append('text').attr('x',ex-6).attr('y',ey-9).style('font-size','15px').style('fill','var(--warn)').text('⚠');g.append('text').attr('x',ex+10).attr('y',ey-9).attr('class','b').attr('fill','var(--warn)').text(String(M.hacks.get(l.eid)).replace(/_/g,' '))}
-      const secLens=LENS.mode.startsWith('sec');
-      if(LENS.mode!=='all'&&!lensKeep(l,M))g.attr('opacity',.1);
-      if(M.sec.has(l.eid)&&!secLens){const f=M.sec.get(l.eid);g.append('circle').attr('cx',ex+(side>0?7:7)).attr('cy',ey+(side>0?-7:7)).attr('r',3.4).attr('fill',SEVC[f.severity]).attr('stroke','var(--panel)').attr('stroke-width',1);
-        g.select('title').text(g.select('title').text()+'\nSECURITY: '+f.all.map(x=>`${x.severity} ${SECL[x.category]||x.category}: ${x.why}`).join('\n'))}
-      if(M.sec.has(l.eid)&&secLens){const f=M.sec.get(l.eid),cc=SEVC[f.severity],bx2=ex+(side>0?10:10),by2=ey+(side>0?-16:16),cats=[...new Set(f.all.map(x=>x.category))];
-        g.append('rect').attr('x',bx2-2).attr('y',by2-9).attr('width',14).attr('height',14).attr('rx',3).attr('fill',cc);
-        g.append('text').attr('x',bx2+5).attr('y',by2+2).attr('text-anchor','middle').style('font-size','10px').style('font-weight','800').style('fill','#fff').text(f.category==='prompt_injection'?'i':'!');
-        const main=cats.find(c=>c!=='injection_followed')||cats[0];
-        g.append('text').attr('x',bx2+16).attr('y',by2+2).attr('class','b').style('font-size','10.5px').attr('fill',cc).text((SECL[main]||main)+(cats.length>1?` +${cats.length-1}`:''));
-        g.select('title').text(g.select('title').text()+'\nSECURITY: '+f.all.map(x=>`${x.severity} ${SECL[x.category]||x.category} (${x.rule}): ${x.why}`).join('\n'))}
-      const fk=S_FORK.get(l.eid);if(fk){g.append('text').attr('x',ex-14).attr('y',ey+(side>0?-8:16)).attr('class','b').style('font-size','11px').attr('fill',fk.better*2>fk.n?'var(--good-text)':'var(--text-2)').text(`⑂${fk.better}/${fk.n}`)}
-      tips.set(l.eid,{x:bx,y:ty,ex,ey});
+      g.append('line').attr('x1',cx).attr('y1',ty).attr('x2',ex).attr('y2',ey).attr('stroke',col).attr('stroke-width',1.6).attr('stroke-linecap','round').attr('opacity',allRep?.45:.9);
+      if(allRep&&!failed&&!chk)g.append('circle').attr('cx',ex).attr('cy',ey).attr('r',rr-1).attr('fill','var(--panel)').attr('stroke',col).attr('stroke-width',1.5).attr('opacity',.7);
+      else g.append('circle').attr('cx',ex).attr('cy',ey).attr('r',rr).attr('fill',col).attr('stroke','var(--panel)').attr('stroke-width',1.5);
+      if(G.n>1)used.count=true;const glyph=G.n>1?String(G.n):chk?(chk.ok?'✓':'✕'):failed?'✕':'';
+      if(glyph)g.append('text').attr('x',ex).attr('y',ey+3.4).attr('text-anchor','middle').style('font-size',G.n>9?'8.5px':'9.5px').style('font-weight',700).style('fill',allRep&&!failed&&!chk?'var(--text-2)':'#fff').style('pointer-events','none').text(glyph);
+      if(sec)g.append('circle').attr('cx',ex).attr('cy',ey).attr('r',rr+3.5).attr('fill','none').attr('stroke',SEVC[sec.severity]).attr('stroke-width',2);
+      if(root||crit)g.append('circle').attr('cx',ex).attr('cy',ey).attr('r',rr+(sec?7:3.5)).attr('fill','none').attr('stroke','var(--critical)').attr('stroke-width',root?2:1.2).attr('stroke-dasharray',root?null:'2 2');
+      if(l.reward){const txt=(l.reward>0?'+':'')+(+l.reward).toFixed(2);pending.push({pri:4,x:ex+rr-4,y:ey+4,txt,fill:l.reward>0?'var(--good-text,var(--good))':'var(--critical)'})}
+      if(LENS.mode!=='all'&&!lensKeep(l,M))g.attr('opacity',.12);
+      const fk=S_FORK.get(l.eid),ly=ey+(side<0?-rr-5:rr+13),nm=treeLabel(l);
+      // what gets named, most important first
+      if(root)pending.push({pri:10,x:ex+rr-4,y:ey+4,txt:'root cause · '+nm,fill:'var(--critical)',bold:true});
+      else if(look)pending.push({pri:9,x:ex+rr-4,y:ey+4,txt:'look first · '+nm,fill:'var(--critical)',bold:true});
+      else if(sec&&SEVR[sec.severity]>=3){const cats=[...new Set(sec.all.map(x=>x.category))],main=cats.find(x=>x==='injection_followed')||cats[0];pending.push({pri:8,x:ex+rr-1,y:ey+4,txt:(SECL[main]||main)+(cats.length>1?' +'+(cats.length-1):''),fill:SEVC[sec.severity],bold:true})}
+      else if(sec){const main=sec.category;pending.push({pri:4,x:ex+rr-1,y:ey+4,txt:SECL[main]||main,fill:SEVC[sec.severity]})}
+      else if(hack)pending.push({pri:8,x:ex+rr-4,y:ey+4,txt:String(hack).replace(/_/g,' '),fill:'var(--warn)',bold:true});
+      else if(chk&&!chk.ok)pending.push({pri:6,x:ex+rr-4,y:ey+4,txt:nm+(chk.regression?' · regression':' failed'),fill:'var(--critical)'});
+      else if(failed)pending.push({pri:5,x:ex+rr-4,y:ey+4,txt:nm+' failed',fill:'var(--critical)'});
+      else if(chk&&chk.progress&&groups.length<=24)pending.push({pri:2,x:ex+rr-4,y:ey+4,txt:nm+(chk.passed!=null?' · '+chk.passed+' pass':''),fill:'var(--text-2)'});
+      else if(G.ph==='edit'&&G.n===1&&groups.length<=24)pending.push({pri:1,x:ex+rr-4,y:ey+4,txt:nm,fill:'var(--muted)'});
+      if(fk)pending.push({pri:6,x:ex+rr-4,y:ly,txt:`fork ${fk.better}/${fk.n} better`,fill:'var(--text-2)'});
+      boxes.push([ex-rr-2,ey-rr-2,ex+rr+2,ey+rr+2]);
+      tips.set(l.eid,{x:cx,y:ty,ex,ey});G.items.forEach(x=>{if(!tips.has(x.eid))tips.set(x.eid,{x:cx,y:ty,ex,ey})});
     });
-    for(const q of r.reasoning.filter(q=>q.t<=cutoff)){const qx=Math.min(endX-2,X(q.t-r.start));
+    // reasoning: quiet ticks on the trunk
+    for(const q of r.reasoning.filter(q=>q.t<=cutoff)){const qx=Math.min(endX-2,X(q.t-r.start));used.think=true;
       const g=target(svg.append('g'),'Reasoning · '+q.chars+' characters',()=>showRun(r.id,q.id));
-      g.append('path').attr('d',`M${qx},${ty-5}l4.5,5l-4.5,5l-4.5,-5Z`).attr('fill','var(--text)')}
+      g.append('rect').attr('x',qx-3).attr('y',ty-3).attr('width',6).attr('height',6).attr('transform',`rotate(45,${qx},${ty})`).attr('fill','var(--panel)').attr('stroke',c).attr('stroke-width',1.5)}
+    // outcome: the score, said once
     const j=t.judge[p],won=t.winner===p,er=M.envret.filter(e=>e.provider===p).at(-1);
-    const crown=target(svg.append('g'),er?`${r.model||NAME[p]} · episode return ${er.score} · ${er.passed?'success':'failure'}`:NAME[p]+(j?' · judge score '+f1(j.overall)+'/5':' · judge pending')+(won?' · turn winner':''),()=>showTurn(t.id));
-    crown.append('ellipse').attr('cx',endX+42).attr('cy',ty).attr('rx',Math.min(60,30+tools.length*.8)).attr('ry',Math.min(laneH/2-10,20+tools.length*.4)).attr('fill',c).attr('opacity',won?.3:.14).attr('stroke',won?c:'none').attr('stroke-width',2);
-    crown.append('text').attr('x',endX+42).attr('y',ty+4).attr('text-anchor','middle').attr('class','ink b').text(er?`R ${(+er.score).toFixed(2)} ${er.passed?'✓':'✗'}`:j?f1(j.overall)+'/5':'…');
-    if(won)crown.append('text').attr('x',endX+42).attr('y',ty-Math.min(laneH/2-10,20+tools.length*.4)-6).attr('text-anchor','middle').text('★');
+    if(er||j){const txt=er?`${(+er.score).toFixed(2)} ${er.passed?'✓':'✕'}`:f1(j.overall)+' / 5',cw=txt.length*7.4+18+(won?14:0);
+      const crown=target(svg.append('g'),er?`${r.model||NAME[p]} · episode return ${er.score} · ${er.passed?'success':'failure'}`:NAME[p]+' · judge score '+f1(j.overall)+'/5'+(won?' · turn winner':''),()=>showTurn(t.id));
+      crown.append('rect').attr('x',endX+10).attr('y',ty-12).attr('width',cw).attr('height',24).attr('rx',12).attr('fill',won?c:'var(--panel)').attr('stroke',c).attr('stroke-width',1.5);
+      crown.append('text').attr('x',endX+10+cw/2).attr('y',ty+4.5).attr('text-anchor','middle').style('font-size','12px').style('font-weight',700).style('fill',won?'#fff':'var(--text)').text((won?'★ ':'')+txt);boxes.push([endX+8,ty-14,endX+12+cw,ty+14])}
     if(r.running&&TREE.progress===100)trunk.append('circle').attr('cx',endX).attr('cy',ty).attr('r',5).attr('fill',c).attr('class','current');
   });
-  const labelled=new Set();
-  const loud=LENS.mode.startsWith('sec');
-  M.chains.forEach(c=>{const a=tips.get(c.source_ref),b=tips.get(c.action_ref);if(!a||!b)return;if(LENS.mode==='fail')return;
-    const g=target(svg.append('g'),`Prompt injection followed: the tool output at the first mark carried instructions, and ${c.steps_after} step(s) later the agent did something risky (${(c.categories||[]).map(x=>SECL[x]||x).join(', ')})`,()=>openRef(c.action_ref));
-    g.append('path').attr('d',`M${a.ex},${a.ey} C${a.ex},${a.ey-40} ${b.ex},${b.ey-40} ${b.ex},${b.ey}`).attr('fill','none').attr('stroke','#8e44ad').attr('stroke-width',loud?2.2:1.1).attr('opacity',loud?1:.4).attr('stroke-dasharray','5 3');
-    if(loud&&!labelled.has(c.source_ref)){labelled.add(c.source_ref);const n=M.chains.filter(x=>x.source_ref===c.source_ref).length;
-      g.append('text').attr('x',a.ex).attr('y',Math.max(12,a.ey-28)).attr('text-anchor','middle').attr('class','b').style('font-size','10.5px').attr('fill','#8e44ad').text(`injection → ${n} risky action${n===1?'':'s'}`)}});
+  pending.sort((a,b)=>b.pri-a.pri).forEach(L=>{place(L.x,L.y,L.txt,L)});
+  // injection chains: only when the security lens is on (the action itself is already named)
+  if(LENS.mode.startsWith('sec'))M.chains.forEach(ch=>{const a=tips.get(ch.source_ref),b=tips.get(ch.action_ref);if(!a||!b)return;
+    const g=target(svg.append('g'),`Prompt injection followed: the tool output at the first mark carried instructions, and ${ch.steps_after} step(s) later the agent did something risky (${(ch.categories||[]).map(x=>SECL[x]||x).join(', ')})`,()=>openRef(ch.action_ref));
+    g.append('path').attr('d',`M${a.ex},${a.ey} C${a.ex},${a.ey-34} ${b.ex},${b.ey-34} ${b.ex},${b.ey}`).attr('fill','none').attr('stroke','#8e44ad').attr('stroke-width',1.6).attr('stroke-dasharray','5 3')});
   if(M.div){const [a,b]=M.div,pa=a!=null&&tips.get(a),pb=b!=null&&tips.get(b);
-    if(pa&&pb){const g=target(svg.append('g'),'First divergence: the runs stop doing the same thing here',()=>openRef(a));
-      g.append('path').attr('d',`M${pa.x},${pa.y+14} C${pa.x},${(pa.y+pb.y)/2} ${pb.x},${(pa.y+pb.y)/2} ${pb.x},${pb.y-14}`).attr('fill','none').attr('stroke','var(--critical)').attr('stroke-width',1.4).attr('stroke-dasharray','4 4').attr('opacity',.8);
-      g.append('text').attr('x',(pa.x+pb.x)/2+6).attr('y',(pa.y+pb.y)/2).attr('class','mut').text('first divergence')}}
-  if(ordered.some(r=>P.includes(r.provider)&&r.provider!==ordered[0].provider))for(const p of P)if(!ordered.some(r=>r.provider===p))svg.append('text').attr('x',w/2).attr('y',h-62).attr('text-anchor','middle').attr('class','mut').text(NAME[p]+' made no run on this turn');
+    if(pa&&pb&&pa.y!==pb.y){const g=target(svg.append('g'),'First divergence: the runs stop doing the same thing here',()=>openRef(a));
+      g.append('line').attr('x1',pa.x).attr('y1',pa.y).attr('x2',pb.x).attr('y2',pb.y).attr('stroke','var(--text)').attr('stroke-width',1).attr('stroke-dasharray','3 4');
+      place((pa.x+pb.x)/2,(pa.y+pb.y)/2+4,'runs diverge here',{fill:'var(--text)',bold:true})}}
+  if(ordered.some(r=>P.includes(r.provider)&&r.provider!==ordered[0].provider))for(const p of P)if(!ordered.some(r=>r.provider===p))svg.append('text').attr('x',w/2).attr('y',ay-8).attr('text-anchor','middle').attr('class','mut').text(NAME[p]+' made no run on this turn');
+  // legend: only what this picture uses
+  let lx=16;const ly=h-12,leg=(draw,txt)=>{draw(lx+5,ly-4);const tx=svg.append('text').attr('x',lx+14).attr('y',ly).attr('class','mut').style('font-size','11px').text(txt);lx+=txt.length*6+32};
+  const PH_L={inspect:'look',plan:'plan',edit:'edit',verify:'check',run:'run'};
+  for(const ph of LAB_PHASES)if(used.phases.has(ph))leg((x,y)=>svg.append('circle').attr('cx',x).attr('cy',y).attr('r',4).attr('fill',LAB_COLORS[ph]),PH_L[ph]);
+  if(used.check)leg((x,y)=>{svg.append('circle').attr('cx',x).attr('cy',y).attr('r',5).attr('fill','var(--good)');svg.append('text').attr('x',x).attr('y',y+3).attr('text-anchor','middle').style('font-size','8px').style('fill','#fff').style('font-weight',700).text('✓')},'check passed');
+  if(used.fail)leg((x,y)=>{svg.append('circle').attr('cx',x).attr('cy',y).attr('r',5).attr('fill','var(--critical)');svg.append('text').attr('x',x).attr('y',y+3).attr('text-anchor','middle').style('font-size','8px').style('fill','#fff').style('font-weight',700).text('✕')},'failed');
+  if(used.repeat)leg((x,y)=>svg.append('circle').attr('cx',x).attr('cy',y).attr('r',3.5).attr('fill','var(--panel)').attr('stroke','var(--muted)').attr('stroke-width',1.5),'repeat');
+  if(used.sec)leg((x,y)=>svg.append('circle').attr('cx',x).attr('cy',y).attr('r',5).attr('fill','none').attr('stroke','var(--critical)').attr('stroke-width',2),'security finding');
+  if(used.think)leg((x,y)=>svg.append('rect').attr('x',x-3).attr('y',y-3).attr('width',6).attr('height',6).attr('transform',`rotate(45,${x},${y})`).attr('fill','var(--panel)').attr('stroke','var(--text-2)').attr('stroke-width',1.5),'reasoning');
+  if(used.count)svg.append('text').attr('x',w-16).attr('y',ly).attr('text-anchor','end').attr('class','mut').style('font-size','11px').text('a number in a dot = that many calls in a row');
   host.replaceChildren(svg.node());
   return visible;
 }
