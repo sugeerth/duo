@@ -243,6 +243,11 @@ def write_agent_session(store,title,provider,turns,model=None):
         _flag_hacks(ev,steps,provider,tid);_review_security(ev,steps,provider,tid)
         r=longrun.read(steps)
         if r:ev(t1,'analysis.longrun',provider,turn_id=tid,data=r,rationale=longrun.summary(r))
+        try:
+            import horizon
+            hz=horizon.read(steps,T['prompt'],T['answer'])
+            if hz:ev(t1,'analysis.horizon',provider,turn_id=tid,data=hz,count=len(hz['modes']),rationale=horizon.summary(hz))
+        except Exception:pass
         ev(t1,'span.end','duo',tid,span_id=tid,span_kind='turn',status='ok',duration_ms=int((t1-t0)*1000))
         carried=0 if T.get('compacted') else carried+1;hist=0 if T.get('compacted') else hist+len(T['prompt'])+len(T['answer'])
     return sid,len(turns)
@@ -348,6 +353,11 @@ def import_rollouts(store,path,provider='claude'):
         _flag_hacks(ev,steps,provider,tid);_review_security(ev,steps,provider,tid)
         r=longrun.read(steps)
         if r:ev(t1,'analysis.longrun',provider,turn_id=tid,data=r,rationale=longrun.summary(r))
+        try:
+            import horizon
+            hz=horizon.read(steps,T['prompt'],T['answer'])
+            if hz:ev(t1,'analysis.horizon',provider,turn_id=tid,data=hz,count=len(hz['modes']),rationale=horizon.summary(hz))
+        except Exception:pass
         ev(t1,'span.end','duo',tid,span_id=tid,span_kind='turn',status='ok',duration_ms=int((t1-t0)*1000))
         clock=t1+30
     store.flush(10)

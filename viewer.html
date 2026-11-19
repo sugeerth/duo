@@ -207,6 +207,13 @@ section:not(.open){padding-top:9px;padding-bottom:9px}
 #palR{max-height:52vh;overflow:auto}.pal-item{display:block;width:100%;text-align:left;border:none;background:none;color:var(--text);font:inherit;font-size:12.5px;padding:7px 16px;cursor:pointer;border-bottom:1px solid var(--grid)}
 .pal-item:hover,.pal-item.on{background:var(--hover)}.pal-item .k{color:var(--muted);margin-right:6px}.pal-item mark{background:color-mix(in srgb,var(--warn) 35%,transparent);color:inherit;border-radius:2px}
 .flow{margin-top:8px}
+.pw{position:relative;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--panel);min-height:180px;display:grid}
+.pw-s{min-height:120px}.pw-ghost{position:absolute;inset:14px;display:flex;flex-direction:column;gap:7px;filter:blur(2px);opacity:.55}
+.pw-ghost i{display:block;height:9px;border-radius:3px;background:linear-gradient(90deg,#9aa7b4 0 30%,#3d74d6 30% 34%,#2e9e5b 34% 38%,#9aa7b4 38% 70%,#3d74d6 70% 73%,#2e9e5b 73% 77%,#9aa7b4 77%)}
+.pw-ghost i:nth-child(2n){width:72%}.pw-ghost i:nth-child(3n){width:88%}
+.pw-body{position:relative;margin:auto;max-width:460px;text-align:center;padding:18px;background:color-mix(in srgb,var(--panel) 88%,transparent);border-radius:10px;display:flex;flex-direction:column;gap:6px;align-items:center}
+.pw-body p{margin:0;color:var(--text-2);font-size:13px}.pw-tag{font:700 10px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.12em;padding:4px 7px;border-radius:99px;background:var(--text);color:var(--panel)}
+.pw-go{margin-top:6px;border:0;border-radius:8px;padding:9px 14px;font-weight:650;background:var(--codex);color:#fff;cursor:pointer}.pw-go:focus-visible{outline:2px solid var(--text);outline-offset:2px}.pw-go:disabled{opacity:.7;cursor:default}
 .fl-head{font-size:13.5px;margin:2px 0 8px;max-width:980px}.fl-head b{font-weight:650}.fl-wrap{max-height:560px;overflow:auto;border:1px solid var(--line);border-radius:8px;background:var(--panel)}
 .fl-wrap svg .fr{cursor:pointer}.fl-wrap svg .fr:hover rect.bg{fill:var(--surface)}.fl-key{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:11.5px;color:var(--muted);margin-top:6px}.fl-key i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
 .hz{margin-top:8px;border-top:1px dashed var(--line);padding-top:6px}.hz h5{margin:0 0 2px;font:700 10.5px/1.9 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.08em;color:var(--muted)}
@@ -1514,6 +1521,7 @@ function lrAxis(r,W,L){
 // Long horizon (horizon.py): milestones through the plan, named long-horizon failure modes, and the run subdivided.
 const HZ_C={look:'#9aa7b4',write:'#3d74d6',check:'#2e9e5b',ship:'#e09a1a',delegate:'#8b5fd1',other:'#cfd4da'};
 function horizonViz(t,p,W){
+  if(PW('horizon'))return `<div class="hz"><h5>LONG HORIZON</h5>${paywallHtml('horizon',true)}</div>`;
   const e=S.A.horizon.filter(e=>e.turn_id===t.id&&e.provider===p).at(-1);if(!e||!e.data)return '';
   const r=e.data,ms=r.milestones,L=70,X=v=>L+(W-L-12)*v/Math.max(1,r.steps-1);
   let svg=`<svg width="${W}" height="${ms.total?118:84}" role="img" aria-label="Long-horizon reading">`;
@@ -1539,11 +1547,23 @@ function horizonViz(t,p,W){
   const mm=(r.modes||[]).map(m=>`<span><b>${esc(m.mode.replace(/_/g,' '))}</b> <button class="vchip" data-lref="${m.ref}">step</button> ${esc(m.why)}</span>`).join('');
   return `<div class="hz"><h5>LONG HORIZON</h5><div style="overflow-x:auto">${svg}</div><div class="lr-why">${esc(e.rationale||'')}</div>${mm?`<div class="hzm">${mm}</div>`:''}</div>`;
 }
+// Paywall (AgentLens Cloud only: the server sets window.AGENTLENS_PAYWALL; locally nothing is locked).
+const PW=k=>((window.AGENTLENS_PAYWALL||{}).locked||[]).includes(k);
+const PW_INFO={fleet:['Fleet and catch matrix','Every run you have recorded as one strip, and which instrument caught each problem. See the runs that passed the grade and still went wrong.'],
+  patterns:['Patterns across runs','Every run placed on one map by what it did, grouped into labelled clusters, so recurring behaviour stands out.'],
+  longterm:['Long-term trends','Each model across every stored session, with a change stated only when it survives a significance test.'],
+  horizon:['Long-horizon reading','Plan milestones, nine named long-horizon failure modes at their step, and the run folded into phases.']};
+function paywallHtml(k,small){const [t,d]=PW_INFO[k]||['Pro feature',''],pr=(window.AGENTLENS_PAYWALL||{}).price||'';
+  return `<div class="pw${small?' pw-s':''}"><div class="pw-ghost" aria-hidden="true">${'<i></i>'.repeat(small?3:7)}</div><div class="pw-body"><span class="pw-tag">PRO</span><b>${esc(t)}</b><p>${esc(d)}</p><button class="pw-go" data-upgrade="${esc(k)}">Unlock with Pro${pr?' · '+esc(pr):''}</button></div></div>`}
+function paywall(k){const host=document.getElementById({fleet:'fleet',patterns:'patterns',longterm:'longTerm'}[k]);if(host)host.innerHTML=paywallHtml(k)}
+document.addEventListener('click',async e=>{const b=e.target.closest('[data-upgrade]');if(!b)return;b.disabled=true;b.textContent='Opening checkout…';
+  try{const r=await fetch('/api/checkout',{method:'POST',headers:{'Content-Type':'application/json','X-AgentLens':'1'},body:'{}'});const j=await r.json();
+    if(j.url){location.href=j.url;return}b.textContent=j.error||'Checkout is not available right now'}catch(_){b.textContent='Checkout is not available right now'}});
 // Fleet (fleet.py /fleet): every stored run as a strip + the catch matrix in the gutter.
 let FL=null,FL_AT=0;
 const FL_I=[['grade','G','grade below pass','var(--muted)'],['milestones','M','a planned unit never reached','var(--warn)'],['modes','F','long-horizon failure mode','var(--critical)'],['security','S','high/critical security finding','var(--critical)'],['loops','L','loop over bursts','var(--warn)'],['guard','B','guard blocked, or risky call ran unchecked','var(--judge)']];
-async function fetchFleet(){try{const r=await fetch('/fleet');if(r.ok){FL=await r.json();FL_AT=Date.now();renderFleet()}}catch(e){}}
-function renderFleet(){
+async function fetchFleet(){if(PW('fleet')){paywall('fleet');return}try{const r=await fetch('/fleet');if(r.ok){FL=await r.json();FL_AT=Date.now();renderFleet()}}catch(e){}}
+function renderFleet(){if(PW('fleet')){paywall('fleet');return}
   const host=document.getElementById('fleet');if(!host)return;
   if(!FL){host.innerHTML='<div class="empty">Loading every stored run…</div>';return}
   const R=FL.rows.slice().sort((a,b)=>b.risk-a.risk||(b.ts||0)-(a.ts||0)),M=FL.matrix;const LMAX=Math.log1p(Math.max(1,...FL.rows.map(r=>r.steps)));
@@ -1588,8 +1608,8 @@ function renderLongRun(t){
 }
 document.getElementById('longRun').addEventListener('click',e=>{const b=e.target.closest('[data-lref]');if(b)openRef(+b.dataset.lref)});
 let LT=null,LT_AT=0;
-async function fetchLongterm(){try{const r=await fetch('/longterm');if(r.ok){LT=await r.json();LT_AT=Date.now();renderLongTerm()}}catch(e){}}
-function renderLongTerm(){
+async function fetchLongterm(){if(PW('longterm')){paywall('longterm');return}try{const r=await fetch('/longterm');if(r.ok){LT=await r.json();LT_AT=Date.now();renderLongTerm()}}catch(e){}}
+function renderLongTerm(){if(PW('longterm')){paywall('longterm');return}
   const host=document.getElementById('longTerm');
   if(!LT){host.innerHTML='<div class="empty">Loading the trace DB…</div>';return}
   const R=LT.records||[],I=LT.insight||{};
@@ -1992,8 +2012,8 @@ function renderFailModes(D){
 }
 /* ---------- patterns map across all stored runs ---------- */
 let FC=null,FC_AT=0,FC_SEL=null,PENDING_TURN=null;
-async function fetchFacets(){try{const r=await fetch('/facets');if(r.ok){FC=await r.json();FC_AT=Date.now();renderPatterns()}}catch(e){}}
-function renderPatterns(){
+async function fetchFacets(){if(PW('patterns')){paywall('patterns');return}try{const r=await fetch('/facets');if(r.ok){FC=await r.json();FC_AT=Date.now();renderPatterns()}}catch(e){}}
+function renderPatterns(){if(PW('patterns')){paywall('patterns');return}
   const host=document.getElementById('patterns');
   if(!FC){host.innerHTML='<div class="empty">Loading the trace DB…</div>';return}
   const R=FC.runs||[];if(R.length<4){host.innerHTML='<div class="empty">Patterns appear once the trace DB holds a few runs with tool calls.</div>';return}
@@ -2178,6 +2198,7 @@ function calBadge(cal,f){const m=cal?.fields?.[f];if(!m)return '<span class="mut
 function readerCard(t){
   const runs=new Set(P.flatMap(p=>t.by[p].map(r=>r.id))),mine=e=>e.turn_id===t.id||runs.has(e.span_id);
   const R=S.A.readerRead.filter(mine),Q=S.A.readerAsk.filter(mine),chip=(ref,label)=>ref==null?'':`<button class="vchip" data-vref="${ref}">${esc(label||'step')}</button>`;
+  if(!R.length&&!Q.length&&window.AGENTLENS_PAYWALL)return '';  // the CLI command does not apply in AgentLens Cloud
   if(!R.length&&!Q.length){const cmd=`agentlens --read-turn ${String(t.id).slice(0,8)}`;return `<div class="rdr"><div class="rh"><b>READER</b><span class="muted">Have a model read this run and tag what went wrong, with each label's measured accuracy.</span></div><div class="forkcmd" style="margin-top:4px"><code>${esc(cmd)}</code><button class="vchip" data-copy="${esc(cmd)}">copy</button></div></div>`}
   let h='';
   for(const e of R){const d=e.data||{},cal=d.calibration;

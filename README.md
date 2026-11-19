@@ -146,6 +146,8 @@ The long-run panel draws all three under the bursts: an icicle of the subdivisio
 - The bars above the dots count how many problem runs each instrument caught; the dark part is runs only that instrument caught.
 - The headline is AgentDiff's finding, computed on your own traces: how many problem runs were graded a pass and caught only by something else.
 
+**AgentLens Cloud** ([cloud/README.md](cloud/README.md)): one install line streams your Claude Code and Codex sessions live to a hosted dashboard. Secrets are removed on your machine first. The free plan has the live tree, alarms and security review; Pro (Stripe) adds the fleet view, long-horizon reading, patterns and long-term trends.
+
 **Share it** (`tools/export_static.py out.html [--db PATH]`): the viewer and a trace DB in one self-contained HTML file, with no server and no live stream. Every session, payload and cross-run view is embedded. Payloads are cut to 4,000 characters, so review what the DB holds before sharing.
 
 **At scale** (`bench/scale.py`): the long-horizon detectors are streamed over a procedurally generated corpus, one run in memory at a time. [bench/SCALE.md](bench/SCALE.md) has the million-step result and how to reproduce it.

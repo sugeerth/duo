@@ -44,6 +44,9 @@ class TraceStore:
     # --- writes (async) ---
     def session(self,session_id,started,cwd):self.queue.put(('session',(session_id,started,cwd)))
     def event(self,event,payload=None,payload_kind=None):self.queue.put(('event',(event,payload,payload_kind)))
+    def delete_session(self,session_id):
+        """Remove a session and everything in it (used to rebuild a session from a growing transcript). Queued in order with writes."""
+        self.queue.put(('delete',session_id))
     def flush(self,timeout=5):
         done=threading.Event();self.queue.put(('flush',done));done.wait(timeout)
     def _writer(self):
@@ -59,6 +62,9 @@ class TraceStore:
                     for kind,item in batch:
                         if kind=='flush':flushes.append(item)
                         elif kind=='session':db.execute('INSERT OR IGNORE INTO sessions(id,started,cwd,last_ts) VALUES(?,?,?,?)',(*item,item[1]))
+                        elif kind=='delete':
+                            for t in ('events','payloads','spans','judge_scores'):db.execute(f'DELETE FROM {t} WHERE session_id=?',(item,))
+                            db.execute('DELETE FROM sessions WHERE id=?',(item,))
                         else:self._write_event(db,*item)
                     db.commit()
                 except sqlite3.Error:db.rollback()

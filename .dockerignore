@@ -1,0 +1,8 @@
+vendor/
+cloud-data/
+bench/results/
+**/__pycache__
+*.db
+*.db-wal
+*.db-shm
+.git
