@@ -141,6 +141,8 @@ It is validated against the vocabularies and the run's real step numbers.
 
 The long-run panel draws all three under the bursts: an icicle of the subdivisions, ▲ at each mode, and the plan's units, reached or not. Bench task T14 measures it.
 
+**The viewer** opens on the tree of the selected run with its verdict underneath. Everything else sits behind five tabs: This run, Reasoning & memory, Security (with a count of high and critical findings), All runs, Over time. In the tree, each line is an agent's run on a shared clock and each dot is a tool call: looking above the line, changing and checking below it. A number in a dot is that many calls in a row, and the steps that matter are named.
+
 **Fleet: every run, and what caught it** (`fleet.py`, `/fleet`): every stored run in every session as one strip, with its phases in order (look, write, check, ship, delegate) and ▲ where a long-horizon mode shows. Strip length is the run's step count (log scale), and a click opens the run.
 - The dots on the left are six instruments, and each run shows which fired: grade below pass, an unreached planned unit, a long-horizon mode, a high/critical security finding, a loop, and a guard block (or a risky call that ran unchecked).
 - The bars above the dots count how many problem runs each instrument caught; the dark part is runs only that instrument caught.

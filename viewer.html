@@ -242,6 +242,16 @@ section:not(.open){padding-top:9px;padding-bottom:9px}
 .vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 .fl-head{font-size:13.5px;margin:2px 0 8px;max-width:980px}.fl-head b{font-weight:650}.fl-wrap{max-height:560px;overflow:auto;border:1px solid var(--line);border-radius:8px;background:var(--panel)}
 .fl-wrap svg .fr{cursor:pointer}.fl-wrap svg .fr:hover rect.bg{fill:var(--surface)}.fl-key{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:11.5px;color:var(--muted);margin-top:6px}.fl-key i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;vertical-align:-1px}
+.focus-view header #summary{display:none}
+.tabs{display:flex;gap:2px;flex-wrap:wrap;margin:10px 0 14px;border-bottom:1px solid var(--line)}
+.tabs button{border:0;background:none;font:inherit;font-size:13.5px;color:var(--text-2);padding:8px 12px;border-bottom:2px solid transparent;margin-bottom:-1px;cursor:pointer;border-radius:6px 6px 0 0}
+.tabs button:hover{color:var(--text);background:var(--hover)}.tabs button[aria-pressed="true"]{color:var(--text);font-weight:650;border-bottom-color:var(--text)}.tabs button:focus-visible{outline:2px solid var(--text);outline-offset:-2px}
+.tab-n[hidden]{display:none}.tab-n{display:inline-block;min-width:18px;padding:0 5px;border-radius:99px;background:var(--critical);color:#fff;font-size:11px;font-weight:700;line-height:18px;text-align:center;margin-left:4px}
+#evalTreeSec[data-tabon="run"] [data-tab]:not([data-tab="run"]):not(button),#evalTreeSec[data-tabon="think"] [data-tab]:not([data-tab="think"]):not(button),#evalTreeSec[data-tabon="security"] [data-tab]:not([data-tab="security"]):not(button),#evalTreeSec[data-tabon="fleet"] [data-tab]:not([data-tab="fleet"]):not(button),#evalTreeSec[data-tabon="trends"] [data-tab]:not([data-tab="trends"]):not(button){display:none!important}
+#evalTreeSec:not(.railview) #railZoom{display:none}
+.run-below{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:12px;align-items:start;margin-top:14px}.run-below .vcard,.run-below .rail-summary{margin-top:0}.run-below .rail-summary{grid-template-columns:1fr}
+@media(max-width:900px){.run-below{grid-template-columns:1fr}}
+details.rdr summary{cursor:pointer;color:var(--text-2);font-size:12.5px}details.rdr[open] summary{margin-bottom:6px}
 .hz{margin-top:8px;border-top:1px dashed var(--line);padding-top:6px}.hz h5{margin:0 0 2px;font:700 10.5px/1.9 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.08em;color:var(--muted)}
 .hz .hzm{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12px;margin-top:4px}.hz .hzm span b{color:var(--critical);font-weight:600}.hz svg g[data-lref]{cursor:pointer}
 .rdr{grid-column:1/-1;border-top:1px solid var(--line);margin-top:6px;padding-top:8px;font-size:12.5px}.rdr .rh{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}.rdr .rh b{font-size:11px;letter-spacing:.08em;color:var(--muted);font:700 10.5px/1.9 ui-monospace,SFMono-Regular,Menlo,monospace}
@@ -277,16 +287,20 @@ section:not(.open){padding-top:9px;padding-bottom:9px}
 <div id="traceExitNotice" role="status" hidden style="padding:12px 24px;border-bottom:1px solid var(--line);background:var(--panel)">Tracing disconnected. AgentLens continues running. Your last trace remains available below. <button id="resumeTracing">Resume tracing</button></div>
 <main>
   <section class="c12" id="evalTreeSec" data-open="1">
-    <h2>AgentLens · one task, two execution tracks</h2>
-    <p class="sub">Each line is one agent's run on a shared clock, and each dot is a tool call: looking above the line, changing and checking below it. The steps that matter are named. Click any dot for the evidence.</p>
+    <h2 id="treeTitle">This run</h2>
+    <nav class="tabs" id="tabs" aria-label="Views of this session">
+      <button data-tab="run" aria-pressed="true">This run</button>
+      <button data-tab="think" aria-pressed="false">Reasoning &amp; memory</button>
+      <button data-tab="security" aria-pressed="false">Security <span class="tab-n" id="tabSec" hidden></span></button>
+      <button data-tab="fleet" aria-pressed="false">All runs</button>
+      <button data-tab="trends" aria-pressed="false">Over time</button>
+    </nav>
     <div id="alarms" class="alarms" aria-live="polite"></div>
-    <div id="verdictCard" class="vcard" aria-live="polite"></div>
-    <div id="railSummary" class="rail-summary"></div>
     <div class="tree-toolbar">
       <select id="treeTurn" aria-label="Execution timeline turn"></select>
       <span class="seg" id="treeView" role="group" aria-label="Timeline view"><button data-v="tree" aria-pressed="true">Tree</button><button data-v="rail" aria-pressed="false">Railway</button></span>
       <button id="treeFollow" aria-pressed="true">Follow latest</button>
-      <button id="treePlay">Replay growth</button>
+      <button id="treePlay">Replay</button>
       <select id="railZoom" aria-label="Timeline zoom"><option value="1">Fit timeline</option><option value="2">Zoom 2×</option><option value="4">Zoom 4×</option><option value="8">Zoom 8×</option></select>
       <input id="treeProgress" type="range" min="0" max="100" value="100" aria-label="Elapsed time replay">
       <span id="treePosition" class="sub"></span>
@@ -294,6 +308,10 @@ section:not(.open){padding-top:9px;padding-bottom:9px}
       <button id="reportBtn" class="lens" title="Download this turn as a self-contained incident report">⤓</button>
     </div>
     <div id="evalTree" aria-label="Execution railway timeline"></div>
+    <div class="run-below" id="runBelow">
+    <div id="verdictCard" class="vcard" aria-live="polite"></div>
+    <div id="railSummary" class="rail-summary"></div>
+    </div>
     <div class="tw-head"><h3>Progress lane</h3><span class="sub">Per step, how close each run is to done: from step scores when a scorer provides them, else rewards, else checks passing, else the judges' step labels. ▼ marks a sudden drop, the likeliest decisive moment (most agent failures are sudden, not gradual).</span></div>
     <div id="progressLane"></div>
     <div class="diff-head"><h3>Step diff — where the runs diverge</h3><span class="sub" id="diffSentence"></span></div>
@@ -311,12 +329,12 @@ section:not(.open){padding-top:9px;padding-bottom:9px}
     <div id="longRun"></div>
     <div class="tw-head"><h3>Security &amp; tool calls</h3><span class="sub">What each run's tool calls could break, leak or be tricked into: destructive commands, secret exposure, data leaving the machine, code fetched at run time, privilege and persistence, and prompt injection in tool outputs followed by a risky action. Every finding names its step, rule and OWASP LLM Top 10 entry. Below: how each tool behaved, with every failure classified.</span></div>
     <div id="secPanel"></div>
+    <div class="tw-head"><h3>Fleet: every run, and what caught it</h3><span class="sub">Every stored run in all sessions. A run has a problem when any instrument fires on it: a long-horizon failure mode, a security finding, an unreached plan unit, a loop, the guard, or a grade below pass. At length the grade is the weakest of them: a run can pass it and still have skipped work.</span></div>
+    <div id="fleet"></div>
     <div class="tw-head"><h3>Process graph</h3><span class="sub">Every run of this kind of task in the session, merged into one map: nodes are actions (size = how often), edges are what came next (width = how often), colour is the share of runs through that node that succeeded. ↻ counts repeats of the same action. Shows the common path and where failing runs go astray.</span></div>
     <div id="procGraph"></div>
     <div class="tw-head"><h3>Failure modes</h3><span class="sub">Each turn's problems tagged with one vocabulary (TRAIL/MAST style: specification, reasoning, planning, execution, verification) from the judges' root causes and AgentLens's own detectors. Cells count turns; click one for the evidence.</span></div>
     <div id="failModes"></div>
-    <div class="tw-head"><h3>Fleet: every run, and what caught it</h3><span class="sub">Every stored run in all sessions. A run has a problem when any instrument fires on it: a long-horizon failure mode, a security finding, an unreached plan unit, a loop, the guard, or a grade below pass. At length the grade is the weakest of them: a run can pass it and still have skipped work.</span></div>
-    <div id="fleet"></div>
     <div class="tw-head"><h3>Patterns across runs</h3><span class="sub">Every stored run, all sessions, placed on one map by what it did (action mix, length, failures, repeats, loops, stalls, progress, test edits) and grouped into clusters labelled by what sets them apart. The recipe today's observability tools use, computed without model calls, so every label is explainable. Click a cluster or a point.</span></div>
     <div id="patterns"></div>
     <div class="tw-head"><h3>Conversation memory</h3><span class="sub">The chat session as memory: each row is a turn, and filled cells are the earlier turns it still carried in its context. The bar is how much was carried in (≈ tokens). Click a row to open that turn.</span></div>
@@ -1664,6 +1682,15 @@ document.getElementById('fleet').addEventListener('click',e=>{
   const ck=e.target.closest('[data-flsel]');if(ck){const k=ck.dataset.flsel;FL_SEL=FL_SEL.includes(k)?FL_SEL.filter(x=>x!==k):[...FL_SEL,k].slice(-2);renderFleet();if(FL_SEL.length===2){openDiff(FL_SEL[0],FL_SEL[1])}return}
   const g=e.target.closest('[data-frun]');if(!g)return;const [sid,tid]=g.dataset.frun.split('|');openRunAnywhere(sid,tid)});
 document.getElementById('fleet').addEventListener('keydown',e=>{if(e.key!=='Enter')return;const g=e.target.closest('tr[data-frun]');if(g&&e.target===g){const [sid,tid]=g.dataset.frun.split('|');openRunAnywhere(sid,tid)}});
+// Tabs: the session's panels in five groups, one visible at a time.
+const TAB_OF={toolbar:'run',evalTree:'run',runBelow:'run',progressLane:'run',stepDiff:'run',envView:'run',timeWent:'run',longRun:'run',
+  reasonMem:'think',attrib:'think',convMem:'think',secPanel:'security',fleet:'fleet',failModes:'fleet',patterns:'fleet',procGraph:'fleet',longTerm:'trends'};
+function setTab(name){const sec=document.getElementById('evalTreeSec');sec.dataset.tabon=name;document.querySelectorAll('#tabs button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.tab===name)));
+  try{localStorage.setItem('agentlens-tab',name)}catch(e){}}
+(function(){const sec=document.getElementById('evalTreeSec');sec.querySelector('.tree-toolbar').dataset.tab='run';
+  for(const [id,tab] of Object.entries(TAB_OF)){const el=document.getElementById(id);if(!el)continue;el.dataset.tab=tab;const h=el.previousElementSibling;if(h&&(h.classList.contains('tw-head')||h.classList.contains('diff-head')))h.dataset.tab=tab}
+  let start='run';try{start=localStorage.getItem('agentlens-tab')||'run'}catch(e){}if(!Object.values(TAB_OF).includes(start))start='run';setTab(start);
+  document.getElementById('tabs').addEventListener('click',e=>{const b=e.target.closest('button[data-tab]');if(!b)return;setTab(b.dataset.tab);schedule()})})();
 function renderLongRun(t){
   const host=document.getElementById('longRun');
   const reads=t?P.map(p=>({p,e:S.A.longrun.filter(e=>e.turn_id===t.id&&e.provider===p).at(-1)})).filter(x=>x.e&&x.e.data):[];
@@ -2115,7 +2142,7 @@ document.getElementById('patterns').addEventListener('click',e=>{const b=e.targe
       openDrawer(esc(c.label),`<p class="sub">${c.n} runs. What sets it apart: ${c.top.map(t=>`${esc(t.facet)} ${t.z>0?'+':''}${t.z} SD`).join(', ')}.</p>`+rs.slice(0,50).map(r=>`<p><button class="link" data-open-run="${esc(r.session)}|${esc(r.turn)}">${esc(r.model||NAME[r.provider]||r.provider)} · ${new Date(r.ts*1000).toLocaleString()}</button> · ${r.steps} calls · ${r.success==null?'–':r.success?'<span class="ok">✓</span>':'<span class="bad">✗</span>'}</p>`).join(''))}return}
   const g=e.target.closest('[data-fcrun]');if(g){const r=FC.runs.find(x=>x.id===g.dataset.fcrun);if(r)openRunAnywhere(r.session,r.turn)}});
 document.getElementById('dBody').addEventListener('click',e=>{const b=e.target.closest('[data-open-run]');if(!b)return;const [sid,tid]=b.dataset.openRun.split('|');openRunAnywhere(sid,tid)});
-function openRunAnywhere(sid,tid){
+function openRunAnywhere(sid,tid){setTab('run');
   if(sid===S.session||(!sid&&!S.session)){TREE.follow=false;TREE.turn=tid;document.getElementById('treeFollow').setAttribute('aria-pressed','false');schedule();document.getElementById('evalTreeSec').scrollIntoView({behavior:'smooth'});return}
   const sel=document.getElementById('session');if(![...sel.options].some(o=>o.value===sid))return;PENDING_TURN=tid;sel.value=sid;sel.onchange();
 }
@@ -2278,7 +2305,7 @@ function readerCard(t){
   const runs=new Set(P.flatMap(p=>t.by[p].map(r=>r.id))),mine=e=>e.turn_id===t.id||runs.has(e.span_id);
   const R=S.A.readerRead.filter(mine),Q=S.A.readerAsk.filter(mine),chip=(ref,label)=>ref==null?'':`<button class="vchip" data-vref="${ref}">${esc(label||'step')}</button>`;
   if(!R.length&&!Q.length&&window.AGENTLENS_PAYWALL)return '';  // the CLI command does not apply in AgentLens Cloud
-  if(!R.length&&!Q.length){const cmd=`agentlens --read-turn ${String(t.id).slice(0,8)}`;return `<div class="rdr"><div class="rh"><b>READER</b><span class="muted">Have a model read this run and tag what went wrong, with each label's measured accuracy.</span></div><div class="forkcmd" style="margin-top:4px"><code>${esc(cmd)}</code><button class="vchip" data-copy="${esc(cmd)}">copy</button></div></div>`}
+  if(!R.length&&!Q.length){const cmd=`agentlens --read-turn ${String(t.id).slice(0,8)}`;return `<details class="rdr"><summary>Have a model read this run</summary><p class="sub" style="margin:0 0 4px">It tags what went wrong, and each label shows its measured accuracy.</p><div class="forkcmd"><code>${esc(cmd)}</code><button class="vchip" data-copy="${esc(cmd)}">copy</button></div></details>`}
   let h='';
   for(const e of R){const d=e.data||{},cal=d.calibration;
     if(d.error){h+=`<div class="rdr"><div class="rh"><b>READER · ${esc(NAME[e.provider]||e.provider)}</b><span class="bad">${esc(d.error)}</span></div></div>`;continue}
@@ -2319,14 +2346,14 @@ function renderTurnReading(D){renderTitle(D);
 document.getElementById('verdictCard').addEventListener('click',e=>{const b=e.target.closest('[data-vref]');if(b)openRef(+b.dataset.vref)});
 document.getElementById('timeWent').addEventListener('click',e=>{const tr=e.target.closest('[data-goto-tool]');if(!tr)return;const [r,i]=tr.dataset.gotoTool.split(':');showTool(r,+i)});
 function renderEvalTree(D){
-  if(TREE.session!==S.session){TREE.session=S.session;TREE.turn=null;TREE.progress=100;clearInterval(TREE.timer);TREE.timer=null;document.getElementById('treePlay').textContent='Replay growth';}
+  if(TREE.session!==S.session){TREE.session=S.session;TREE.turn=null;TREE.progress=100;clearInterval(TREE.timer);TREE.timer=null;document.getElementById('treePlay').textContent='Replay';}
   const turns=D.turns,sel=document.getElementById('treeTurn'),host=document.getElementById('evalTree');
   sel.innerHTML=turns.map(t=>`<option value="${esc(t.id)}">Turn ${t.no} · ${KIND_L[t.kind]}${t.running?' · running':''}</option>`).join('');
   const t=turns.find(t=>t.id===(TREE.follow?turns.at(-1)?.id:TREE.turn))||turns.at(-1);
   if(!t){document.getElementById('railSummary').innerHTML='';host.innerHTML='<div class="empty" style="padding:100px 20px">Execution tracks start with your first task.<br>Agent bars and tool branches appear here as AgentLens works.</div>';document.getElementById('treePosition').textContent='Waiting for a task';return}
   TREE.turn=t.id;sel.value=t.id;
   const present=P.filter(p=>t.by[p].some(r=>r.role!=='synthesis')),solo=present.length===1;
-  document.getElementById('evalTreeSec').classList.toggle('solo',solo);document.getElementById('railSummary').classList.toggle('one',solo);
+  document.getElementById('evalTreeSec').classList.toggle('solo',solo);document.getElementById('evalTreeSec').classList.toggle('railview',TREE.view!=='tree');document.getElementById('treeTitle').textContent=solo?`What ${NAME[present[0]]||present[0]} did`:present.length?'Codex and Claude, side by side':'This run';{const kinds=new Set(D.allTurns.map(u=>u.kind)),fr=document.querySelector('.filters');if(fr)fr.style.display=(kinds.size>1||S.J.results.length)?'':'none';const nsec=d3.sum(S.A.security.filter(e=>e.turn_id===t.id),e=>(e.data?.findings||[]).filter(f=>SEVR[f.severity]>=3).length),tb=document.getElementById('tabSec');tb.hidden=!nsec;tb.textContent=nsec}document.getElementById('railSummary').classList.toggle('one',solo);
   document.getElementById('railSummary').innerHTML=(solo?present:P).map(p=>{const rs=t.by[p],tools=rs.flatMap(r=>r.tools),fail=tools.filter(l=>l.passed===false).length,j=t.judge[p];
     const runMs=d3.sum(rs,r=>r.dur),toolMs=Math.min(runMs,d3.sum(tools,l=>l.dur||0)),slow=tools.filter(l=>l.dur!=null).sort((a,b)=>b.dur-a.dur)[0];
     // Where the time went: tool time vs the rest of the run (model thinking + orchestration). Tool time is summed, so overlapping calls can overstate it.
@@ -2612,7 +2639,7 @@ document.getElementById('railZoom').onchange=schedule;
 document.getElementById('treeTurn').onchange=e=>{TREE.turn=e.target.value;TREE.follow=false;TREE.progress=100;document.getElementById('treeFollow').setAttribute('aria-pressed','false');schedule()};
 document.getElementById('treeFollow').onclick=()=>{TREE.follow=!TREE.follow;document.getElementById('treeFollow').setAttribute('aria-pressed',String(TREE.follow));TREE.progress=100;schedule()};
 document.getElementById('treeProgress').oninput=e=>{TREE.progress=+e.target.value;schedule()};
-document.getElementById('treePlay').onclick=()=>{if(TREE.timer){clearInterval(TREE.timer);TREE.timer=null;document.getElementById('treePlay').textContent='Replay growth';return}TREE.progress=0;TREE.seen.clear();document.getElementById('treePlay').textContent='Pause replay';TREE.timer=setInterval(()=>{TREE.progress=Math.min(100,TREE.progress+2);schedule();if(TREE.progress===100){clearInterval(TREE.timer);TREE.timer=null;document.getElementById('treePlay').textContent='Replay growth'}},140);schedule()};
+document.getElementById('treePlay').onclick=()=>{if(TREE.timer){clearInterval(TREE.timer);TREE.timer=null;document.getElementById('treePlay').textContent='Replay';return}TREE.progress=0;TREE.seen.clear();document.getElementById('treePlay').textContent='Pause replay';TREE.timer=setInterval(()=>{TREE.progress=Math.min(100,TREE.progress+2);schedule();if(TREE.progress===100){clearInterval(TREE.timer);TREE.timer=null;document.getElementById('treePlay').textContent='Replay'}},140);schedule()};
 
 
 /* ================= model observatory: linked evidence lenses ================= */
@@ -2799,7 +2826,7 @@ function exitTracing(){
   TRACING_EXITED=true;LOAD_GENERATION++;S.live=false;
   if(src){src.close();src=null}
   clearInterval(TREE.timer);TREE.timer=null;
-  document.getElementById('treePlay').textContent='Replay growth';
+  document.getElementById('treePlay').textContent='Replay';
   document.getElementById('traceExitNotice').hidden=false;
   document.getElementById('exitTracing').disabled=true;
   document.getElementById('session').disabled=true;
