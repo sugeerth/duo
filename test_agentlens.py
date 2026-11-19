@@ -763,4 +763,15 @@ class Tests(unittest.TestCase):
   r=scale.run(2,6)
   self.assertEqual(r['runs'],24);self.assertEqual(r['caught'],r['known_failures']);self.assertEqual(r['controls_flagged'],0)
   self.assertEqual(r['milestones_exact'],24);self.assertGreater(r['steps'],1500);self.assertIn('known failures caught',scale.report(r))
+ def test_static_export_embeds_sessions_and_routes(self):
+  sys.path.insert(0,str(Path(__file__).parent/'tools'));import export_static,tracestore
+  with tempfile.TemporaryDirectory() as tmp:
+   st=tracestore.TraceStore(Path(tmp)/'s.db');st.session('s1',1000.0,'/r')
+   for i,(k,f) in enumerate([('span.start',{'span_id':'t1','span_kind':'turn','mode':'read'}),('prompt',{'span_id':'t1','chars':5})],1):
+    st.event({'session_id':'s1','id':i,'timestamp':1000.0+i,'type':k,'provider':'duo',**f},'hello' if k=='prompt' else None,'prompt' if k=='prompt' else None)
+   st.flush(5);out=Path(tmp)/'o.html';r=export_static.build(Path(tmp)/'s.db',out)
+   html=out.read_text()
+  self.assertEqual(r['sessions'],1);self.assertIn('cdnjs.cloudflare.com/ajax/libs/d3/7.9.0',html);self.assertNotIn('src="/d3.v7.min.js"',html)
+  data=json.loads(html.split('<script type="application/json" id="agentlens-data">',1)[1].split('</script>',1)[0])
+  self.assertEqual(data['current'],'s1');self.assertEqual(data['payloads']['s1']['2']['text'],'hello');self.assertIn('/fleet',data['routes'])
 if __name__=='__main__':unittest.main()
