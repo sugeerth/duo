@@ -41,6 +41,21 @@ def strip(tree,steps_n,modes):
     if not out:out=[['other',tree['calls'],tree['failed']]]
     return out,[[round((m['index'] or 0)/max(1,steps_n-1),4),m['mode']] for m in modes]
 
+def finding(hz,sec,rd,fired,grade,first):
+    """One sentence a person can act on: the first long-horizon mode, else the worst security finding, else the loop,
+    else the unreached unit, else the grade."""
+    if hz['modes']:return first.get('why')
+    if fired.get('security'):
+        f=max(sec['findings'],key=lambda f:security.SEV_RANK.get(f['severity'],0))
+        return f"{f['category'].replace('_',' ')} ({f['severity']}) at step {f.get('ref')}: {f.get('why') or f.get('evidence') or ''}".rstrip(': ')
+    if fired.get('loops') and rd and rd['loops']:
+        L=rd['loops'][0];return f"loop of {L['bursts']} bursts from step {L['ref']}, repeating earlier calls without progress"
+    if fired.get('milestones'):
+        ms=hz['milestones'];return f"{ms['reached']} of {ms['total']} planned units reached; stalled before {ms.get('stalled_label') or 'the next unit'}"
+    if fired.get('grade'):return f'graded {grade} (below pass)'
+    if fired.get('guard'):return 'the guard blocked a call, or a risky call ran unchecked'
+    return None
+
 def run_row(tid,p,t,meta,guard_hits):
     steps=t['steps'][p]
     if not steps:return None
@@ -62,7 +77,7 @@ def run_row(tid,p,t,meta,guard_hits):
             'grade':grade,'severity':sev,'modes':[m['mode'] for m in hz['modes']],'milestones':[ms['reached'],ms['total'],ms['source']],
             'loops':len(rd['loops']) if rd else 0,'guard':guard_hits,'phases':phases,'marks':marks,
             'fired':[k for k in INSTRUMENTS if fired[k]],'risk':sum(WEIGHT[k] for k in INSTRUMENTS if fired[k]),
-            'look_first':first.get('ref'),'why':first.get('why')}
+            'look_first':first.get('ref'),'why':finding(hz,sec,rd,fired,grade,first)}
 
 def matrix(rows):
     prob=[r for r in rows if r['fired']]

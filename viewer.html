@@ -208,9 +208,8 @@ section:not(.open){padding-top:9px;padding-bottom:9px}
 .pal-item:hover,.pal-item.on{background:var(--hover)}.pal-item .k{color:var(--muted);margin-right:6px}.pal-item mark{background:color-mix(in srgb,var(--warn) 35%,transparent);color:inherit;border-radius:2px}
 .flow{margin-top:8px}
 .pw{position:relative;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--panel);min-height:180px;display:grid}
-.pw-s{min-height:120px}.pw-ghost{position:absolute;inset:14px;display:flex;flex-wrap:wrap;align-content:flex-start;gap:10px;filter:blur(2px);opacity:.55}
-.pw-ghost i{display:block;width:38px;height:38px;border-radius:50%;background:conic-gradient(#3d74d6 0 12%,#2e9e5b 12% 20%,#9aa7b4 20% 62%,#3d74d6 62% 70%,#2e9e5b 70% 78%,#9aa7b4 78%);-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 6px),#000 calc(100% - 5px));mask:radial-gradient(farthest-side,transparent calc(100% - 6px),#000 calc(100% - 5px))}
-.pw-ghost i:nth-child(2n){width:28px;height:28px}.pw-ghost i:nth-child(3n){width:46px;height:46px}
+.pw-s{min-height:120px}.pw-ghost{position:absolute;inset:14px;display:flex;flex-direction:column;gap:12px;filter:blur(2px);opacity:.55}
+.pw-ghost i{display:block;height:12px;border-radius:3px;background:linear-gradient(90deg,var(--line) 0 34%,transparent 34% 40%,var(--line) 40% 44%,transparent 44% 52%,var(--text-2) 52% 53.5%,transparent 53.5% 60%,var(--line) 60% 92%,transparent 92%);opacity:.8;width:100%}
 .pw-body{position:relative;margin:auto;max-width:460px;text-align:center;padding:18px;background:color-mix(in srgb,var(--panel) 88%,transparent);border-radius:10px;display:flex;flex-direction:column;gap:6px;align-items:center}
 .pw-body p{margin:0;color:var(--text-2);font-size:13px}.pw-tag{font:700 10px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.12em;padding:4px 7px;border-radius:99px;background:var(--text);color:var(--panel)}
 .pw-soon{margin-top:6px;font-weight:650;color:var(--text-2);border:1px dashed var(--line);border-radius:8px;padding:8px 12px}.pw-go{margin-top:6px;border:0;border-radius:8px;padding:9px 14px;font-weight:650;background:var(--codex);color:#fff;cursor:pointer}.pw-go:focus-visible{outline:2px solid var(--text);outline-offset:2px}.pw-go:disabled{opacity:.7;cursor:default}
@@ -222,6 +221,25 @@ section:not(.open){padding-top:9px;padding-bottom:9px}
 .fr-gh{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline;margin-bottom:6px}.fr-gh b{font-size:13.5px}.fr-n{font:700 12px/1 ui-monospace,SFMono-Regular,Menlo,monospace;padding:3px 7px;border-radius:99px;background:var(--hover)}
 .fr-cells{display:flex;flex-wrap:wrap;gap:2px 4px;align-items:flex-end}.fr-cell{border:0;background:none;padding:2px 3px;border-radius:8px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:0;color:var(--muted);font:10px/1.2 ui-monospace,SFMono-Regular,Menlo,monospace;transition:opacity .15s}
 .fr-cell:hover,.fr-cell:focus-visible{background:var(--hover);outline:none}.fr-cell:focus-visible{box-shadow:0 0 0 2px var(--text)}.fr-cell.dim{opacity:.16}
+.fk-tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:2px 0 14px}@media (max-width:640px){.fk-tiles{grid-template-columns:1fr}}
+.fk-tile{border:1px solid var(--line);border-radius:10px;padding:12px 14px;background:var(--panel)}.fk-v{font-size:30px;font-weight:650;line-height:1.1}.fk-l{color:var(--text-2);font-size:13px;margin-top:2px}
+.fk-tile.fk-em{border-color:var(--text)}.fk-tile.fk-em .fk-v{color:var(--codex)}
+.fk-sec{margin:0 0 16px}.fk-h{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline;margin-bottom:8px}.fk-h b{font-size:13.5px}
+.fk-leg{margin-left:auto;display:inline-flex;gap:6px;align-items:center;font-size:11.5px;color:var(--muted)}.fk-sw{width:12px;height:8px;border-radius:2px;background:color-mix(in srgb,var(--codex) 32%,var(--panel));display:inline-block;margin-left:8px}.fk-sw.on{background:var(--codex)}
+.fk-bars{display:flex;flex-direction:column;gap:2px;max-width:760px}
+.fk-bar{display:grid;grid-template-columns:120px minmax(0,1fr) 110px;gap:10px;align-items:center;border:0;background:none;padding:5px 6px;border-radius:6px;font:inherit;font-size:13px;color:var(--text);cursor:pointer;text-align:left}
+.fk-bar:hover,.fk-bar:focus-visible{background:var(--hover);outline:none}.fk-bar:focus-visible{box-shadow:0 0 0 2px var(--text)}.fk-bar.on{background:var(--hover)}.fk-bar.dim{opacity:.45}
+.fk-track{display:flex;gap:2px;height:10px}.fk-track i{display:block;height:100%}.fk-only{background:var(--codex);border-radius:4px 0 0 4px}.fk-also{background:color-mix(in srgb,var(--codex) 32%,var(--panel));border-radius:0 4px 4px 0}
+.fk-only[style*="width:0%"]+.fk-also{border-radius:4px}.fk-bv{color:var(--text-2);font-variant-numeric:tabular-nums}.fk-bv b{color:var(--text)}
+.fk-tw{overflow:auto;max-height:620px;border:1px solid var(--line);border-radius:10px;background:var(--panel)}
+.fk-t{border-collapse:collapse;width:100%;min-width:760px;font-size:12.5px}.fk-t th,.fk-t td{padding:6px 8px;border-bottom:1px solid var(--grid);text-align:left;vertical-align:middle}
+.fk-t thead th{position:sticky;top:0;background:var(--panel);z-index:1;font-size:11px;color:var(--muted);font-weight:600;letter-spacing:.02em;border-bottom:1px solid var(--line)}
+.fk-t th.fk-dot{text-align:center;width:70px}.fk-t td.fk-dot{text-align:center}.fk-dot i{display:inline-block;width:8px;height:8px;border-radius:50%;box-shadow:inset 0 0 0 1px var(--line)}.fk-dot i.on{width:10px;height:10px;background:var(--text);box-shadow:none}
+.fk-num{text-align:right!important;font-variant-numeric:tabular-nums;width:56px}.fk-ck{width:28px}.fk-run{width:300px;max-width:300px}.fk-p{display:block;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:300px}.fk-m{display:block;color:var(--muted);font-size:11px}
+.fk-why{color:var(--text-2);line-height:1.4}.fk-wt{min-width:260px;max-width:440px;white-space:normal}.fk-row{cursor:pointer}.fk-row:hover td,.fk-row:focus-visible td{background:var(--hover)}.fk-row:focus-visible{outline:2px solid var(--text);outline-offset:-2px}.fk-row.sel td{background:color-mix(in srgb,var(--codex) 10%,var(--panel))}
+.fk-gr th{background:var(--surface);font-size:12px;color:var(--text);font-weight:650;position:sticky;top:29px;z-index:1}.fk-gr th span{font-weight:500;color:var(--muted);margin-left:6px;font-variant-numeric:tabular-nums}
+.fk-g-missed th{box-shadow:inset 3px 0 0 var(--codex)}.fk-more,.fk-clear{margin-top:8px;border:1px solid var(--line);background:var(--panel);border-radius:7px;padding:5px 10px;font:inherit;font-size:12.5px;cursor:pointer;color:var(--text)}.fk-clear{margin:0 0 0 auto}.fk-cmpnote{color:var(--codex);font-size:12px}
+.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 .fl-head{font-size:13.5px;margin:2px 0 8px;max-width:980px}.fl-head b{font-weight:650}.fl-wrap{max-height:560px;overflow:auto;border:1px solid var(--line);border-radius:8px;background:var(--panel)}
 .fl-wrap svg .fr{cursor:pointer}.fl-wrap svg .fr:hover rect.bg{fill:var(--surface)}.fl-key{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:11.5px;color:var(--muted);margin-top:6px}.fl-key i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;vertical-align:-1px}
 .hz{margin-top:8px;border-top:1px dashed var(--line);padding-top:6px}.hz h5{margin:0 0 2px;font:700 10.5px/1.9 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.08em;color:var(--muted)}
@@ -297,7 +315,7 @@ section:not(.open){padding-top:9px;padding-bottom:9px}
     <div id="procGraph"></div>
     <div class="tw-head"><h3>Failure modes</h3><span class="sub">Each turn's problems tagged with one vocabulary (TRAIL/MAST style: specification, reasoning, planning, execution, verification) from the judges' root causes and AgentLens's own detectors. Cells count turns; click one for the evidence.</span></div>
     <div id="failModes"></div>
-    <div class="tw-head"><h3>Fleet: every run, and what caught it</h3><span class="sub">Every stored run in all sessions is one ring: its size is the number of steps, and its arcs are its phases in order, clockwise from the top (look, write, check, ship, delegate). ▲ marks where a long-horizon failure mode shows. Runs are grouped by what caught them; the first group is the one to read: runs that passed the grade and still went wrong. Click an instrument to highlight what it caught, or a ring to open the run.</span></div>
+    <div class="tw-head"><h3>Fleet: every run, and what caught it</h3><span class="sub">Every stored run in all sessions. A run has a problem when any instrument fires on it: a long-horizon failure mode, a security finding, an unreached plan unit, a loop, the guard, or a grade below pass. At length the grade is the weakest of them: a run can pass it and still have skipped work.</span></div>
     <div id="fleet"></div>
     <div class="tw-head"><h3>Patterns across runs</h3><span class="sub">Every stored run, all sessions, placed on one map by what it did (action mix, length, failures, repeats, loops, stalls, progress, test edits) and grouped into clusters labelled by what sets them apart. The recipe today's observability tools use, computed without model calls, so every label is explainable. Click a cluster or a point.</span></div>
     <div id="patterns"></div>
@@ -1562,50 +1580,57 @@ const PW_INFO={fleet:['Fleet and catch matrix','Every run you have recorded as o
   longterm:['Long-term trends','Each model across every stored session, with a change stated only when it survives a significance test.'],
   horizon:['Long-horizon reading','Plan milestones, nine named long-horizon failure modes at their step, and the run folded into phases.']};
 function paywallHtml(k,small){const [t,d]=PW_INFO[k]||['Pro feature',''],pr=(window.AGENTLENS_PAYWALL||{}).price||'';
-  return `<div class="pw${small?' pw-s':''}"><div class="pw-ghost" aria-hidden="true">${'<i></i>'.repeat(small?10:40)}</div><div class="pw-body"><span class="pw-tag">PRO</span><b>${esc(t)}</b><p>${esc(d)}</p>${(window.AGENTLENS_PAYWALL||{}).payments===false?'<span class="pw-soon">Pro is coming soon</span>':`<button class="pw-go" data-upgrade="${esc(k)}">Unlock with Pro${pr?' · '+esc(pr):''}</button>`}</div></div>`}
+  return `<div class="pw${small?' pw-s':''}"><div class="pw-ghost" aria-hidden="true">${'<i></i>'.repeat(small?4:9)}</div><div class="pw-body"><span class="pw-tag">PRO</span><b>${esc(t)}</b><p>${esc(d)}</p>${(window.AGENTLENS_PAYWALL||{}).payments===false?'<span class="pw-soon">Pro is coming soon</span>':`<button class="pw-go" data-upgrade="${esc(k)}">Unlock with Pro${pr?' · '+esc(pr):''}</button>`}</div></div>`}
 function paywall(k){const host=document.getElementById({fleet:'fleet',patterns:'patterns',longterm:'longTerm'}[k]);if(host)host.innerHTML=paywallHtml(k)}
 document.addEventListener('click',async e=>{const b=e.target.closest('[data-upgrade]');if(!b)return;b.disabled=true;b.textContent='Opening checkout…';
   try{const r=await fetch('/api/checkout',{method:'POST',headers:{'Content-Type':'application/json','X-AgentLens':'1'},body:'{}'});const j=await r.json();
     if(j.url){location.href=j.url;return}b.textContent=j.error||'Checkout is not available right now'}catch(_){b.textContent='Checkout is not available right now'}});
 // Fleet (fleet.py /fleet): every stored run as a strip + the catch matrix in the gutter.
 let FL=null,FL_AT=0;
-const FL_I=[['modes','Failure modes','a named long-horizon failure mode','#d03b3b'],['security','Security','a high or critical security finding','#b8327a'],['milestones','Milestones','a planned unit never reached','#e09a1a'],['loops','Loops','a loop over bursts','#2b9aa0'],['guard','Guard','the guard blocked a call, or a risky call ran unchecked','#8b5fd1'],['grade','Grade','graded below pass','#6b7280']];
-let FL_HI=null;
+// Fleet (fleet.py /fleet). Three questions, three forms (dataviz practice):
+//  how bad -> headline numbers; which instrument catches -> ranked horizontal bars (one hue; dark = caught only here);
+//  which runs and why -> a catch-matrix table (rows = runs, a dot per instrument that fired, the finding in words).
+const FL_I=[['modes','Failure modes','a named long-horizon failure mode'],['security','Security','a high or critical security finding'],['milestones','Milestones','a planned unit never reached'],['loops','Loops','a loop over bursts'],['guard','Guard','the guard blocked a call, or a risky call ran unchecked'],['grade','Grade','graded below pass']];
+let FL_HI=null,FL_ALL=false;
 async function fetchFleet(){if(PW('fleet')){paywall('fleet');return}try{const r=await fetch('/fleet');if(r.ok){FL=await r.json();FL_AT=Date.now();renderFleet()}}catch(e){}}
-const FL_G=[['missed','Passed the grade, caught by something else','The outcome looked fine. Another instrument found the problem.'],
-  ['graded','The grade caught it','Graded below pass; the other dots show what else fired.'],
-  ['unjudged','Not graded, caught by an instrument','No judge scored these runs; an instrument still fired.'],
-  ['clean','Clean on every instrument','Nothing fired.']];
 function flGroup(r){if(!r.fired.length)return 'clean';if(r.fired.includes('grade'))return 'graded';return r.grade!=null?'missed':'unjudged'}
-function flRing(r,LMAX){
-  const rad=7+12*Math.log1p(r.steps)/LMAX,S=2*(rad+8),c=S/2,tot=d3.sum(r.phases,p=>p[1])||1,arc=d3.arc().innerRadius(rad-2.6).outerRadius(rad+2.6);
-  let a=0,g=`<circle cx="${c}" cy="${c}" r="${rad}" fill="none" stroke="var(--line)" stroke-width="5.2"/>`;
-  r.phases.forEach(([kd,n,f])=>{const a1=a+2*Math.PI*n/tot;g+=`<path transform="translate(${c},${c})" d="${arc({startAngle:a,endAngle:Math.max(a+.02,a1-.012)})}" fill="${HZ_C[kd]||HZ_C.other}" opacity="${kd==='other'?.55:.92}"/>`;
-    a=a1});
-  r.marks.forEach(([fr])=>{const m=2*Math.PI*fr,x=c+Math.sin(m)*(rad+5.4),y=c-Math.cos(m)*(rad+5.4),deg=m*180/Math.PI;
-    g+=`<path transform="translate(${x},${y}) rotate(${deg})" d="M0,3.2L-3,-2.6H3Z" fill="var(--critical)" stroke="var(--panel)" stroke-width=".7"/>`});
-  const top=FL_I.find(([k])=>r.fired.includes(k));if(top)g+=`<circle cx="${c}" cy="${c}" r="${Math.min(4.2,rad-4)}" fill="${top[3]}"/>`;
-  return `<svg width="${S}" height="${S}" viewBox="0 0 ${S} ${S}" aria-hidden="true">${g}</svg>`}
+const FL_G={missed:'Passed the grade, caught by another instrument',graded:'The grade caught it',unjudged:'Not graded, caught by an instrument',clean:'Clean on every instrument'};
 function renderFleet(){
   if(PW('fleet')){paywall('fleet');return}
   const host=document.getElementById('fleet');if(!host)return;
   if(!FL){host.innerHTML='<div class="empty">Loading every stored run…</div>';return}
   const R=FL.rows,M=FL.matrix;
   if(!R.length){host.innerHTML='<div class="empty">No stored runs with tool calls yet. The fleet fills in from the trace DB.</div>';return}
-  const LMAX=Math.log1p(Math.max(1,...R.map(r=>r.steps)));
-  const chips=FL_I.filter(([k])=>(M.by_instrument[k]||0)||k==='grade').map(([k,l,why,c])=>`<button class="fr-chip${FL_HI===k?' on':''}" data-flhi="${k}" aria-pressed="${FL_HI===k}" title="${esc(why)}"><i style="background:${c}"></i>${esc(l)} <b>${M.by_instrument[k]||0}</b>${M.only[k]?`<span>${M.only[k]} only here</span>`:''}</button>`).join('');
-  let h=`<p class="fl-head"><b>${esc(M.headline)}</b> ${M.clean} of ${M.runs} runs are clean on every instrument.</p><div class="fr-chips" role="group" aria-label="Highlight the runs an instrument caught">${chips}<button class="fr-chip fr-cmp${FL_CMP?' on':''}" data-flcmp="1" aria-pressed="${FL_CMP}">⇄ ${FL_CMP?(FL_SEL.length?'Pick one more run':'Pick two runs to compare'):'Compare two runs'}</button></div>`;
-  for(const [g,title,sub] of FL_G){
-    const rs=R.filter(r=>flGroup(r)===g).sort((a,b)=>b.risk-a.risk||b.steps-a.steps);if(!rs.length)continue;
-    h+=`<div class="fr-grp fr-${g}"><div class="fr-gh"><b>${esc(title)}</b><span class="fr-n">${rs.length}</span><span class="sub">${esc(sub)}</span></div><div class="fr-cells">`+
-      rs.map(r=>`<button class="fr-cell${FL_HI&&!r.fired.includes(FL_HI)?' dim':''}${FL_SEL.includes(r.turn+'|'+r.provider)?' sel':''}" data-frun="${esc(r.session||'')}|${esc(r.turn)}" data-frp="${esc(r.provider)}" title="${esc(`${NAME[r.provider]||r.provider} · ${r.steps} steps${r.grade!=null?' · grade '+r.grade:''}${r.fired.length?' · caught by '+r.fired.join(', '):' · nothing fired'}${r.modes.length?'\n'+r.modes.map(m=>m.replace(/_/g,' ')).join(', '):''}${r.why?'\n'+r.why:''}\n${r.prompt||''}`)}">${flRing(r,LMAX)}<span>${r.steps}</span></button>`).join('')+'</div></div>'}
-  const key=Object.entries(HZ_C).map(([k,c])=>`<span><i style="background:${c}"></i>${k}</span>`).join('');
-  h+=`<div class="fl-key">${key}<span><b style="color:var(--critical)">▲</b> where a failure mode shows</span><span>centre dot = the strongest instrument that fired</span><span>ring size = steps (log) · arcs run clockwise from the top, start to end</span></div>`;
+  const missed=R.filter(r=>flGroup(r)==='missed').length,judged=R.filter(r=>r.fired.length&&r.grade!=null).length;
+  const tiles=[[M.problems,`of ${M.runs} runs had a problem`,''],[missed,`passed the grade but were caught by another instrument`,'fk-em'],[M.clean,'clean on every instrument','']];
+  let h=`<div class="fk-tiles">${tiles.map(([v,l,c])=>`<div class="fk-tile ${c}"><div class="fk-v">${v}</div><div class="fk-l">${esc(l)}</div></div>`).join('')}</div>`;
+  // ranked horizontal bars: runs caught per instrument, dark part = caught by nothing else
+  const I=FL_I.map(([k,l,why])=>({k,l,why,n:M.by_instrument[k]||0,o:M.only[k]||0})).filter(x=>x.n||x.k==='grade').sort((a,b)=>b.n-a.n);
+  const max=Math.max(1,...I.map(x=>x.n));
+  h+=`<div class="fk-sec"><div class="fk-h"><b>What each instrument caught</b><span class="sub">problem runs it flagged, of ${M.problems}. Click a bar to list those runs.</span><span class="fk-leg"><i class="fk-sw on"></i>caught only here<i class="fk-sw"></i>also caught by another</span></div><div class="fk-bars" role="list">`+
+    I.map(x=>`<button class="fk-bar${FL_HI===x.k?' on':''}${FL_HI&&FL_HI!==x.k?' dim':''}" data-flhi="${x.k}" role="listitem" aria-pressed="${FL_HI===x.k}" title="${esc(x.l)}: caught ${x.n} of ${M.problems} problem runs; ${x.o} caught by nothing else (${esc(x.why)})"><span class="fk-bn">${esc(x.l)}</span><span class="fk-track"><i class="fk-only" style="width:${100*x.o/max}%"></i><i class="fk-also" style="width:${100*(x.n-x.o)/max}%"></i></span><span class="fk-bv"><b>${x.n}</b>${x.o?` · ${x.o} only`:''}</span></button>`).join('')+`</div></div>`;
+  // the catch-matrix table
+  const order={missed:0,graded:1,unjudged:2,clean:3};
+  let rows=R.filter(r=>!FL_HI||r.fired.includes(FL_HI)).sort((a,b)=>order[flGroup(a)]-order[flGroup(b)]||b.risk-a.risk||b.steps-a.steps);
+  const total=rows.length,LIM=FL_ALL?rows.length:40;rows=rows.slice(0,LIM);
+  const cols=FL_I.filter(([k])=>(M.by_instrument[k]||0)||k==='grade');
+  const sel=FL_SEL||[];
+  let body='',last=null;
+  rows.forEach(r=>{const g=flGroup(r),key=r.turn+'|'+r.provider;
+    if(g!==last){const n=R.filter(x=>flGroup(x)===g&&(!FL_HI||x.fired.includes(FL_HI))).length;body+=`<tr class="fk-gr fk-g-${g}"><th colspan="${5+cols.length}" scope="rowgroup">${esc(FL_G[g])} <span>${n}</span></th></tr>`;last=g}
+    body+=`<tr class="fk-row${sel.includes(key)?' sel':''}" data-frun="${esc(r.session||'')}|${esc(r.turn)}" data-frp="${esc(r.provider)}" tabindex="0">
+      <td class="fk-ck"><input type="checkbox" aria-label="Select to compare" data-flsel="${esc(key)}" ${sel.includes(key)?'checked':''}></td>
+      <td class="fk-run"><span class="fk-p" title="${esc(r.prompt||'')}">${esc((r.prompt||'(no prompt)').split('\n')[0].slice(0,64))}</span><span class="fk-m">${esc(NAME[r.provider]||r.provider)}</span></td>
+      <td class="fk-num">${r.steps}</td><td class="fk-num">${r.grade!=null?r.grade.toFixed(1):'–'}</td>
+      ${cols.map(([k,l])=>`<td class="fk-dot" title="${esc(l)}${r.fired.includes(k)?': fired':''}">${r.fired.includes(k)?'<i class="on" aria-label="fired"></i>':'<i aria-label="no"></i>'}</td>`).join('')}
+      <td class="fk-why"><div class="fk-wt">${r.why?esc(r.why):r.fired.length?esc(r.fired.join(', ')):'<span class="muted">nothing fired</span>'}</div></td></tr>`});
+  h+=`<div class="fk-sec"><div class="fk-h"><b>${FL_HI?esc(FL_I.find(x=>x[0]===FL_HI)[1])+': the runs it caught':'Every run, worst first'}</b><span class="sub">${total} run${total===1?'':'s'}. Click a row to open the run; tick two to compare them.</span>${FL_HI?'<button class="fk-clear" data-flhi="'+FL_HI+'">Show all runs</button>':''}${sel.length?`<span class="fk-cmpnote">${sel.length===1?'Tick one more run to compare.':''}</span>`:''}</div>
+    <div class="fk-tw"><table class="fk-t"><thead><tr><th class="fk-ck"><span class="vh">Compare</span></th><th>Run</th><th class="fk-num">Steps</th><th class="fk-num">Grade</th>${cols.map(([k,l])=>`<th class="fk-dot"><span>${esc(l)}</span></th>`).join('')}<th>Finding</th></tr></thead><tbody>${body}</tbody></table></div>
+    ${total>LIM?`<button class="fk-more" data-flall="1">Show all ${total} runs</button>`:''}</div>`;
   host.innerHTML=h;
 }
-document.getElementById('fleet').addEventListener('click',e=>{const c=e.target.closest('[data-flhi]');if(c){FL_HI=FL_HI===c.dataset.flhi?null:c.dataset.flhi;renderFleet()}});
 // Run diff (rundiff.py /diff): AgentDiff's pair comparison. Compare mode: pick two rings.
-let FL_CMP=false,FL_SEL=[];
+let FL_SEL=[];
 const DT={FILE_READ:'look',SEARCH:'look',FETCH:'look',NAVIGATE:'look',FILE_WRITE:'write',AGENT_SPAWN:'delegate',COMMAND:'other',PLAN:'other'};
 function diffLane(d){
   const L=d.lanes,n=L.length,W=Math.max(3,Math.min(11,860/Math.max(1,n))),X=58,H=96,w=X+n*W+12,ya=22,yb=62,cw=Math.max(2,W-1.2);
@@ -1634,10 +1659,11 @@ async function openDiff(a,b){
   try{const r=await fetch('/diff?a='+encodeURIComponent(a)+'&b='+encodeURIComponent(b));const d=await r.json();
     document.getElementById('dBody').innerHTML=r.status===402?paywallHtml('fleet',true):diffCard(d)}catch(e){document.getElementById('dBody').innerHTML='<div class="empty">The diff could not be loaded.</div>'}}
 document.getElementById('fleet').addEventListener('click',e=>{
-  if(e.target.closest('[data-flcmp]')){FL_CMP=!FL_CMP;FL_SEL=[];renderFleet();return}
-  const g=e.target.closest('[data-frun]');if(!g)return;const [sid,tid]=g.dataset.frun.split('|');
-  if(FL_CMP){const key=tid+'|'+g.dataset.frp;FL_SEL=FL_SEL.includes(key)?FL_SEL.filter(x=>x!==key):[...FL_SEL,key].slice(-2);renderFleet();if(FL_SEL.length===2)openDiff(FL_SEL[0],FL_SEL[1]);return}
-  openRunAnywhere(sid,tid)});
+  const hi=e.target.closest('[data-flhi]');if(hi){FL_HI=FL_HI===hi.dataset.flhi?null:hi.dataset.flhi;renderFleet();return}
+  if(e.target.closest('[data-flall]')){FL_ALL=true;renderFleet();return}
+  const ck=e.target.closest('[data-flsel]');if(ck){const k=ck.dataset.flsel;FL_SEL=FL_SEL.includes(k)?FL_SEL.filter(x=>x!==k):[...FL_SEL,k].slice(-2);renderFleet();if(FL_SEL.length===2){openDiff(FL_SEL[0],FL_SEL[1])}return}
+  const g=e.target.closest('[data-frun]');if(!g)return;const [sid,tid]=g.dataset.frun.split('|');openRunAnywhere(sid,tid)});
+document.getElementById('fleet').addEventListener('keydown',e=>{if(e.key!=='Enter')return;const g=e.target.closest('tr[data-frun]');if(g&&e.target===g){const [sid,tid]=g.dataset.frun.split('|');openRunAnywhere(sid,tid)}});
 function renderLongRun(t){
   const host=document.getElementById('longRun');
   const reads=t?P.map(p=>({p,e:S.A.longrun.filter(e=>e.turn_id===t.id&&e.provider===p).at(-1)})).filter(x=>x.e&&x.e.data):[];

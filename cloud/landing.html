@@ -21,15 +21,13 @@ h1,h2{font-family:var(--display);text-wrap:balance;margin:0;letter-spacing:-.01e
 h1{font-size:clamp(32px,4.6vw,48px);line-height:1.06}h2{font-size:24px}
 .kicker{font:600 11px/1 var(--mono);letter-spacing:.14em;color:var(--ink-2);text-transform:uppercase}
 .lede{font-size:18px;color:var(--ink-2);max-width:62ch;margin:14px 0 0}
-.hero{display:grid;grid-template-columns:1.1fr .9fr;gap:36px;align-items:center}
-@media (max-width:820px){.hero{grid-template-columns:1fr}}
-.strips{display:flex;flex-direction:column;gap:6px;padding:18px;background:var(--panel);border:1px solid var(--line);border-radius:12px}
-.strips div{height:11px;border-radius:3px;display:flex;overflow:hidden}.strips span{height:100%}
-.strips .m{position:relative}.strips em{position:absolute;top:-3px;width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:15px solid var(--fail)}
-.rings{display:flex;flex-wrap:wrap;gap:14px;align-items:center;justify-content:center;padding:22px;background:var(--panel);border:1px solid var(--line);border-radius:12px}
-.ring{position:relative;width:var(--s);height:var(--s);border-radius:50%}
-.ring::before{content:"";position:absolute;inset:0;border-radius:50%;background:var(--g);-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 7px),#000 calc(100% - 6px));mask:radial-gradient(farthest-side,transparent calc(100% - 7px),#000 calc(100% - 6px))}
-.ring em{position:absolute;left:50%;top:50%;width:0;height:0;transform:rotate(var(--a)) translateY(calc(var(--s) / -2 - 7px)) translateX(-5px);border-left:5px solid transparent;border-right:5px solid transparent;border-top:8px solid var(--fail)}
+.hero{display:grid;grid-template-columns:1fr;gap:28px}
+@media (max-width:820px){.hero{grid-template-columns:1fr}}.hero>div{min-width:0}
+.mx{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow-x:auto}
+.mx table{border-collapse:collapse;width:100%;min-width:520px;font-size:12.5px}.mx th,.mx td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle}.mx tr:last-child td{border-bottom:0}
+.mx th{font:600 10.5px/1 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2)}.mx td b{display:block;font-weight:500}.mx td span{font-size:11px;color:var(--ink-2)}
+.mx .n{text-align:right;font-variant-numeric:tabular-nums}.mx .d{text-align:center}.mx .d i{display:inline-block;width:7px;height:7px;border-radius:50%;box-shadow:inset 0 0 0 1px var(--line)}.mx .d i.on{width:9px;height:9px;background:var(--ink);box-shadow:none}
+.mx .w{color:var(--ink-2);min-width:240px}.mx td:first-child{min-width:190px}
 .cap{font:12px/1.4 var(--mono);color:var(--ink-2);margin-top:8px}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:22px;display:flex;flex-direction:column;gap:12px}
 form{display:flex;gap:8px;flex-wrap:wrap}input{flex:1 1 220px;min-width:0;font:inherit;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}
@@ -44,12 +42,11 @@ button:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(-
 .tbl{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
 table{border-collapse:collapse;width:100%;min-width:560px;font-size:14px}th,td{padding:11px 14px;text-align:left;border-bottom:1px solid var(--line)}tr:last-child td{border-bottom:0}
 th{font:600 11px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--ink-2)}td:nth-child(n+2){width:22%;font-variant-numeric:tabular-nums}
-thead th:last-child{color:var(--write)}
+.tbl thead th:last-child{color:var(--write)}
 .msg{color:var(--fail);min-height:1.2em;margin:0;font-size:14px}.ok{color:var(--check)}
 .small{font-size:13px;color:var(--ink-2)}
 footer{max-width:980px;margin:0 auto;padding-block:0 40px;font-size:13px;color:var(--ink-2)}
-@media (prefers-reduced-motion:no-preference){.ring{animation:spin-in .9s cubic-bezier(.2,.7,.2,1) both}.ring:nth-child(2n){animation-delay:.1s}.ring:nth-child(3n){animation-delay:.2s}
-@keyframes spin-in{from{transform:rotate(-90deg) scale(.85);opacity:.4}to{transform:none;opacity:1}}}
+@media (prefers-reduced-motion:no-preference){@keyframes spin-in{from{transform:rotate(-90deg) scale(.85);opacity:.4}to{transform:none;opacity:1}}}
 </style>
 </head>
 <body>
@@ -61,8 +58,7 @@ footer{max-width:980px;margin:0 auto;padding-block:0 40px;font-size:13px;color:v
       <p class="lede">Paste one line on your machine. Every Claude Code and Codex session streams here: each tool call on a live tree, alarms when a run loops or touches something risky, and a security review of every command.</p>
     </div>
     <div>
-      <div class="rings" aria-label="Example: runs drawn as rings of look, write and check phases, with a failure mode marked"><span class="ring" style="--s:52px;--g:conic-gradient(var(--look) 0 18%,var(--write) 18% 26%,var(--check) 26% 34%,var(--look) 34% 66%,var(--write) 66% 72%,var(--check) 72% 80%,var(--look) 80%)"></span><span class="ring" style="--s:64px;--g:conic-gradient(var(--look) 0 30%,var(--write) 30% 40%,var(--check) 40% 46%,var(--look) 46% 82%,var(--write) 82% 88%,var(--ship) 88%)"><em style="--a:316.8deg"></em></span><span class="ring" style="--s:40px;--g:conic-gradient(var(--write) 0 22%,var(--check) 22% 34%,var(--look) 34% 60%,var(--write) 60% 76%,var(--check) 76%)"></span><span class="ring" style="--s:70px;--g:conic-gradient(var(--look) 0 36%,var(--write) 36% 42%,var(--fail) 42% 70%,var(--look) 70%)"><em style="--a:144.0deg"></em></span><span class="ring" style="--s:46px;--g:conic-gradient(var(--look) 0 40%,var(--write) 40% 55%,var(--check) 55% 70%,var(--write) 70% 80%,var(--check) 80%)"></span><span class="ring" style="--s:58px;--g:conic-gradient(var(--look) 0 50%,var(--write) 50% 64%,var(--check) 64% 76%,var(--look) 76%)"></span><span class="ring" style="--s:34px;--g:conic-gradient(var(--write) 0 40%,var(--check) 40% 70%,var(--look) 70%)"></span><span class="ring" style="--s:62px;--g:conic-gradient(var(--look) 0 44%,var(--delegate) 44% 60%,var(--look) 60% 92%,var(--ship) 92%)"><em style="--a:208.8deg"></em></span></div>
-      <div class="cap">ring size = steps · look · <span style="color:var(--write)">write</span> · <span style="color:var(--check)">check</span> · <span style="color:var(--ship)">ship</span> · <span style="color:var(--fail)">▲ failure mode</span></div>
+      <div class="mx" aria-label="Example of the dashboard: each run is a row, with a dot under each instrument that caught a problem"><table><thead><tr><th>Run</th><th class="n">Steps</th><th class="n">Grade</th><th class="d">Modes</th><th class="d">Security</th><th class="d">Loops</th><th class="d">Grade</th><th>Finding</th></tr></thead><tbody><tr><td><b>Add retries to the client</b><span>Claude</span></td><td class="n">42</td><td class="n">4.6</td><td class="d"><i class="on"></i></td><td class="d"><i class=""></i></td><td class="d"><i class=""></i></td><td class="d"><i class=""></i></td><td class="w">skipped unit: said done, one planned file never touched</td></tr><tr><td><b>Set up the project and run tests</b><span>Codex</span></td><td class="n">7</td><td class="n">4.1</td><td class="d"><i class=""></i></td><td class="d"><i class="on"></i></td><td class="d"><i class=""></i></td><td class="d"><i class=""></i></td><td class="w">supply chain (high): installs a package from a URL</td></tr><tr><td><b>Fix the flaky upload test</b><span>Claude</span></td><td class="n">118</td><td class="n">4.4</td><td class="d"><i class=""></i></td><td class="d"><i class=""></i></td><td class="d"><i class="on"></i></td><td class="d"><i class=""></i></td><td class="w">loop of 5 bursts repeating earlier calls</td></tr><tr><td><b>Migrate config to the new API</b><span>Codex</span></td><td class="n">96</td><td class="n">4.8</td><td class="d"><i class=""></i></td><td class="d"><i class=""></i></td><td class="d"><i class=""></i></td><td class="d"><i class=""></i></td><td class="w">nothing fired</td></tr></tbody></table></div><div class="cap">Example. Three of these runs passed the grade; another instrument caught each one.</div>
     </div>
   </section>
 
