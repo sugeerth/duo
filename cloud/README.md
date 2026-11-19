@@ -23,7 +23,7 @@ Secrets are removed on your machine before anything is sent: API keys and tokens
 |---|---|---|
 | Live tree, alarms, security review, long-run panel | ✓ | ✓ |
 | Sessions | 3 most recent, 7 days | all |
-| Fleet + catch matrix, long-horizon reading, patterns, long-term trends | locked | ✓ |
+| Fleet + catch matrix, run diff, long-horizon reading, patterns, long-term trends | locked | ✓ |
 
 The server enforces the plan:
 - Pro routes answer 402 on the free plan.

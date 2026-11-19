@@ -150,6 +150,16 @@ The long-run panel draws all three under the bursts: an icicle of the subdivisio
 
 **Share it** (`tools/export_static.py out.html [--db PATH]`): the viewer and a trace DB in one self-contained HTML file, with no server and no live stream. Every session, payload and cross-run view is embedded. Payloads are cut to 4,000 characters, so review what the DB holds before sharing.
 
+**Run diff** (`rundiff.py`, `/diff`, from AgentDiff): turn on Compare in the fleet view and click any two runs. The card shows:
+- VERDICT: which run came out better, by the instruments and the grade;
+- DIVERGE: the first aligned step where they differ;
+- CAUSE: the worse run's decisive step, and what the better run did at that point;
+- COST: steps, time and failed calls ("faster to nothing" when the cheaper run is the worse one);
+- FIX: the change the failure mode calls for;
+- CONF: how far to trust it, and the fork command that would test it.
+
+Below it, both runs' steps are drawn aligned.
+
 **At scale** (`bench/scale.py`): the long-horizon detectors are streamed over a procedurally generated corpus, one run in memory at a time. [bench/SCALE.md](bench/SCALE.md) has the million-step result and how to reproduce it.
 
 **Guard, alarms, data flow, spend, reports, search:**

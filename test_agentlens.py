@@ -774,4 +774,18 @@ class Tests(unittest.TestCase):
   self.assertEqual(r['sessions'],1);self.assertIn('cdnjs.cloudflare.com/ajax/libs/d3/7.9.0',html);self.assertNotIn('src="/d3.v7.min.js"',html)
   data=json.loads(html.split('<script type="application/json" id="agentlens-data">',1)[1].split('</script>',1)[0])
   self.assertEqual(data['current'],'s1');self.assertEqual(data['payloads']['s1']['2']['text'],'hello');self.assertIn('/fleet',data['routes'])
+ def test_rundiff_card_and_alignment(self):
+  import rundiff
+  mk=lambda refs:[{'ref':r,'tool':t,'target':g,'ok':ok,'at':1000.0+i,'seconds':1.0} for i,(r,t,g,ok) in enumerate(refs)]
+  A=mk([(1,'Read','src/a.py',True),(2,'Edit','src/a.py',True),(3,'Bash','pytest -q',True),(4,'Bash','git commit -am x',True)])
+  B=mk([(11,'Read','src/a.py',True),(12,'Edit','vendor/gen.py',True),(13,'Bash','git commit -am x',True)])
+  ta={'steps':{'claude':A}};tb={'steps':{'codex':B}}
+  row=lambda turn,p,n,fired,modes,lf,why:{'turn':turn,'provider':p,'session':'s','steps':n,'grade':4.6,'fired':fired,'modes':modes,'prompt':'p','risk':2*len(fired),'look_first':lf,'why':why}
+  ra=row('t1','claude',4,[],[],None,None);rb=row('t2','codex',3,['modes'],['forgotten_constraint'],12,'forgotten constraint: the request says not to touch vendor/')
+  d=rundiff.compare(ta,'claude',ra,tb,'codex',rb)
+  self.assertTrue(d['verdict'].startswith('Run A came out better'));self.assertEqual(d['divergence']['pair'],1)
+  self.assertEqual((d['cause']['run'],d['cause']['ref'],d['cause']['mode']),('b',12,'forgotten_constraint'));self.assertIn("constraints",d['fix'])
+  self.assertIn('Edit src/a.py',d['fix']);self.assertIn('run B was 1 steps cheaper and the worse run: faster to nothing',d['cost']['text'])
+  self.assertEqual(len(d['lanes']),4);self.assertEqual(d['lanes'][0][:3],[1,11,0.0])
+  clean=rundiff.compare(ta,'claude',ra,ta,'claude',ra);self.assertEqual(clean['verdict'],'Both runs are clean on every instrument.');self.assertIsNone(clean['divergence'])
 if __name__=='__main__':unittest.main()

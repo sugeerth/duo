@@ -42,7 +42,7 @@ from pathlib import Path
 
 HERE=Path(__file__).resolve().parent;ROOT=HERE.parent;sys.path.insert(0,str(ROOT))
 os.environ.setdefault('AGENTLENS_TRACE_DB','off')  # this process never writes a local ~/.agentlens DB
-import chatimport, fleet, facets, longterm, tracestore  # noqa: E402
+import chatimport, fleet, facets, longterm, rundiff, tracestore  # noqa: E402
 
 DATA=Path(os.environ.get('AGENTLENS_CLOUD_DATA') or ROOT/'cloud-data')
 PUBLIC=(os.environ.get('AGENTLENS_CLOUD_URL') or os.environ.get('RENDER_EXTERNAL_URL') or '').rstrip('/')  # Render sets RENDER_EXTERNAL_URL
@@ -51,7 +51,7 @@ def payments():return DEV or bool(os.environ.get('STRIPE_SECRET_KEY') and os.env
 PRICE_LABEL=os.environ.get('AGENTLENS_PRO_PRICE_LABEL','$12 / month')
 FREE_SESSIONS=3;FREE_DAYS=7
 PRO_EVENTS={'analysis.horizon','reader.read','reader.ask','fork.step'}
-PRO_ROUTES={'/fleet':'fleet','/facets':'patterns','/longterm':'longterm'}
+PRO_ROUTES={'/fleet':'fleet','/facets':'patterns','/longterm':'longterm','/diff':'diff'}
 LOCKED_FREE=['fleet','patterns','longterm','horizon']
 MAX_BODY=4_000_000;MAX_LINES=60_000
 REV={};REV_LOCK=threading.Lock();STORES={};STORE_LOCK=threading.Lock();BUILD_LOCKS={}
@@ -167,7 +167,7 @@ def landing(base,msg=''):
     rows=[('Live tree of every tool call, as the agent works','✓','✓'),('Alarms: guard, repeats, failure streaks, context size','✓','✓'),
           ('Security review of each tool call (OWASP LLM Top 10)','✓','✓'),('Long-run reading: bursts, loops, stalls','✓','✓'),
           ('Sessions kept',f'{FREE_SESSIONS} most recent, {FREE_DAYS} days','All, no limit'),
-          ('Fleet view and catch matrix: which instrument caught each run','—','✓'),('Long-horizon failure modes and milestones','—','✓'),
+          ('Fleet view and catch matrix: which instrument caught each run','—','✓'),('Run diff: any two runs aligned, with verdict, cause, cost and fix','—','✓'),('Long-horizon failure modes and milestones','—','✓'),
           ('Patterns map across runs, long-term trends','—','✓')]
     tr=''.join(f'<tr><td>{html.escape(a)}</td><td>{html.escape(b)}</td><td>{html.escape(c)}</td></tr>' for a,b,c in rows)
     pro=PRICE_LABEL if payments() else 'coming soon';note='Upgrade from your dashboard at any time. Payments are handled by Stripe; cancel whenever you like.' if payments() else 'Pro is coming soon. Everything on the free plan works today.'
@@ -248,6 +248,7 @@ class H(BaseHTTPRequestHandler):
         sid=q.get('session')
         if path in PRO_ROUTES:
             if acct['plan']!='pro':return self.send(402,{'paywall':True,'feature':PRO_ROUTES[path]})
+            if path=='/diff':return self.send(200,rundiff.snapshot(st,q))
             fn={'/fleet':fleet.snapshot,'/facets':facets.snapshot,'/longterm':longterm.snapshot}[path]
             return self.send(200,fn(st))
         if path in ('/snapshot','/payload','/span_payloads','/events'):

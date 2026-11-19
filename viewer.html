@@ -214,6 +214,8 @@ section:not(.open){padding-top:9px;padding-bottom:9px}
 .pw-body{position:relative;margin:auto;max-width:460px;text-align:center;padding:18px;background:color-mix(in srgb,var(--panel) 88%,transparent);border-radius:10px;display:flex;flex-direction:column;gap:6px;align-items:center}
 .pw-body p{margin:0;color:var(--text-2);font-size:13px}.pw-tag{font:700 10px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.12em;padding:4px 7px;border-radius:99px;background:var(--text);color:var(--panel)}
 .pw-soon{margin-top:6px;font-weight:650;color:var(--text-2);border:1px dashed var(--line);border-radius:8px;padding:8px 12px}.pw-go{margin-top:6px;border:0;border-radius:8px;padding:9px 14px;font-weight:650;background:var(--codex);color:#fff;cursor:pointer}.pw-go:focus-visible{outline:2px solid var(--text);outline-offset:2px}.pw-go:disabled{opacity:.7;cursor:default}
+.fr-cell.sel{background:var(--hover);box-shadow:0 0 0 2px var(--codex)}.fr-cmp{margin-left:auto}.rd-runs{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}@media (max-width:640px){.rd-runs{grid-template-columns:1fr}}
+.rd-run{border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:13px;display:flex;flex-direction:column;gap:4px;align-items:flex-start;min-width:0}.rd-card{margin-top:0}
 .fr-chips{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 12px}.fr-chip{display:inline-flex;gap:6px;align-items:center;border:1px solid var(--line);background:var(--panel);border-radius:99px;padding:4px 10px;font:inherit;font-size:12.5px;color:var(--text);cursor:pointer}
 .fr-chip i{width:9px;height:9px;border-radius:50%}.fr-chip b{font-variant-numeric:tabular-nums}.fr-chip span{color:var(--muted);font-size:11.5px}.fr-chip.on{border-color:var(--text);background:var(--hover)}
 .fr-grp{margin:0 0 14px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--panel)}.fr-missed{border-color:color-mix(in srgb,var(--critical) 45%,var(--line));box-shadow:inset 3px 0 0 var(--critical)}
@@ -1592,17 +1594,50 @@ function renderFleet(){
   if(!R.length){host.innerHTML='<div class="empty">No stored runs with tool calls yet. The fleet fills in from the trace DB.</div>';return}
   const LMAX=Math.log1p(Math.max(1,...R.map(r=>r.steps)));
   const chips=FL_I.filter(([k])=>(M.by_instrument[k]||0)||k==='grade').map(([k,l,why,c])=>`<button class="fr-chip${FL_HI===k?' on':''}" data-flhi="${k}" aria-pressed="${FL_HI===k}" title="${esc(why)}"><i style="background:${c}"></i>${esc(l)} <b>${M.by_instrument[k]||0}</b>${M.only[k]?`<span>${M.only[k]} only here</span>`:''}</button>`).join('');
-  let h=`<p class="fl-head"><b>${esc(M.headline)}</b> ${M.clean} of ${M.runs} runs are clean on every instrument.</p><div class="fr-chips" role="group" aria-label="Highlight the runs an instrument caught">${chips}</div>`;
+  let h=`<p class="fl-head"><b>${esc(M.headline)}</b> ${M.clean} of ${M.runs} runs are clean on every instrument.</p><div class="fr-chips" role="group" aria-label="Highlight the runs an instrument caught">${chips}<button class="fr-chip fr-cmp${FL_CMP?' on':''}" data-flcmp="1" aria-pressed="${FL_CMP}">⇄ ${FL_CMP?(FL_SEL.length?'Pick one more run':'Pick two runs to compare'):'Compare two runs'}</button></div>`;
   for(const [g,title,sub] of FL_G){
     const rs=R.filter(r=>flGroup(r)===g).sort((a,b)=>b.risk-a.risk||b.steps-a.steps);if(!rs.length)continue;
     h+=`<div class="fr-grp fr-${g}"><div class="fr-gh"><b>${esc(title)}</b><span class="fr-n">${rs.length}</span><span class="sub">${esc(sub)}</span></div><div class="fr-cells">`+
-      rs.map(r=>`<button class="fr-cell${FL_HI&&!r.fired.includes(FL_HI)?' dim':''}" data-frun="${esc(r.session||'')}|${esc(r.turn)}" title="${esc(`${NAME[r.provider]||r.provider} · ${r.steps} steps${r.grade!=null?' · grade '+r.grade:''}${r.fired.length?' · caught by '+r.fired.join(', '):' · nothing fired'}${r.modes.length?'\n'+r.modes.map(m=>m.replace(/_/g,' ')).join(', '):''}${r.why?'\n'+r.why:''}\n${r.prompt||''}`)}">${flRing(r,LMAX)}<span>${r.steps}</span></button>`).join('')+'</div></div>'}
+      rs.map(r=>`<button class="fr-cell${FL_HI&&!r.fired.includes(FL_HI)?' dim':''}${FL_SEL.includes(r.turn+'|'+r.provider)?' sel':''}" data-frun="${esc(r.session||'')}|${esc(r.turn)}" data-frp="${esc(r.provider)}" title="${esc(`${NAME[r.provider]||r.provider} · ${r.steps} steps${r.grade!=null?' · grade '+r.grade:''}${r.fired.length?' · caught by '+r.fired.join(', '):' · nothing fired'}${r.modes.length?'\n'+r.modes.map(m=>m.replace(/_/g,' ')).join(', '):''}${r.why?'\n'+r.why:''}\n${r.prompt||''}`)}">${flRing(r,LMAX)}<span>${r.steps}</span></button>`).join('')+'</div></div>'}
   const key=Object.entries(HZ_C).map(([k,c])=>`<span><i style="background:${c}"></i>${k}</span>`).join('');
   h+=`<div class="fl-key">${key}<span><b style="color:var(--critical)">▲</b> where a failure mode shows</span><span>centre dot = the strongest instrument that fired</span><span>ring size = steps (log) · arcs run clockwise from the top, start to end</span></div>`;
   host.innerHTML=h;
 }
 document.getElementById('fleet').addEventListener('click',e=>{const c=e.target.closest('[data-flhi]');if(c){FL_HI=FL_HI===c.dataset.flhi?null:c.dataset.flhi;renderFleet()}});
-document.getElementById('fleet').addEventListener('click',e=>{const g=e.target.closest('[data-frun]');if(!g)return;const [sid,tid]=g.dataset.frun.split('|');openRunAnywhere(sid,tid)});
+// Run diff (rundiff.py /diff): AgentDiff's pair comparison. Compare mode: pick two rings.
+let FL_CMP=false,FL_SEL=[];
+const DT={FILE_READ:'look',SEARCH:'look',FETCH:'look',NAVIGATE:'look',FILE_WRITE:'write',AGENT_SPAWN:'delegate',COMMAND:'other',PLAN:'other'};
+function diffLane(d){
+  const L=d.lanes,n=L.length,W=Math.max(3,Math.min(11,860/Math.max(1,n))),X=58,H=96,w=X+n*W+12,ya=22,yb=62,cw=Math.max(2,W-1.2);
+  const col=t=>t?(HZ_C[DT[t]]||'#7d848c'):null,worse=d.cause?.run;
+  let g=`<text x="0" y="${ya+8}" class="mut" style="font-size:11px">run A</text><text x="0" y="${yb+8}" class="mut" style="font-size:11px">run B</text>`;
+  L.forEach(([ra,rb,cost,ta,tb,fa,fb],k)=>{const x=X+k*W;
+    if(ra!=null&&rb!=null)g+=`<line x1="${x+cw/2}" x2="${x+cw/2}" y1="${ya+12}" y2="${yb}" stroke="${cost<.01?'var(--line)':'var(--warn)'}" stroke-width="${cost<.01?1:1.2}" ${cost<.01?'':'stroke-dasharray="2 2"'}/>`;
+    if(ra!=null)g+=`<rect x="${x}" y="${ya}" width="${cw}" height="12" rx="1.5" fill="${col(ta)}"/>`+(fa?`<rect x="${x}" y="${ya+13}" width="${cw}" height="2" fill="var(--critical)"/>`:'');
+    if(rb!=null)g+=`<rect x="${x}" y="${yb}" width="${cw}" height="12" rx="1.5" fill="${col(tb)}"/>`+(fb?`<rect x="${x}" y="${yb+13}" width="${cw}" height="2" fill="var(--critical)"/>`:'')});
+  if(d.divergence){const x=X+d.divergence.pair*W;g+=`<line x1="${x-1}" x2="${x-1}" y1="8" y2="${H-14}" stroke="var(--text)" stroke-dasharray="3 3"/><text x="${x+3}" y="12" style="font-size:10.5px;fill:var(--text)">first divergence</text>`}
+  if(d.cause&&d.cause.pair!=null){const x=X+d.cause.pair*W+cw/2,y=worse==='a'?ya-3:yb+20;g+=`<path d="M${x},${y}l5,${worse==='a'?-8:8}h-10z" fill="var(--critical)"/><text x="${x+7}" y="${worse==='a'?y-1:y+8}" style="font-size:10.5px;fill:var(--critical)">decisive</text>`}
+  return `<div style="overflow-x:auto"><svg width="${w}" height="${H}" role="img" aria-label="The two runs' steps, aligned">${g}</svg></div>`}
+function diffCard(d){
+  if(d.error)return `<div class="empty">${esc(d.error)}</div>`;
+  const R=d.runs,run=(k,r)=>`<div class="rd-run"><b>Run ${k.toUpperCase()}</b> ${esc(NAME[r.provider]||r.provider)} · ${r.steps} steps${r.grade!=null?' · grade '+r.grade:''} · ${r.fired.length?'<span class="bad">caught by '+esc(r.fired.join(', '))+'</span>':'<span class="ok">clean</span>'}<div class="sub">${esc((r.prompt||'').slice(0,140))}</div><button class="vchip" data-open-run="${esc(r.session||'')}|${esc(r.turn)}">Open run ${k.toUpperCase()}</button></div>`;
+  const line=(k,t)=>t?`<div class="vk">${k}</div><div class="vt">${t}</div>`:'';
+  const c=d.cause;
+  return `<div class="rd-runs">${run('a',R.a)}${run('b',R.b)}</div>
+  <div class="vcard rd-card">${line('VERDICT',esc(d.verdict))}${line('DIVERGE',d.divergence?esc(d.divergence.text)+'.':'The runs never diverge: same steps, same order.')}
+  ${line('CAUSE',c?`run ${c.run.toUpperCase()}, step ${c.ref}: ${esc(c.why)}${c.after_divergence?' (after the runs diverged)':''}.`:'')}
+  ${line('COST',esc(d.cost.text)+'.')}${line('FIX',esc(d.fix||''))}${line('CONF',esc(d.conf_text))}</div>
+  <h3 style="margin:14px 0 4px">The two runs, step by step</h3><p class="sub" style="margin:0 0 6px">Aligned by what each step did (action and target). A grey line joins identical steps, a dashed amber line joins the same kind of step on a different target; a step alone was done by one run only. Similarity ${Math.round(100*d.similarity)}%.</p>${diffLane(d)}
+  <div class="fl-key">${Object.entries(HZ_C).map(([k,c])=>`<span><i style="background:${c}"></i>${k}</span>`).join('')}<span><i style="background:var(--critical);height:2px;border-radius:0"></i>failed call</span></div>`}
+async function openDiff(a,b){
+  openDrawer('Run diff','<div class="empty">Aligning the two runs…</div>');
+  try{const r=await fetch('/diff?a='+encodeURIComponent(a)+'&b='+encodeURIComponent(b));const d=await r.json();
+    document.getElementById('dBody').innerHTML=r.status===402?paywallHtml('fleet',true):diffCard(d)}catch(e){document.getElementById('dBody').innerHTML='<div class="empty">The diff could not be loaded.</div>'}}
+document.getElementById('fleet').addEventListener('click',e=>{
+  if(e.target.closest('[data-flcmp]')){FL_CMP=!FL_CMP;FL_SEL=[];renderFleet();return}
+  const g=e.target.closest('[data-frun]');if(!g)return;const [sid,tid]=g.dataset.frun.split('|');
+  if(FL_CMP){const key=tid+'|'+g.dataset.frp;FL_SEL=FL_SEL.includes(key)?FL_SEL.filter(x=>x!==key):[...FL_SEL,key].slice(-2);renderFleet();if(FL_SEL.length===2)openDiff(FL_SEL[0],FL_SEL[1]);return}
+  openRunAnywhere(sid,tid)});
 function renderLongRun(t){
   const host=document.getElementById('longRun');
   const reads=t?P.map(p=>({p,e:S.A.longrun.filter(e=>e.turn_id===t.id&&e.provider===p).at(-1)})).filter(x=>x.e&&x.e.data):[];
