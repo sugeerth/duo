@@ -1,0 +1,26 @@
+# Render Blueprint for AgentLens Cloud (cloud/README.md). New > Blueprint > this repo, or the Deploy to Render button.
+# A disk keeps accounts and traces across deploys; Render disks need a paid instance (starter).
+services:
+  - type: web
+    name: agentlens-cloud
+    runtime: docker
+    dockerfilePath: ./cloud/Dockerfile
+    dockerContext: .
+    plan: starter
+    healthCheckPath: /healthz
+    disk:
+      name: agentlens-data
+      mountPath: /data
+      sizeGB: 1
+    envVars:
+      - key: AGENTLENS_CLOUD_DATA
+        value: /data
+      - key: AGENTLENS_PRO_PRICE_LABEL
+        value: $12 / month
+      # Turn on payments later by adding these in the Render dashboard (no code change):
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_PRICE_ID
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false

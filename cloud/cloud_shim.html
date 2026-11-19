@@ -32,7 +32,7 @@
     const pro=C.plan==='pro';
     el.innerHTML=`<b>AgentLens</b><span class="cl-plan${pro?' pro':''}">${pro?'PRO':'FREE'}</span><span class="cl-live"><i></i>live</span>`+
       `<span class="cl-inst"><span class="sub">Stream a machine:</span><code id="clInst"></code><button id="clCopy" type="button">Copy</button></span>`+
-      (pro?'':`<button class="cl-up" type="button" data-upgrade="bar">Upgrade to Pro${C.price?' · '+C.price:''}</button>`)+
+      (pro?'':C.payments===false?'<span class="cl-plan">PRO COMING SOON</span>':`<button class="cl-up" type="button" data-upgrade="bar">Upgrade to Pro${C.price?' · '+C.price:''}</button>`)+
       `<a class="cl-btn" href="/logout">Sign out</a>`;
     document.body.insertBefore(el,document.body.firstChild);
     document.getElementById('clInst').textContent=C.install||'';

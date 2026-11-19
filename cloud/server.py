@@ -45,8 +45,9 @@ os.environ.setdefault('AGENTLENS_TRACE_DB','off')  # this process never writes a
 import chatimport, fleet, facets, longterm, tracestore  # noqa: E402
 
 DATA=Path(os.environ.get('AGENTLENS_CLOUD_DATA') or ROOT/'cloud-data')
-PUBLIC=os.environ.get('AGENTLENS_CLOUD_URL','').rstrip('/')
+PUBLIC=(os.environ.get('AGENTLENS_CLOUD_URL') or os.environ.get('RENDER_EXTERNAL_URL') or '').rstrip('/')  # Render sets RENDER_EXTERNAL_URL
 DEV=os.environ.get('AGENTLENS_CLOUD_DEV')=='1'
+def payments():return DEV or bool(os.environ.get('STRIPE_SECRET_KEY') and os.environ.get('STRIPE_PRICE_ID'))  # without Stripe, Pro shows as coming soon
 PRICE_LABEL=os.environ.get('AGENTLENS_PRO_PRICE_LABEL','$12 / month')
 FREE_SESSIONS=3;FREE_DAYS=7
 PRO_EVENTS={'analysis.horizon','reader.read','reader.ask','fork.step'}
@@ -158,7 +159,7 @@ def install_line(base,key):return f'curl -fsSL {base}/install.sh | sh -s -- {key
 
 def viewer_page(acct,base,key):
     v=(ROOT/'viewer.html').read_text()
-    cfg={'plan':acct['plan'],'email':acct['email'],'locked':[] if acct['plan']=='pro' else LOCKED_FREE,'price':PRICE_LABEL,'install':install_line(base,key),'dev':DEV}
+    cfg={'plan':acct['plan'],'email':acct['email'],'locked':[] if acct['plan']=='pro' else LOCKED_FREE,'price':PRICE_LABEL,'install':install_line(base,key),'dev':DEV,'payments':payments()}
     inject=f'<script>window.AGENTLENS_PAYWALL={json.dumps(cfg).replace("</","<\\/")};</script>\n'+(HERE/'cloud_shim.html').read_text()
     return v.replace('<script src="/d3.v7.min.js"></script>',inject+'<script src="/d3.v7.min.js"></script>',1)
 
@@ -169,7 +170,8 @@ def landing(base,msg=''):
           ('Fleet view and catch matrix: which instrument caught each run','—','✓'),('Long-horizon failure modes and milestones','—','✓'),
           ('Patterns map across runs, long-term trends','—','✓')]
     tr=''.join(f'<tr><td>{html.escape(a)}</td><td>{html.escape(b)}</td><td>{html.escape(c)}</td></tr>' for a,b,c in rows)
-    return (HERE/'landing.html').read_text().replace('{{ROWS}}',tr).replace('{{PRICE}}',html.escape(PRICE_LABEL)).replace('{{MSG}}',html.escape(msg)).replace('{{BASE}}',html.escape(base))
+    pro=PRICE_LABEL if payments() else 'coming soon';note='Upgrade from your dashboard at any time. Payments are handled by Stripe; cancel whenever you like.' if payments() else 'Pro is coming soon. Everything on the free plan works today.'
+    return (HERE/'landing.html').read_text().replace('{{ROWS}}',tr).replace('{{PRICE}}',html.escape(pro)).replace('{{PLANNOTE}}',html.escape(note)).replace('{{MSG}}',html.escape(msg)).replace('{{BASE}}',html.escape(base))
 
 # ------------------------------------------------------------------ HTTP
 class H(BaseHTTPRequestHandler):
