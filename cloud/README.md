@@ -47,6 +47,16 @@ python3 cloud/server.py --port 8080                       # or: docker build -f 
 | `AGENTLENS_PRO_PRICE_LABEL` | price shown on the paywall (default `$12 / month`) |
 | `AGENTLENS_CLOUD_DEV=1` | local testing only: Upgrade switches to Pro without payment |
 
+**Cheapest: Fly.io**, about $2 a month (the repo's `fly.toml`). It sleeps when idle and wakes on the next visit or upload.
+
+```sh
+fly launch --copy-config --no-deploy     # pick a unique app name
+fly volumes create agentlens_data --size 1
+fly deploy
+```
+
+On Render, `render.yaml` uses a paid instance with a disk (about $7 a month). Render's free plan works for a trial: set `plan: free` and remove the `disk` block. It sleeps when idle, and stored data is lost on every restart.
+
 Serve it behind HTTPS (any host that runs a container: Fly.io, Render, Railway, a VPS with Caddy). The login cookie is `Secure` when the public URL is https.
 
 ## Limits of this first version
