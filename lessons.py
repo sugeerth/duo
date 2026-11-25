@@ -1,9 +1,9 @@
 """Trace -> action -> better agent.
 
 Judges propose fixes (judge.action events) backed by step evidence. suggestions()
-groups them across turns and sessions; accept() turns one into a lesson that Duo
-prepends to that model's future prompts. Lessons live in ~/.duo/lessons.json
-(DUO_LESSONS=/path overrides). Nothing outside Duo is modified.
+groups them across turns and sessions; accept() turns one into a lesson that AgentLens
+prepends to that model's future prompts. Lessons live in ~/.agentlens/lessons.json
+(AGENTLENS_LESSONS=/path overrides). Nothing outside AgentLens is modified.
 """
 from collections import defaultdict
 import json
@@ -11,10 +11,10 @@ import os
 from pathlib import Path
 import time
 
-TARGET_LABEL={'prompt':'Prompt rule','tools':'Tool setup','workflow':'Duo workflow','context':'Missing context'}
+TARGET_LABEL={'prompt':'Prompt rule','tools':'Tool setup','workflow':'AgentLens workflow','context':'Missing context'}
 
 def path():
-    return Path(os.environ.get('DUO_LESSONS') or Path.home()/'.duo'/'lessons.json').expanduser()
+    return Path(os.environ.get('AGENTLENS_LESSONS') or Path.home()/'.agentlens'/'lessons.json').expanduser()
 
 def load():
     try:return json.loads(path().read_text())
@@ -114,9 +114,9 @@ def save_settings(**kw):
     st=settings();st.update({k:v for k,v in kw.items() if k in ('enabled','k')})
     settings_path().parent.mkdir(parents=True,exist_ok=True);settings_path().write_text(json.dumps(st));_changed('settings');return st
 
-def disabled():return os.environ.get('DUO_NO_LESSONS','')=='1' or not settings()['enabled']  # replay --no-lessons / user switch
+def disabled():return os.environ.get('AGENTLENS_NO_LESSONS','')=='1' or not settings()['enabled']  # replay --no-lessons / user switch
 
-TOP_K=int(os.environ.get('DUO_LESSONS_K','4'))
+TOP_K=int(os.environ.get('AGENTLENS_LESSONS_K','4'))
 ALWAYS={'ignored_constraint','hallucinated_result','reward_hack','no_verification'}  # general habits that apply to every task
 HEADER=('Optional guidance from earlier graded runs. It is lower priority than everything above: the user\'s request always wins, '
         'and skip any item that does not apply to this task.')

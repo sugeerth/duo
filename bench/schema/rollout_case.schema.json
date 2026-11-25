@@ -1,0 +1,83 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "title": "Rollout task case",
+ "type": "object",
+ "required": [
+  "id",
+  "family",
+  "split",
+  "file",
+  "labels"
+ ],
+ "properties": {
+  "id": {
+   "type": "string"
+  },
+  "family": {
+   "type": "string"
+  },
+  "split": {
+   "enum": [
+    "dev",
+    "test"
+   ]
+  },
+  "file": {
+   "type": "string"
+  },
+  "labels": {
+   "type": "object",
+   "required": [
+    "episodes",
+    "n",
+    "successes"
+   ],
+   "properties": {
+    "n": {
+     "type": "integer"
+    },
+    "successes": {
+     "type": "integer"
+    },
+    "clean_successes": {
+     "type": "integer"
+    },
+    "episodes": {
+     "type": "array",
+     "items": {
+      "type": "object",
+      "required": [
+       "episode",
+       "success",
+       "hacked",
+       "return"
+      ],
+      "properties": {
+       "episode": {
+        "type": "integer"
+       },
+       "success": {
+        "type": "boolean"
+       },
+       "hacked": {
+        "type": "boolean"
+       },
+       "return": {
+        "type": "number"
+       }
+      }
+     }
+    },
+    "pass_at_k": {
+     "type": "object"
+    },
+    "pass_hat_k": {
+     "type": "object"
+    },
+    "note": {
+     "type": "string"
+    }
+   }
+  }
+ }
+}

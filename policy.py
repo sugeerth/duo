@@ -8,7 +8,7 @@ the background after the judges score the turn.
 Reward in [0,1]: judge overall (1-5 -> 0-1), minus 0.5 for a confirmed reward hack,
 minus 0.15 per contradicted claim (max 0.45); user feedback on the next message moves
 it +0.2 / -0.3. Exploration is capped at EXPLORE. Routing is applied only with
-DUO_ROUTE=auto; otherwise it is a recommendation shown in /policy and the viewer.
+AGENTLENS_ROUTE=auto; otherwise it is a recommendation shown in /policy and the viewer.
 """
 import json
 import os
@@ -22,7 +22,7 @@ ROUTE_MIN=10          # decisive turns before a route is recommended
 ROUTE_CONF=0.9        # posterior probability one agent is better
 _lock=threading.Lock()
 
-def path():return Path(os.environ.get('DUO_POLICY') or Path.home()/'.duo'/'policy.json').expanduser()
+def path():return Path(os.environ.get('AGENTLENS_POLICY') or Path.home()/'.agentlens'/'policy.json').expanduser()
 
 def load():
     try:return json.loads(path().read_text())
@@ -104,7 +104,7 @@ def summary():
             mean=a/(a+b);var=a*b/((a+b)**2*(a+b+1))
             arms.append({'provider':p,'kind':kind,'k':int(k),'alpha':a,'beta':b,'n':a+b-2,'mean':round(mean,3),'sd':round(var**.5,3)})
     routes=[{'kind':k,'route':route(k,st)[0],'p_codex':round(route(k,st)[1],3),'n':route(k,st)[2]} for k in sorted(st['routes'])]
-    return {'arms':arms,'routes':routes,'history':st['history'][-400:],'explore':EXPLORE,'auto_route':os.environ.get('DUO_ROUTE')=='auto'}
+    return {'arms':arms,'routes':routes,'history':st['history'][-400:],'explore':EXPLORE,'auto_route':os.environ.get('AGENTLENS_ROUTE')=='auto'}
 
 def render():
     s=summary()

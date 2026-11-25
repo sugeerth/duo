@@ -1,0 +1,220 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "title": "Run case",
+ "description": "One model run: tool steps in time order, with planted labels.",
+ "type": "object",
+ "required": [
+  "id",
+  "family",
+  "split",
+  "steps",
+  "labels"
+ ],
+ "properties": {
+  "id": {
+   "type": "string"
+  },
+  "family": {
+   "type": "string"
+  },
+  "split": {
+   "enum": [
+    "dev",
+    "test"
+   ]
+  },
+  "style": {
+   "enum": [
+    "claude",
+    "codex"
+   ]
+  },
+  "steps": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "required": [
+     "ref",
+     "tool",
+     "target",
+     "ok",
+     "at",
+     "seconds"
+    ],
+    "properties": {
+     "ref": {
+      "type": "integer",
+      "minimum": 1
+     },
+     "tool": {
+      "type": "string"
+     },
+     "target": {
+      "type": "string"
+     },
+     "ok": {
+      "type": "boolean"
+     },
+     "at": {
+      "type": "number"
+     },
+     "seconds": {
+      "type": "number",
+      "minimum": 0
+     },
+     "output": {
+      "type": "string"
+     },
+     "input": {
+      "type": "string"
+     }
+    }
+   },
+   "minItems": 1
+  },
+  "labels": {
+   "type": "object",
+   "required": [
+    "loops",
+    "look_first_ref",
+    "progress_refs",
+    "regression_refs",
+    "sessions",
+    "hacks",
+    "flags"
+   ],
+   "properties": {
+    "loops": {
+     "type": "array",
+     "items": {
+      "type": "object",
+      "required": [
+       "start_ref"
+      ],
+      "properties": {
+       "start_ref": {
+        "type": "integer",
+        "minimum": 1
+       },
+       "end_ref": {
+        "type": [
+         "integer",
+         "null"
+        ]
+       },
+       "bursts": {
+        "type": [
+         "integer",
+         "null"
+        ]
+       }
+      }
+     }
+    },
+    "look_first_ref": {
+     "type": [
+      "integer",
+      "null"
+     ]
+    },
+    "progress_refs": {
+     "type": "array",
+     "items": {
+      "type": "integer",
+      "minimum": 1
+     }
+    },
+    "regression_refs": {
+     "type": "array",
+     "items": {
+      "type": "integer",
+      "minimum": 1
+     }
+    },
+    "sessions": {
+     "type": "integer",
+     "minimum": 1
+    },
+    "stall_open": {
+     "type": [
+      "boolean",
+      "null"
+     ]
+    },
+    "stall_start_ref": {
+     "type": [
+      "integer",
+      "null"
+     ]
+    },
+    "hacks": {
+     "type": "array",
+     "items": {
+      "type": "object",
+      "required": [
+       "ref",
+       "signals"
+      ],
+      "properties": {
+       "ref": {
+        "type": "integer",
+        "minimum": 1
+       },
+       "signals": {
+        "type": "array",
+        "items": {
+         "enum": [
+          "test_file_edit",
+          "assert_removed",
+          "skip_added",
+          "grader_or_ci_edit",
+          "test_deleted"
+         ]
+        },
+        "minItems": 1
+       }
+      }
+     }
+    },
+    "flags": {
+     "type": "array",
+     "items": {
+      "enum": [
+       "reread_churn",
+       "write_churn",
+       "rogue_after_error",
+       "unverified_finish",
+       "search_loop",
+       "oscillation"
+      ]
+     }
+    },
+    "checks": {
+     "type": [
+      "integer",
+      "null"
+     ],
+     "minimum": 0
+    },
+    "note": {
+     "type": "string"
+    }
+   }
+  },
+  "reviewed": {
+   "type": "boolean"
+  },
+  "suggested": {
+   "type": "object"
+  },
+  "session": {
+   "type": "string"
+  },
+  "turn": {
+   "type": [
+    "string",
+    "null"
+   ]
+  }
+ }
+}

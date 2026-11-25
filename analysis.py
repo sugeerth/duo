@@ -18,6 +18,7 @@ GLYPH={'FILE_READ':'○','FILE_WRITE':'▭','SEARCH':'⌕','COMMAND':'▶','FETC
 READ_CMD=re.compile(r'^(cat|sed -n|nl|head|tail|less|bat|wc|file|stat|jq|python3? -c .*open\()',re.I)
 SEARCH_CMD=re.compile(r'^(rg|grep|egrep|find|fd|ls|tree|git (grep|log|show|diff|status|blame)|ag)\b',re.I)
 WRITE_CMD=re.compile(r"^(sed -i|perl -pi|tee|mv|cp|rm|mkdir|touch|apply_patch|git (apply|checkout|restore|commit|add|mv|rm)|patch|truncate)\b|>\s*\S",re.I)
+NOT_A_WRITE=re.compile(r'\d*>&\d+|&>\s*/dev/null|\d*>>?\s*/dev/null')  # fd duplication and /dev/null are redirects, not file writes
 TEST_CMD=re.compile(r'\b(pytest|py\.test|unittest|nosetests|tox|npm (run )?test|yarn test|pnpm test|jest|vitest|mocha|go test|cargo test|mvn test|gradle test|make (test|check)|ctest|rspec|phpunit|tsc|mypy|ruff|eslint|test_\w+\.py|-m pytest)\b',re.I)
 TEST_PATH=re.compile(r'(^|/)(tests?|__tests__|spec)(/|$)|(^|/)test_[^/]*\.py$|_test\.(py|go|rb)$|\.(test|spec)\.[jt]sx?$|Test\.java$',re.I)
 GRADER_PATH=re.compile(r'(^|/)(conftest\.py|pytest\.ini|tox\.ini|setup\.cfg|jest\.config\.[jt]s|vitest\.config\.[jt]s|\.github/workflows/|Makefile|noxfile\.py)',re.I)
@@ -39,7 +40,7 @@ def action_type(step):
     if tool in ('agent','task'):return 'AGENT_SPAWN'
     if tool in ('todowrite','exitplanmode','plan'):return 'PLAN'
     if tool in ('bash','commandexecution','shell','command') or detail:
-        if WRITE_CMD.search(detail):return 'FILE_WRITE'
+        if WRITE_CMD.search(NOT_A_WRITE.sub('',detail)):return 'FILE_WRITE'
         if SEARCH_CMD.match(detail):return 'SEARCH'
         if READ_CMD.match(detail):return 'FILE_READ'
         return 'COMMAND'
@@ -195,11 +196,15 @@ def match_claims(claims,steps):
 
 def analyse(traj):
     """traj = judge.trajectory(turn_id, raw=True). Returns per-provider findings + alignment."""
+    import longrun  # longrun reuses this module's check patterns
+    import security
     per={};steps={}
     for p,runs in traj.items():
         st=steps_of([r for r in runs if r.get('role')!='reviewer']);steps[p]=st
         m,f=behaviour(st)
-        per[p]={'metrics':m,'flags':f,'hacks':hack_signals(st)}
+        tools=[x for x in st if x['type']!='REASON' and x.get('kind')=='tool']
+        per[p]={'metrics':m,'flags':f,'hacks':hack_signals(st),'longrun':longrun.read(tools),'tools':tools,
+                'security':security.review([{**x,'output':x.get('output') or x.get('error') or ''} for x in tools])}
     acts=lambda p:[x for x in steps.get(p,[]) if x['type']!='REASON']
     al=align(steps['codex'],steps['claude']) if acts('codex') and acts('claude') else None  # only when both did the task (not writer vs reviewer)
     return {'per':per,'align':al,'steps':steps}

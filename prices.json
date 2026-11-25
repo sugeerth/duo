@@ -1,0 +1,28 @@
+{
+ "_about": "USD per million tokens: [input, cache write 5 min, cache write 1 hour, cache read, output]. Anthropic list prices read from platform.claude.com/docs/en/about-claude/pricing on 2026-11-25 (standard speed, global endpoint, no batch discount). OpenAI prices are not filled in: add yours under \"openai\". Override any of this in ~/.agentlens/prices.json.",
+ "anthropic": {
+  "fable-5-2": [8, 10, 16, 0.2, 40],
+  "mythos-5-2": [8, 10, 16, 0.2, 40],
+  "fable-5-1": [10, 12.5, 20, 0.25, 50],
+  "mythos-5-1": [10, 12.5, 20, 0.25, 50],
+  "fable-5": [10, 12.5, 20, 1, 50],
+  "mythos-5": [10, 12.5, 20, 1, 50],
+  "opus-5-5": [4, 5, 8, 0.2, 20],
+  "opus-5": [5, 6.25, 10, 0.5, 25],
+  "opus-4-8": [5, 6.25, 10, 0.5, 25],
+  "opus-4-7": [5, 6.25, 10, 0.5, 25],
+  "opus-4-6": [5, 6.25, 10, 0.5, 25],
+  "opus-4-5": [5, 6.25, 10, 0.5, 25],
+  "opus-4-1": [15, 18.75, 30, 1.5, 75],
+  "opus-4": [15, 18.75, 30, 1.5, 75],
+  "sonnet-5-5": [2, 2.5, 4, 0.1, 10],
+  "sonnet-5": [2, 2.5, 4, 0.2, 10],
+  "sonnet-4-6": [3, 3.75, 6, 0.3, 15],
+  "sonnet-4-5": [3, 3.75, 6, 0.3, 15],
+  "sonnet-4": [3, 3.75, 6, 0.3, 15],
+  "haiku-5-5": [0.1, 0.125, 0.2, 0.01, 0.5],
+  "haiku-5-5>100k": [0.5, 0.625, 1, 0.05, 2.5],
+  "haiku-4-5": [1, 1.25, 2, 0.1, 5]
+ },
+ "openai": {}
+}

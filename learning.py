@@ -1,7 +1,7 @@
 """Self-learning evals, kept in check.
 
 Signals: implicit feedback from the user's next message (correction, re-ask, thanks) and
-explicit /rate and /prefer. From them Duo learns which judge dimensions matter to this
+explicit /rate and /prefer. From them AgentLens learns which judge dimensions matter to this
 user. The judge rubric itself never changes (scores stay comparable over time); learned
 weights only re-rank downstream: a user-weighted score, which fixes surface first, and
 which lessons are auto-adopted. Every adaptive piece is checked: shrinkage toward uniform
@@ -169,7 +169,7 @@ def checks(ev,w,agree,health,sugg,turn_kinds):
     errs=len(ev['judge.error']);calls=errs+len(ev['judge.verdict'])+len([r for r in ev['judge.result'] if r.get('verdict')=='solo'])
     add(calls==0 or errs/calls<0.1,'Judge output parses',f'{errs} failed of ~{calls} judge calls')
     if agree['n']>=3:add(agree['rate']>=0.6,'Judges agree with you',f"{agree['agree']} of {agree['n']} of your labels / preferences match the panel")
-    else:add(None,'Judges agree with you',f"{agree['n']} labels so far; run duo --label (or /prefer after a turn) to calibrate the judges")
+    else:add(None,'Judges agree with you',f"{agree['n']} labels so far; run agentlens --label (or /prefer after a turn) to calibrate the judges")
     add(None if w['signals']<3 else True,'Learned what matters to you',f"{w['signals']} feedback signals"+(f"; top: {', '.join(d.replace('_',' ') for d in w['top'])}" if w['top'] else '; weights still near uniform'))
     hurting=[h for h in health if h['status']=='hurting']
     add(not hurting,'Lessons are not hurting',f'{len(health)} lessons, {sum(h["status"]=="helping" for h in health)} helping, {len(hurting)} hurting' if health else 'no lessons yet')

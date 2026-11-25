@@ -1,0 +1,35 @@
+# Fly.io config for AgentLens Cloud (cloud/README.md): about $2/month, less when idle.
+# First time:  fly launch --copy-config --no-deploy   (pick a unique app name)
+#              fly volumes create agentlens_data --size 1
+#              fly deploy
+app = "agentlens-cloud"
+primary_region = "iad"
+
+[build]
+  dockerfile = "cloud/Dockerfile"
+
+[env]
+  AGENTLENS_CLOUD_DATA = "/data"
+  PORT = "8080"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "stop"      # sleeps when idle, so you pay for little more than the disk
+  auto_start_machines = true       # a visit or an upload wakes it in a couple of seconds
+  min_machines_running = 0
+
+  [[http_service.checks]]
+    grace_period = "10s"
+    interval = "30s"
+    method = "GET"
+    path = "/healthz"
+    timeout = "5s"
+
+[mounts]
+  source = "agentlens_data"
+  destination = "/data"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"

@@ -1,0 +1,134 @@
+[
+ {
+  "family": "import_chat",
+  "file": "imports/claude_ai_export.json",
+  "id": "import-claude-ai",
+  "labels": {
+   "conversations": [
+    {
+     "reasoning": 2,
+     "turns": 3
+    },
+    {
+     "reasoning": 0,
+     "turns": 4
+    }
+   ],
+   "note": "the empty conversation must be skipped"
+  },
+  "loader": "chat",
+  "split": "test"
+ },
+ {
+  "family": "import_chat",
+  "file": "imports/chatgpt_export.json",
+  "id": "import-chatgpt",
+  "labels": {
+   "answers_must_exclude": "Abandoned answer",
+   "conversations": [
+    {
+     "reasoning": 1,
+     "turns": 2
+    }
+   ],
+   "note": "follow current_node; system messages dropped"
+  },
+  "loader": "chat",
+  "split": "test"
+ },
+ {
+  "family": "import_chat",
+  "file": "imports/plain_messages.jsonl",
+  "id": "import-plain",
+  "labels": {
+   "conversations": [
+    {
+     "reasoning": 0,
+     "turns": 2
+    }
+   ]
+  },
+  "loader": "chat",
+  "split": "test"
+ },
+ {
+  "family": "import_session",
+  "file": "imports/claude_code_session.jsonl",
+  "id": "import-claude-code",
+  "labels": {
+   "note": "skip /clear wrapper and sidechain records; is_error marks failures; each assistant usage is a context point",
+   "turns": [
+    {
+     "answer": "Done with task 0.",
+     "ctx_points": 3,
+     "failed": 1,
+     "reasoning": 1,
+     "tools": 2
+    },
+    {
+     "answer": "Done with task 1.",
+     "ctx_points": 4,
+     "failed": 1,
+     "reasoning": 1,
+     "tools": 3
+    },
+    {
+     "answer": "Done with task 2.",
+     "ctx_points": 5,
+     "failed": 1,
+     "reasoning": 1,
+     "tools": 4
+    }
+   ]
+  },
+  "loader": "session",
+  "split": "test"
+ },
+ {
+  "family": "import_session",
+  "file": "imports/codex_rollout.jsonl",
+  "id": "import-codex-cli",
+  "labels": {
+   "note": "skip the environment_context wrapper; exit_code != 0 is a failure; token_count events are context points",
+   "turns": [
+    {
+     "answer": "Codex done 0.",
+     "ctx_points": 3,
+     "failed": 1,
+     "reasoning": 1,
+     "tools": 3
+    },
+    {
+     "answer": "Codex done 1.",
+     "ctx_points": 3,
+     "failed": 1,
+     "reasoning": 1,
+     "tools": 3
+    }
+   ]
+  },
+  "loader": "session",
+  "split": "test"
+ },
+ {
+  "family": "import_rollouts",
+  "file": "imports/rollout_steps.jsonl",
+  "id": "import-rollout-steps",
+  "labels": {
+   "episodes": [
+    {
+     "return": 1.0,
+     "steps": 2,
+     "success": true
+    },
+    {
+     "return": -1.0,
+     "steps": 2,
+     "success": false
+    }
+   ]
+  },
+  "loader": "rollouts",
+  "split": "test"
+ }
+]

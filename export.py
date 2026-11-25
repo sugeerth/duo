@@ -6,7 +6,7 @@ export_rl: preference data for training elsewhere (reward models, DPO/KTO on ope
   (confirmed reward hacks override). Ties and splits are skipped.
   KTO rows: one per answer, desirable = mean judge score >= 4 and no confirmed hack.
 export_otel: OTLP/JSON with OpenTelemetry GenAI semantic-convention attributes (v1.41,
-  "Development" status) so duo traces open in Phoenix, Langfuse, Datadog or Docent.
+  "Development" status) so agentlens traces open in Phoenix, Langfuse, Datadog or Docent.
 """
 import hashlib
 import json
@@ -32,10 +32,13 @@ def turns(store):
         elif s and s['kind']=='agent' and s['role'] in ('responder','reader','writer') and s['parent_id']:
             t=T[s['parent_id']]
             if e['type'] in ('answer','agent.completed') and (e['session_id'],e['id']) in pay and pay[(e['session_id'],e['id'])][0]=='answer':t['answers'][e['provider']]=pay[(e['session_id'],e['id'])][1]
-            elif e['type']=='tool.started':t['steps'][e['provider']].append({'tool':e.get('tool'),'target':e.get('detail'),'ok':None,'ref':e['id'],'item':e.get('item_id')})
+            elif e['type']=='tool.started':t['steps'][e['provider']].append({'tool':e.get('tool'),'target':e.get('detail'),'ok':None,'ref':e['id'],'item':e.get('item_id'),'at':e['timestamp']})
             elif e['type']=='tool.completed':
                 for st in reversed(t['steps'][e['provider']]):
-                    if st['ok'] is None and (not e.get('item_id') or st['item']==e.get('item_id')):st['ok']=e.get('passed') is not False;break
+                    if st['ok'] is None and (not e.get('item_id') or st['item']==e.get('item_id')):
+                        st['ok']=e.get('passed') is not False;st['seconds']=max(0.0,e['timestamp']-st['at']);o=pay.get((e['session_id'],e['id']))
+                        if o and o[1]:st['output']=o[1][:2000]
+                        break
         tid=e.get('turn_id')
         if not tid:continue
         t=T[tid]
@@ -67,7 +70,7 @@ def export_rl(store,out,fmt='dpo'):
             else:skipped+=1;continue
             rejected='claude' if chosen=='codex' else 'codex'
             f.write(json.dumps({'prompt':t['prompt'],'chosen':t['answers'][chosen],'rejected':t['answers'][rejected],'chosen_model':chosen,'label_source':source,
-                'rewards':mean,'trajectories':{p:[{k:v for k,v in s.items() if k!='item'} for s in st] for p,st in t['steps'].items()},
+                'rewards':mean,'trajectories':{p:[{k:v for k,v in s.items() if k not in ('item','output','at','seconds')} for s in st] for p,st in t['steps'].items()},
                 'judge_labels':{'root_causes':dict(t['roots']),'steps':dict(t['step_labels']),'reward_hack':sorted(t['hacks'])},'turn_id':tid})+'\n');n+=1
     return n,skipped
 
@@ -82,13 +85,13 @@ def export_otel(store,out,session=None):
         if e['type']=='judge.result':scores[(e.get('turn_id'),e['provider'])].append(e)
     for s in sp.values():
         trace=_hex(s['session_id'],32)
-        attrs={'gen_ai.operation.name':op.get(s['kind'],'invoke_agent'),'gen_ai.agent.name':s['provider'],'duo.role':s['role'] or s['kind'],'duo.mode':s['mode'] or ''}
+        attrs={'gen_ai.operation.name':op.get(s['kind'],'invoke_agent'),'gen_ai.agent.name':s['provider'],'agentlens.role':s['role'] or s['kind'],'agentlens.mode':s['mode'] or ''}
         if s['kind']=='turn':attrs['gen_ai.conversation.id']=s['session_id']
         events=[]
         if s['kind']=='turn':
             for p in ('codex','claude'):
                 for r in scores.get((s['span_id'],p),[]):
-                    events.append({'name':'gen_ai.evaluation.result','timeUnixNano':int(r['timestamp']*1e9),'attributes':_kv({'gen_ai.evaluation.name':'duo.judge.'+str(r.get('judge')),'gen_ai.evaluation.score.value':r.get('score'),'gen_ai.agent.name':p})})
+                    events.append({'name':'gen_ai.evaluation.result','timeUnixNano':int(r['timestamp']*1e9),'attributes':_kv({'gen_ai.evaluation.name':'agentlens.judge.'+str(r.get('judge')),'gen_ai.evaluation.score.value':r.get('score'),'gen_ai.agent.name':p})})
         spans.append({'traceId':trace,'spanId':_hex(s['span_id'],16),'parentSpanId':_hex(s['parent_id'],16) if s['parent_id'] else '','name':f"{attrs['gen_ai.operation.name']} {s['provider']}",
                       'kind':1,'startTimeUnixNano':int((s['start'] or 0)*1e9),'endTimeUnixNano':int((s['end'] or s['start'] or 0)*1e9),'attributes':_kv(attrs),'events':events,
                       'status':{'code':2 if s['status']=='failed' else 1}})
@@ -100,7 +103,7 @@ def export_otel(store,out,session=None):
             if not st or st.get('span_id') not in sp:continue
             spans.append({'traceId':_hex(e['session_id'],32),'spanId':_hex(f"{e['session_id']}:{st['id']}",16),'parentSpanId':_hex(st['span_id'],16),'name':f"execute_tool {st.get('tool')}",'kind':1,
                           'startTimeUnixNano':int(st['timestamp']*1e9),'endTimeUnixNano':int(e['timestamp']*1e9),
-                          'attributes':_kv({'gen_ai.operation.name':'execute_tool','gen_ai.tool.name':st.get('tool'),'gen_ai.tool.call.id':str(st.get('item_id') or st['id']),'gen_ai.agent.name':st['provider'],'duo.tool.target':st.get('detail') or ''}),
+                          'attributes':_kv({'gen_ai.operation.name':'execute_tool','gen_ai.tool.name':st.get('tool'),'gen_ai.tool.call.id':str(st.get('item_id') or st['id']),'gen_ai.agent.name':st['provider'],'agentlens.tool.target':st.get('detail') or ''}),
                           'status':{'code':2 if e.get('passed') is False else 1}})
     doc={'resourceSpans':[{'resource':{'attributes':_kv({'service.name':'duo','telemetry.sdk.name':'duo'})},'scopeSpans':[{'scope':{'name':'duo','version':'semconv-genai-1.41'},'spans':spans}]}]}
     Path(out).write_text(json.dumps(doc));return len(spans)
