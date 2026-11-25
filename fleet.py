@@ -27,8 +27,8 @@ import longrun
 import security
 
 GRADE_PASS=3.5
-INSTRUMENTS=('grade','milestones','modes','security','loops','guard')
-WEIGHT={'security':3,'guard':3,'modes':2,'milestones':2,'loops':1,'grade':1}
+INSTRUMENTS=('grade','milestones','modes','security','loops','guard','guardrails')
+WEIGHT={'guardrails':3,'security':3,'guard':3,'modes':2,'milestones':2,'loops':1,'grade':1}
 _CACHE={'at':0,'key':None,'data':None}
 
 def strip(tree,steps_n,modes):
@@ -41,9 +41,11 @@ def strip(tree,steps_n,modes):
     if not out:out=[['other',tree['calls'],tree['failed']]]
     return out,[[round((m['index'] or 0)/max(1,steps_n-1),4),m['mode']] for m in modes]
 
-def finding(hz,sec,rd,fired,grade,first):
+def finding(hz,sec,rd,fired,grade,first,rails=None):
     """One sentence a person can act on: the first long-horizon mode, else the worst security finding, else the loop,
     else the unreached unit, else the grade."""
+    if fired.get('guardrails'):
+        b=next(r for r in rails['rules'] if r['status']=='violated');return f"guardrail broken: {b['label'].lower()} ({b['why']})"
     if hz['modes']:return first.get('why')
     if fired.get('security'):
         f=max(sec['findings'],key=lambda f:security.SEV_RANK.get(f['severity'],0))
@@ -56,7 +58,7 @@ def finding(hz,sec,rd,fired,grade,first):
     if fired.get('guard'):return 'the guard blocked a call, or a risky call ran unchecked'
     return None
 
-def run_row(tid,p,t,meta,guard_hits):
+def run_row(tid,p,t,meta,guard_hits,cost=None,rails=None):
     steps=t['steps'][p]
     if not steps:return None
     hz=horizon.read(steps,t.get('prompt'),t['answers'].get(p))
@@ -69,15 +71,16 @@ def run_row(tid,p,t,meta,guard_hits):
            'modes':bool(hz['modes']),
            'security':security.SEV_RANK.get(sev,0)>=3,
            'loops':bool(rd and rd['loops']),
-           'guard':guard_hits>0}
+           'guard':guard_hits>0,'guardrails':bool(rails and rails.get('violations'))}
     phases,marks=strip(hz['tree'],len(steps),hz['modes'])
     first=hz['look_first'] or {}
     return {'turn':tid,'provider':p,'session':meta.get('session_id'),'ts':meta.get('start'),'mode':t.get('mode'),
             'prompt':(t.get('prompt') or '')[:140],'steps':len(steps),'failed':sum(s.get('ok') is False for s in steps),
             'grade':grade,'severity':sev,'modes':[m['mode'] for m in hz['modes']],'milestones':[ms['reached'],ms['total'],ms['source']],
-            'loops':len(rd['loops']) if rd else 0,'guard':guard_hits,'phases':phases,'marks':marks,
+            'loops':len(rd['loops']) if rd else 0,'guard':guard_hits,'usd':(cost or {}).get('usd'),'wasted_usd':(cost or {}).get('after_decisive_usd'),
+            'rails':[r['label'] for r in (rails or {}).get('rules',[]) if r['status']=='violated'],'phases':phases,'marks':marks,
             'fired':[k for k in INSTRUMENTS if fired[k]],'risk':sum(WEIGHT[k] for k in INSTRUMENTS if fired[k]),
-            'look_first':first.get('ref'),'why':finding(hz,sec,rd,fired,grade,first)}
+            'look_first':first.get('ref'),'why':finding(hz,sec,rd,fired,grade,first,rails)}
 
 def matrix(rows):
     prob=[r for r in rows if r['fired']]
@@ -86,7 +89,7 @@ def matrix(rows):
     only={k:sum(r['fired']==[k] for r in prob) for k in INSTRUMENTS}
     passed=[r for r in judged if 'grade' not in r['fired']]
     return {'runs':len(rows),'problems':len(prob),'judged_problems':len(judged),'by_instrument':by,'only':only,
-            'graded_pass_but_caught':len(passed),'clean':len(rows)-len(prob),
+            'graded_pass_but_caught':len(passed),'clean':len(rows)-len(prob),'usd':round(sum(r['usd'] or 0 for r in rows),2),'usd_problems':round(sum(r['usd'] or 0 for r in prob),2),'priced':sum(r['usd'] is not None for r in rows),
             'pairs':{f'{a}+{b}':sum(a in r['fired'] or b in r['fired'] for r in prob) for i,a in enumerate(INSTRUMENTS) for b in INSTRUMENTS[i+1:]},
             'headline':headline(len(prob),len(judged),len(passed),by)}
 
@@ -105,8 +108,10 @@ def snapshot(store,limit=600):
     except Exception:key=None
     if _CACHE['data'] is not None and _CACHE['key']==key and time.time()-_CACHE['at']<20:return _CACHE['data']
     ev,sp,_=export._events(store);T=export.turns(store)
-    guard=defaultdict(int)
+    guard=defaultdict(int);costs={};rails={}
     for e in ev:
+        if e['type']=='analysis.cost' and e.get('turn_id'):costs[(e['turn_id'],e['provider'])]=e.get('data') or {}
+        if e['type']=='analysis.guardrails' and e.get('turn_id'):rails[(e['turn_id'],e['provider'])]=e.get('data') or {}
         if e['type']=='guard.blocked' or (e['type']=='guard.check' and e.get('verdict')=='ran_unchecked'):
             s=sp.get(e.get('span_id'));tid=e.get('turn_id') or (s and s.get('parent_id'))
             if tid:guard[(tid,e['provider'])]+=1
@@ -114,7 +119,7 @@ def snapshot(store,limit=600):
     for tid,t in T.items():
         meta=sp.get(tid) or {}
         for p in t['steps']:
-            try:r=run_row(tid,p,t,meta,guard[(tid,p)])
+            try:r=run_row(tid,p,t,meta,guard[(tid,p)],costs.get((tid,p)),rails.get((tid,p)))
             except Exception:r=None
             if r:rows.append(r)
     rows.sort(key=lambda r:-(r['ts'] or 0));rows=rows[:limit]

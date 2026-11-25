@@ -1,4 +1,5 @@
 import json
+import asyncio
 import contextlib
 import importlib.util
 import io
@@ -788,4 +789,41 @@ class Tests(unittest.TestCase):
   self.assertIn('Edit src/a.py',d['fix']);self.assertIn('run B was 1 steps cheaper and the worse run: faster to nothing',d['cost']['text'])
   self.assertEqual(len(d['lanes']),4);self.assertEqual(d['lanes'][0][:3],[1,11,0.0])
   clean=rundiff.compare(ta,'claude',ra,ta,'claude',ra);self.assertEqual(clean['verdict'],'Both runs are clean on every instrument.');self.assertIsNone(clean['divergence'])
+ def test_cost_prices_by_model_and_attributes_waste(self):
+  import cost
+  calls=[{'ts':10.0,'input':1000,'cache_write':2000,'cache_read':100000,'output':500},{'ts':50.0,'input':0,'cache_write':0,'cache_read':200000,'output':1000}]
+  c=cost.run_cost(calls,'claude-sonnet-5-5',loops=[(40.0,60.0)],decisive_at=20.0)
+  first=(1000*2+2000*2.5+100000*0.1+500*10)/1e6;second=(200000*0.1+1000*10)/1e6
+  self.assertAlmostEqual(c['usd'],round(first+second,4),places=4);self.assertEqual(c['source'],'list prices')
+  self.assertAlmostEqual(c['in_loops_usd'],round(second,4),places=4);self.assertAlmostEqual(c['after_decisive_usd'],round(second,4),places=4)
+  self.assertEqual(cost.price_for('claude-opus-4-20250514'),[15,18.75,30,1.5,75]);self.assertEqual(cost.price_for('claude-opus-5-5')[0],4)
+  self.assertEqual(cost.price_for('claude-haiku-5-5',150000)[0],0.5);self.assertEqual(cost.price_for('claude-haiku-5-5',1000)[0],0.1)
+  u=cost.run_cost(calls,'some-unknown-model');self.assertIsNone(u['usd']);self.assertTrue(u['unpriced']);self.assertIn('no price set',cost.summary(u))
+  r=cost.run_cost(calls,'claude-sonnet-5-5',reported=0.5);self.assertEqual((r['usd'],r['source']),(0.5,'reported by the agent'))
+
+ def test_guardrails_evaluate_and_refuse_live(self):
+  import guardrails
+  pol={'max_cost_usd':1.0,'max_steps':3,'forbid_write':['vendor/**'],'forbid_read':['.env'],'forbid_commands':['git push --force'],'require_check_before_ship':True}
+  st=[{'ref':1,'tool':'Read','target':'src/a.py','ok':True,'at':0.0,'seconds':1},{'ref':2,'tool':'Edit','target':'vendor/lib/x.py','ok':True,'at':5.0,'seconds':1},
+      {'ref':3,'tool':'Bash','target':'cat .env','ok':True,'at':9.0,'seconds':1},{'ref':4,'tool':'Bash','target':'git commit -am x && git push --force origin main','ok':True,'at':12.0,'seconds':1}]
+  g=guardrails.evaluate(st,{'usd':1.4},policy=pol);R={r['rule']:r for r in g['rules']}
+  self.assertEqual({k for k,r in R.items() if r['status']=='violated'},{'max_cost_usd','max_steps','forbid_write','forbid_read','forbid_commands','require_check_before_ship'})
+  self.assertEqual((R['forbid_write']['ref'],R['forbid_read']['ref'],R['forbid_commands']['ref'],R['require_check_before_ship']['ref']),(2,3,4,4))
+  self.assertEqual(R['max_minutes']['status'],'unset');self.assertEqual(g['violations'],6)
+  ok=guardrails.evaluate(st[:1],{'usd':0.1},policy=pol);self.assertEqual(ok['violations'],0);self.assertIn('Within all',guardrails.summary(ok))
+  self.assertEqual(guardrails.evaluate(st,None,policy={'max_cost_usd':1})['rules'][0]['status'],'unknown')
+  self.assertEqual(guardrails.call_violation('Edit','src/a.py',pol),None);self.assertEqual(guardrails.call_violation('Edit','vendor/a.py',pol)['rule'],'forbid_write')
+  self.assertEqual(guardrails.call_violation('Bash','rm -rf build/',pol),None)
+  self.assertEqual(guardrails.call_violation('Write','/home/u/proj/vendor/lib/a.py',pol)['rule'],'forbid_write');self.assertIsNone(guardrails.call_violation('Write','/home/u/proj/src/vendors.py',pol))
+  import guard;hub=lens.HUB;seen=[]
+  guardrails._TL.policy=guardrails.clean(pol)
+  try:
+   hook=guard.claude_pre_tool_hook(hub,lambda *a,**k:seen.append((a,k)))
+   out=asyncio.run(hook({'tool_name':'Edit','tool_input':{'file_path':'vendor/lib/x.py'}},'t1',None))
+   self.assertEqual(out['hookSpecificOutput']['permissionDecision'],'deny');self.assertIn('guardrail',out['hookSpecificOutput']['permissionDecisionReason'])
+   self.assertEqual(seen[-1][0][0],'guard.blocked');self.assertEqual(seen[-1][1]['data']['rule'],'forbid_write')
+   with patch.object(guardrails,'live_usage',return_value={'steps':3,'failed':0,'minutes':1,'usd':None}):
+    out=asyncio.run(hook({'tool_name':'Read','tool_input':{'file_path':'src/a.py'}},'t2',None));self.assertIn('used its budget',out['hookSpecificOutput']['permissionDecisionReason'])
+   self.assertEqual(guard.codex_policy(),'untrusted')
+  finally:guardrails._TL.policy=None
 if __name__=='__main__':unittest.main()

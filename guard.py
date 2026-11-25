@@ -17,6 +17,7 @@ without asking run unchecked here; the post-turn review still covers them.
 import json
 import os
 
+import guardrails
 import security
 
 def _target(action,details):
@@ -63,9 +64,18 @@ def banner(result):
     return lines
 
 
+def guardrail_block(hub,provider,tool,details,emit):
+    """Guardrails (guardrails.py): refuse a forbidden call, or any call once a budget is used up. -> reason or None."""
+    if os.environ.get('AGENTLENS_GUARD','warn').lower()=='off':return None
+    v=guardrails.live_check(hub,provider,str(tool),_target(tool,details))
+    if not v:return None
+    emit('guard.blocked',provider,name=str(tool),detail=_target(tool,details),verdict='guardrail',data={'rule':v['rule'],'why':v['why'],'findings':[]})
+    return 'Blocked by an AgentLens guardrail: '+v['why']
+
 def codex_policy():
     """Codex app-server approval policy: in block mode every non-trivial command asks first, so the guard sees it."""
-    return 'untrusted' if os.environ.get('AGENTLENS_GUARD','warn').lower()=='block' else 'on-request'
+    strict=os.environ.get('AGENTLENS_GUARD','warn').lower()=='block' or bool(guardrails.load())  # guardrails need to see every command
+    return 'untrusted' if strict else 'on-request'
 
 def unchecked(provider,tool,details,emit,hub=None):
     """A call that started without an approval prompt (sandbox or saved rule allowed it): it cannot be stopped any
@@ -82,6 +92,8 @@ def claude_pre_tool_hook(hub,emit):
     async def hook(input_data,tool_use_id,context):
         if os.environ.get('AGENTLENS_GUARD','warn').lower()=='off':return {}
         tool=input_data.get('tool_name');args=input_data.get('tool_input') or {}
+        why=guardrail_block(hub,'claude',tool,args,emit)
+        if why:return {'hookSpecificOutput':{'hookEventName':'PreToolUse','permissionDecision':'deny','permissionDecisionReason':why}}
         g=check(tool,args,recent_outputs(hub,'claude'))
         if not g['findings']:return {}
         emit('guard.check','claude',name=str(tool),verdict=g['verdict'],detail=g['target'],data={'severity':g['severity'],'findings':g['findings'][:6],'stage':'pre_tool_use'})

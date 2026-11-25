@@ -42,7 +42,7 @@ from pathlib import Path
 
 HERE=Path(__file__).resolve().parent;ROOT=HERE.parent;sys.path.insert(0,str(ROOT))
 os.environ.setdefault('AGENTLENS_TRACE_DB','off')  # this process never writes a local ~/.agentlens DB
-import chatimport, fleet, facets, longterm, rundiff, tracestore  # noqa: E402
+import chatimport, fleet, facets, guardrails, longterm, rundiff, tracestore  # noqa: E402
 
 DATA=Path(os.environ.get('AGENTLENS_CLOUD_DATA') or ROOT/'cloud-data')
 PUBLIC=(os.environ.get('AGENTLENS_CLOUD_URL') or os.environ.get('RENDER_EXTERNAL_URL') or '').rstrip('/')  # Render sets RENDER_EXTERNAL_URL
@@ -104,7 +104,11 @@ def ingest(acct,body):
         st=store(acct['id']);meta=raw/f'{fid}.sid'
         old=meta.read_text().strip() if meta.exists() else None
         if old:st.delete_session(old)
-        sid,turns=chatimport.import_session(st,f,provider)
+        rails=DATA/'acct'/acct['id']/'guardrails.json'
+        try:guardrails._TL.policy=guardrails.clean(json.loads(rails.read_text())) if rails.exists() else {}
+        except ValueError:guardrails._TL.policy={}
+        try:sid,turns=chatimport.import_session(st,f,provider)
+        finally:guardrails._TL.policy=None
         if sid:meta.write_text(sid)
         st.flush(10)
     if sid:
@@ -164,7 +168,7 @@ def viewer_page(acct,base,key):
     return v.replace('<script src="/d3.v7.min.js"></script>',inject+'<script src="/d3.v7.min.js"></script>',1)
 
 def landing(base,msg=''):
-    rows=[('Live tree of every tool call, as the agent works','✓','✓'),('Alarms: guard, repeats, failure streaks, context size','✓','✓'),
+    rows=[('Live tree of every tool call, as the agent works','✓','✓'),('Cost of every run in dollars, and how much was wasted','✓','✓'),('Guardrails: budgets and off-limits files and commands, enforced in Claude Code','✓','✓'),('Alarms: guard, repeats, failure streaks, context size','✓','✓'),
           ('Security review of each tool call (OWASP LLM Top 10)','✓','✓'),('Long-run reading: bursts, loops, stalls','✓','✓'),
           ('Sessions kept',f'{FREE_SESSIONS} most recent, {FREE_DAYS} days','All, no limit'),
           ('Fleet view and catch matrix: which instrument caught each run','—','✓'),('Run diff: any two runs aligned, with verdict, cause, cost and fix','—','✓'),('Long-horizon failure modes and milestones','—','✓'),
@@ -217,6 +221,9 @@ class H(BaseHTTPRequestHandler):
             return self.send(200,{'key':key,'install':install_line(base_url(self),key)},headers=[self.cookie(key)])
         acct=account(self.key())
         if not acct:return self.send(401,{'error':'sign in or pass your API key'})
+        if path=='/api/guardrails':
+            pol=guardrails.clean(body);d=DATA/'acct'/acct['id'];d.mkdir(parents=True,exist_ok=True);(d/'guardrails.json').write_text(json.dumps(pol))
+            return self.send(200,{'rules':sorted(pol)})
         if path=='/v1/transcripts':
             try:sid,turns=ingest(acct,body)
             except ValueError as e:return self.send(400,{'error':str(e)})
@@ -243,6 +250,8 @@ class H(BaseHTTPRequestHandler):
             return self.send(200,viewer_page(acct,base_url(self),self.key()),'text/html')
         if not acct:return self.send(401,{'error':'sign in'})
         st=store(acct['id']);vis,hidden=visible_sessions(acct);ids={s['id'] for s in vis}
+        if path=='/api/guardrails':
+            f=DATA/'acct'/acct['id']/'guardrails.json';return self.send(200,json.loads(f.read_text()) if f.exists() else {})
         if path=='/api/me':return self.send(200,{'email':acct['email'],'plan':acct['plan'],'sessions':len(vis),'hidden_sessions':hidden,'locked':[] if acct['plan']=='pro' else LOCKED_FREE})
         if path=='/sessions':return self.send(200,{'current':'__cloud__','db':'AgentLens Cloud','sessions':vis,'hidden':hidden})  # no live in-process session: the viewer follows the newest stored one
         sid=q.get('session')

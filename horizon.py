@@ -48,6 +48,7 @@ def kind(s):
     if s.get('tool') in ('Task','Agent','spawn_agent','collabAgentToolCall') :return 'delegate'
     k=action_type({'kind':'tool','tool':s.get('tool'),'target':s.get('target')})
     if k=='AGENT_SPAWN':return 'delegate'
+    if k in ('FILE_WRITE','COMMAND') and str(s.get('tool') or '').lower() not in ('edit','write','multiedit','notebookedit','filechange','apply_patch') and SHIP.search(unwrap(s.get('target'))):return 'ship'
     if k=='FILE_WRITE':return 'write'
     if k in ('FILE_READ','SEARCH','WEB'):return 'look'
     t=unwrap(s.get('target'))

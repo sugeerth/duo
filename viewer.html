@@ -221,7 +221,7 @@ section:not(.open){padding-top:9px;padding-bottom:9px}
 .fr-gh{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline;margin-bottom:6px}.fr-gh b{font-size:13.5px}.fr-n{font:700 12px/1 ui-monospace,SFMono-Regular,Menlo,monospace;padding:3px 7px;border-radius:99px;background:var(--hover)}
 .fr-cells{display:flex;flex-wrap:wrap;gap:2px 4px;align-items:flex-end}.fr-cell{border:0;background:none;padding:2px 3px;border-radius:8px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:0;color:var(--muted);font:10px/1.2 ui-monospace,SFMono-Regular,Menlo,monospace;transition:opacity .15s}
 .fr-cell:hover,.fr-cell:focus-visible{background:var(--hover);outline:none}.fr-cell:focus-visible{box-shadow:0 0 0 2px var(--text)}.fr-cell.dim{opacity:.16}
-.fk-tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:2px 0 14px}@media (max-width:640px){.fk-tiles{grid-template-columns:1fr}}
+.fk-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin:2px 0 14px}@media (max-width:640px){.fk-tiles{grid-template-columns:1fr}}
 .fk-tile{border:1px solid var(--line);border-radius:10px;padding:12px 14px;background:var(--panel)}.fk-v{font-size:30px;font-weight:650;line-height:1.1}.fk-l{color:var(--text-2);font-size:13px;margin-top:2px}
 .fk-tile.fk-em{border-color:var(--text)}.fk-tile.fk-em .fk-v{color:var(--codex)}
 .fk-sec{margin:0 0 16px}.fk-h{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline;margin-bottom:8px}.fk-h b{font-size:13.5px}
@@ -251,6 +251,18 @@ section:not(.open){padding-top:9px;padding-bottom:9px}
 #evalTreeSec:not(.railview) #railZoom{display:none}
 .run-below{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:12px;align-items:start;margin-top:14px}.run-below .vcard,.run-below .rail-summary{margin-top:0}.run-below .rail-summary{grid-template-columns:1fr}
 @media(max-width:900px){.run-below{grid-template-columns:1fr}}
+.run-below{grid-template-columns:1fr!important}
+.sc{border:1px solid var(--line);border-left:3px solid var(--model);border-radius:10px;background:var(--panel);padding:10px 14px}.sc+.sc{margin-top:10px}
+.sc-h{display:flex;gap:10px;align-items:baseline;margin-bottom:8px}.sc-h b{color:var(--model);font-size:15px}
+.sc-g{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:0}@media (max-width:1000px){.sc-g{grid-template-columns:repeat(4,minmax(0,1fr));row-gap:12px}}@media (max-width:560px){.sc-g{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.sc-t{padding:0 12px;border-left:1px solid var(--grid);min-width:0}.sc-t:first-child{padding-left:0;border-left:0}.sc-t[data-vref]{cursor:pointer}.sc-t[data-vref]:hover .sc-v{text-decoration:underline}.sc-t:focus-visible{outline:2px solid var(--text);outline-offset:2px;border-radius:4px}
+.sc-l{font:600 10.5px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}.sc-v{font-size:20px;font-weight:650;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sc-s{font-size:11.5px;color:var(--text-2);line-height:1.35;overflow-wrap:anywhere}.sc-t.bad .sc-v{color:var(--critical)}
+.sc-m{height:4px;border-radius:2px;background:var(--grid);margin-top:6px;overflow:hidden}.sc-m i{display:block;height:100%;background:var(--text-2);border-radius:2px}.sc-t.bad .sc-m i{background:var(--critical)}.sc-lim{font-size:10.5px;color:var(--muted);margin-top:2px}
+.gr{border:1px solid var(--line);border-radius:10px;background:var(--panel);padding:10px 14px;margin-bottom:10px}.gr-h{display:flex;gap:12px;align-items:baseline;margin-bottom:6px}.gr-h b{font-size:14px}
+.gr-t{border-collapse:collapse;width:100%;min-width:620px;font-size:12.5px}.gr-t th,.gr-t td{padding:6px 8px;text-align:left;border-bottom:1px solid var(--grid);vertical-align:top}.gr-t th{font-size:11px;color:var(--muted);font-weight:600}.gr-t tr:last-child td{border-bottom:0}
+.gr-t td.num{font-variant-numeric:tabular-nums}.gr-bad td{background:color-mix(in srgb,var(--critical) 7%,transparent)}.gr-s{font-size:11px;font-weight:650;border-radius:99px;padding:1px 8px;border:1px solid var(--line)}.gr-s.bad{color:#fff;background:var(--critical);border-color:var(--critical)}.gr-s.ok{color:var(--good-text,var(--good))}
+.gr-empty{border:1px dashed var(--line);border-radius:10px;padding:14px;font-size:13px;max-width:760px}.gr-empty pre{margin:10px 0 0;font-size:12px;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px;overflow-x:auto}.gr-blk{font-size:13px;margin:0 0 10px}
 details.rdr summary{cursor:pointer;color:var(--text-2);font-size:12.5px}details.rdr[open] summary{margin-bottom:6px}
 .hz{margin-top:8px;border-top:1px dashed var(--line);padding-top:6px}.hz h5{margin:0 0 2px;font:700 10.5px/1.9 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.08em;color:var(--muted)}
 .hz .hzm{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12px;margin-top:4px}.hz .hzm span b{color:var(--critical);font-weight:600}.hz svg g[data-lref]{cursor:pointer}
@@ -291,7 +303,7 @@ details.rdr summary{cursor:pointer;color:var(--text-2);font-size:12.5px}details.
     <nav class="tabs" id="tabs" aria-label="Views of this session">
       <button data-tab="run" aria-pressed="true">This run</button>
       <button data-tab="think" aria-pressed="false">Reasoning &amp; memory</button>
-      <button data-tab="security" aria-pressed="false">Security <span class="tab-n" id="tabSec" hidden></span></button>
+      <button data-tab="security" aria-pressed="false">Security &amp; guardrails <span class="tab-n" id="tabSec" hidden></span></button>
       <button data-tab="fleet" aria-pressed="false">All runs</button>
       <button data-tab="trends" aria-pressed="false">Over time</button>
     </nav>
@@ -309,8 +321,8 @@ details.rdr summary{cursor:pointer;color:var(--text-2);font-size:12.5px}details.
     </div>
     <div id="evalTree" aria-label="Execution railway timeline"></div>
     <div class="run-below" id="runBelow">
-    <div id="verdictCard" class="vcard" aria-live="polite"></div>
     <div id="railSummary" class="rail-summary"></div>
+    <div id="verdictCard" class="vcard" aria-live="polite"></div>
     </div>
     <div class="tw-head"><h3>Progress lane</h3><span class="sub">Per step, how close each run is to done: from step scores when a scorer provides them, else rewards, else checks passing, else the judges' step labels. ▼ marks a sudden drop, the likeliest decisive moment (most agent failures are sudden, not gradual).</span></div>
     <div id="progressLane"></div>
@@ -327,6 +339,8 @@ details.rdr summary{cursor:pointer;color:var(--text-2);font-size:12.5px}details.
     <div id="timeWent"></div>
     <div class="tw-head"><h3>Long run: phases, loops and stalls</h3><span class="sub">The run read at the scale it ran: bursts of calls, with idle between them compressed. ✓ a check newly passing, ↻ a burst repeating earlier calls without progress, ! a failing check. Brackets mark the longest loop and the longest stall.</span></div>
     <div id="longRun"></div>
+    <div class="tw-head"><h3>Guardrails</h3><span class="sub">The limits you set, checked on this run: budget, steps, time, files and commands that are off limits. A forbidden call is refused while the agent runs, and a run that has used its budget is stopped.</span></div>
+    <div id="guardPanel"></div>
     <div class="tw-head"><h3>Security &amp; tool calls</h3><span class="sub">What each run's tool calls could break, leak or be tricked into: destructive commands, secret exposure, data leaving the machine, code fetched at run time, privilege and persistence, and prompt injection in tool outputs followed by a risky action. Every finding names its step, rule and OWASP LLM Top 10 entry. Below: how each tool behaved, with every failure classified.</span></div>
     <div id="secPanel"></div>
     <div class="tw-head"><h3>Fleet: every run, and what caught it</h3><span class="sub">Every stored run in all sessions. A run has a problem when any instrument fires on it: a long-horizon failure mode, a security finding, an unreached plan unit, a loop, the guard, or a grade below pass. At length the grade is the weakest of them: a run can pass it and still have skipped work.</span></div>
@@ -497,7 +511,7 @@ const DIML={correctness:'Correctness',completeness:'Completeness',groundedness:'
 const KIND_L={respond:'Answer',read:'Read',write:'Write'};
 const qs=new URLSearchParams(location.search);
 let S;
-function reset(){S={events:[],maxId:0,started:null,session:'',spans:new Map(),order:[],J:{results:[],scores:[],verdicts:[],agree:[],errors:[],raw:[],steps:[],roots:[],actions:[]},feedback:[],byEvent:new Map(),A:{behaviour:[],flags:[],hacks:[],align:[],claims:[],hackFinal:[],override:[],rootAgree:[],conflicts:[],rewards:[],usage:[],evolve:[],fork:[],longrun:[],memctx:[],ctxtok:[],envret:[],security:[],guard:[],guardBlocked:[],forkStep:[],readerRead:[],readerAsk:[],horizon:[]},live:false,stored:false}}
+function reset(){S={events:[],maxId:0,started:null,session:'',spans:new Map(),order:[],J:{results:[],scores:[],verdicts:[],agree:[],errors:[],raw:[],steps:[],roots:[],actions:[]},feedback:[],byEvent:new Map(),A:{behaviour:[],flags:[],hacks:[],align:[],claims:[],hackFinal:[],override:[],rootAgree:[],conflicts:[],rewards:[],usage:[],evolve:[],fork:[],longrun:[],memctx:[],ctxtok:[],envret:[],security:[],guard:[],guardBlocked:[],forkStep:[],readerRead:[],readerAsk:[],horizon:[],cost:[],rails:[]},live:false,stored:false}}
 reset();
 const PROC=['planning','tool_selection','error_recovery','verification'];
 const PROCL={planning:'Planning',tool_selection:'Tool choice',error_recovery:'Error recovery',verification:'Verification'};
@@ -522,7 +536,7 @@ function ingest(e){
   if(e.type==='judge.root'){J.roots.push(e);return}
   if(e.type==='judge.action'){J.actions.push(e);return}
   if(e.type==='feedback'){S.feedback.push(e);return}
-  const AM={'analysis.behaviour':'behaviour','analysis.flag':'flags','analysis.hack':'hacks','analysis.align':'align','judge.claim':'claims','judge.hack_final':'hackFinal','judge.verdict_override':'override','judge.root_agreement':'rootAgree','judge.conflict':'conflicts','policy.reward':'rewards','usage':'usage','evolve.result':'evolve','fork.result':'fork','analysis.longrun':'longrun','memory.context':'memctx','context.tokens':'ctxtok','env.return':'envret','analysis.security':'security','guard.check':'guard','guard.blocked':'guardBlocked','fork.step':'forkStep','reader.read':'readerRead','analysis.horizon':'horizon','reader.ask':'readerAsk'};
+  const AM={'analysis.behaviour':'behaviour','analysis.flag':'flags','analysis.hack':'hacks','analysis.align':'align','judge.claim':'claims','judge.hack_final':'hackFinal','judge.verdict_override':'override','judge.root_agreement':'rootAgree','judge.conflict':'conflicts','policy.reward':'rewards','usage':'usage','evolve.result':'evolve','fork.result':'fork','analysis.longrun':'longrun','memory.context':'memctx','context.tokens':'ctxtok','env.return':'envret','analysis.security':'security','guard.check':'guard','guard.blocked':'guardBlocked','fork.step':'forkStep','reader.read':'readerRead','analysis.horizon':'horizon','analysis.cost':'cost','analysis.guardrails':'rails','reader.ask':'readerAsk'};
   if(AM[e.type]){S.A[AM[e.type]].push(e);if(e.type!=='usage')return}
   const s=e.span_id&&S.spans.get(e.span_id);
   if(e.type==='judge.raw'){if(s)s.answerId=e.id;return}
@@ -1608,7 +1622,7 @@ let FL=null,FL_AT=0;
 // Fleet (fleet.py /fleet). Three questions, three forms (dataviz practice):
 //  how bad -> headline numbers; which instrument catches -> ranked horizontal bars (one hue; dark = caught only here);
 //  which runs and why -> a catch-matrix table (rows = runs, a dot per instrument that fired, the finding in words).
-const FL_I=[['modes','Failure modes','a named long-horizon failure mode'],['security','Security','a high or critical security finding'],['milestones','Milestones','a planned unit never reached'],['loops','Loops','a loop over bursts'],['guard','Guard','the guard blocked a call, or a risky call ran unchecked'],['grade','Grade','graded below pass']];
+const FL_I=[['modes','Failure modes','a named long-horizon failure mode'],['security','Security','a high or critical security finding'],['milestones','Milestones','a planned unit never reached'],['loops','Loops','a loop over bursts'],['guardrails','Guardrails','a limit you set was broken'],['guard','Guard','the guard blocked a call, or a risky call ran unchecked'],['grade','Grade','graded below pass']];
 let FL_HI=null,FL_ALL=false;
 async function fetchFleet(){if(PW('fleet')){paywall('fleet');return}try{const r=await fetch('/fleet');if(r.ok){FL=await r.json();FL_AT=Date.now();renderFleet()}}catch(e){}}
 function flGroup(r){if(!r.fired.length)return 'clean';if(r.fired.includes('grade'))return 'graded';return r.grade!=null?'missed':'unjudged'}
@@ -1621,6 +1635,7 @@ function renderFleet(){
   if(!R.length){host.innerHTML='<div class="empty">No stored runs with tool calls yet. The fleet fills in from the trace DB.</div>';return}
   const missed=R.filter(r=>flGroup(r)==='missed').length,judged=R.filter(r=>r.fired.length&&r.grade!=null).length;
   const tiles=[[M.problems,`of ${M.runs} runs had a problem`,''],[missed,`passed the grade but were caught by another instrument`,'fk-em'],[M.clean,'clean on every instrument','']];
+  if(M.priced)tiles.push([usd(M.usd),`spent on ${M.priced} priced run${M.priced===1?'':'s'}; ${usd(M.usd_problems)} of it on runs with a problem`,'']);
   let h=`<div class="fk-tiles">${tiles.map(([v,l,c])=>`<div class="fk-tile ${c}"><div class="fk-v">${v}</div><div class="fk-l">${esc(l)}</div></div>`).join('')}</div>`;
   // ranked horizontal bars: runs caught per instrument, dark part = caught by nothing else
   const I=FL_I.map(([k,l,why])=>({k,l,why,n:M.by_instrument[k]||0,o:M.only[k]||0})).filter(x=>x.n||x.k==='grade').sort((a,b)=>b.n-a.n);
@@ -1635,15 +1650,15 @@ function renderFleet(){
   const sel=FL_SEL||[];
   let body='',last=null;
   rows.forEach(r=>{const g=flGroup(r),key=r.turn+'|'+r.provider;
-    if(g!==last){const n=R.filter(x=>flGroup(x)===g&&(!FL_HI||x.fired.includes(FL_HI))).length;body+=`<tr class="fk-gr fk-g-${g}"><th colspan="${5+cols.length}" scope="rowgroup">${esc(FL_G[g])} <span>${n}</span></th></tr>`;last=g}
+    if(g!==last){const n=R.filter(x=>flGroup(x)===g&&(!FL_HI||x.fired.includes(FL_HI))).length;body+=`<tr class="fk-gr fk-g-${g}"><th colspan="${6+cols.length}" scope="rowgroup">${esc(FL_G[g])} <span>${n}</span></th></tr>`;last=g}
     body+=`<tr class="fk-row${sel.includes(key)?' sel':''}" data-frun="${esc(r.session||'')}|${esc(r.turn)}" data-frp="${esc(r.provider)}" tabindex="0">
       <td class="fk-ck"><input type="checkbox" aria-label="Select to compare" data-flsel="${esc(key)}" ${sel.includes(key)?'checked':''}></td>
       <td class="fk-run"><span class="fk-p" title="${esc(r.prompt||'')}">${esc((r.prompt||'(no prompt)').split('\n')[0].slice(0,64))}</span><span class="fk-m">${esc(NAME[r.provider]||r.provider)}</span></td>
-      <td class="fk-num">${r.steps}</td><td class="fk-num">${r.grade!=null?r.grade.toFixed(1):'–'}</td>
+      <td class="fk-num">${r.steps}</td><td class="fk-num">${r.usd!=null?usd(r.usd):'–'}</td><td class="fk-num">${r.grade!=null?r.grade.toFixed(1):'–'}</td>
       ${cols.map(([k,l])=>`<td class="fk-dot" title="${esc(l)}${r.fired.includes(k)?': fired':''}">${r.fired.includes(k)?'<i class="on" aria-label="fired"></i>':'<i aria-label="no"></i>'}</td>`).join('')}
       <td class="fk-why"><div class="fk-wt">${r.why?esc(r.why):r.fired.length?esc(r.fired.join(', ')):'<span class="muted">nothing fired</span>'}</div></td></tr>`});
   h+=`<div class="fk-sec"><div class="fk-h"><b>${FL_HI?esc(FL_I.find(x=>x[0]===FL_HI)[1])+': the runs it caught':'Every run, worst first'}</b><span class="sub">${total} run${total===1?'':'s'}. Click a row to open the run; tick two to compare them.</span>${FL_HI?'<button class="fk-clear" data-flhi="'+FL_HI+'">Show all runs</button>':''}${sel.length?`<span class="fk-cmpnote">${sel.length===1?'Tick one more run to compare.':''}</span>`:''}</div>
-    <div class="fk-tw"><table class="fk-t"><thead><tr><th class="fk-ck"><span class="vh">Compare</span></th><th>Run</th><th class="fk-num">Steps</th><th class="fk-num">Grade</th>${cols.map(([k,l])=>`<th class="fk-dot"><span>${esc(l)}</span></th>`).join('')}<th>Finding</th></tr></thead><tbody>${body}</tbody></table></div>
+    <div class="fk-tw"><table class="fk-t"><thead><tr><th class="fk-ck"><span class="vh">Compare</span></th><th>Run</th><th class="fk-num">Steps</th><th class="fk-num">Cost</th><th class="fk-num">Grade</th>${cols.map(([k,l])=>`<th class="fk-dot"><span>${esc(l)}</span></th>`).join('')}<th>Finding</th></tr></thead><tbody>${body}</tbody></table></div>
     ${total>LIM?`<button class="fk-more" data-flall="1">Show all ${total} runs</button>`:''}</div>`;
   host.innerHTML=h;
 }
@@ -1682,9 +1697,44 @@ document.getElementById('fleet').addEventListener('click',e=>{
   const ck=e.target.closest('[data-flsel]');if(ck){const k=ck.dataset.flsel;FL_SEL=FL_SEL.includes(k)?FL_SEL.filter(x=>x!==k):[...FL_SEL,k].slice(-2);renderFleet();if(FL_SEL.length===2){openDiff(FL_SEL[0],FL_SEL[1])}return}
   const g=e.target.closest('[data-frun]');if(!g)return;const [sid,tid]=g.dataset.frun.split('|');openRunAnywhere(sid,tid)});
 document.getElementById('fleet').addEventListener('keydown',e=>{if(e.key!=='Enter')return;const g=e.target.closest('tr[data-frun]');if(g&&e.target===g){const [sid,tid]=g.dataset.frun.split('|');openRunAnywhere(sid,tid)}});
+// Scorecard: the factors a run is judged on, side by side, each against its guardrail when one is set.
+const usd=v=>v==null?'–':v>=100?'$'+Math.round(v):v>=10?'$'+v.toFixed(1):'$'+v.toFixed(2);
+const lastOf=(arr,t,p)=>arr.filter(e=>e.turn_id===t.id&&e.provider===p).at(-1)?.data;
+function scorecard(t,p){
+  const rs=t.by[p].filter(r=>r.role!=='synthesis'),tools=rs.flatMap(r=>r.tools),fail=tools.filter(l=>l.passed===false).length,j=t.judge[p];
+  const runMs=d3.sum(rs,r=>r.dur),C=lastOf(S.A.cost,t,p),G=lastOf(S.A.rails,t,p),sec=lastOf(S.A.security,t,p),mdl=[...new Set(rs.map(r=>r.model).filter(Boolean))].join(', ');
+  const rule=k=>G?.rules?.find(r=>r.rule===k),crit=(sec?.findings||[]).filter(f=>SEVR[f.severity]>=3).length;
+  const tile=(label,value,sub,o={})=>{const r=o.rule&&rule(o.rule),lim=r&&r.limit!=null&&typeof r.limit==='number'?r:null,frac=lim&&o.num!=null?Math.min(1,o.num/lim.limit):null,bad=o.bad||(r&&r.status==='violated');
+    return `<div class="sc-t${bad?' bad':''}"${o.ref!=null?` data-vref="${o.ref}" role="button" tabindex="0"`:''}><div class="sc-l">${label}</div><div class="sc-v">${value}</div><div class="sc-s">${sub||'&nbsp;'}</div>${frac!=null?`<div class="sc-m" title="${Math.round(100*frac)}% of the limit"><i style="width:${100*frac}%"></i></div><div class="sc-lim">limit ${esc(o.fmt?o.fmt(lim.limit):String(lim.limit))}</div>`:''}</div>`};
+  const waste=C&&C.usd?Math.max(C.after_decisive_usd||0,C.in_loops_usd||0):0;
+  const tiles=[
+    tile('Cost',C?usd(C.usd):'–',C?(C.usd==null?'no price set for this model':waste>=.005?`${usd(waste)} ${C.after_decisive_usd>=(C.in_loops_usd||0)?'after the decisive step':'inside loops'}`:esc(C.source||'')):'no token counts recorded',{rule:'max_cost_usd',num:C?.usd,fmt:usd}),
+    tile('Time',rs.length?dur(runMs):'–',t.running?'running':'',{rule:'max_minutes',num:runMs/60000,fmt:v=>v+' min'}),
+    tile('Tool calls',tools.length,C?`${C.calls} model call${C.calls===1?'':'s'}`:'',{rule:'max_steps',num:tools.length}),
+    tile('Failed calls',fail,tools.length?pct(fail/tools.length)+' of calls':'',{rule:'max_failed_calls',num:fail,bad:!rule('max_failed_calls')&&fail>=3,ref:tools.find(l=>l.passed===false)?.eid}),
+    tile('Security',crit?crit+' high':'clear',crit?esc([...new Set((sec.findings||[]).filter(f=>SEVR[f.severity]>=3).map(f=>SECL[f.category]||f.category))].slice(0,2).join(', ')):(sec?'no high or critical finding':'not reviewed'),{bad:crit>0,ref:(sec?.findings||[]).find(f=>SEVR[f.severity]>=3)?.ref}),
+    tile('Guardrails',G&&G.set?(G.violations?G.violations+' broken':'all kept'):'none set',G&&G.set?(G.violations?esc(G.rules.find(r=>r.status==='violated').label.toLowerCase()):`${G.set} rule${G.set===1?'':'s'} checked`):'add a guardrails file',{bad:!!(G&&G.violations),ref:G?.rules?.find(r=>r.status==='violated')?.ref}),
+    tile('Quality',j?f1(j.overall)+' / 5':'–',j?(t.winner===p?'winner of this turn':'judge score'):'not judged',{})];
+  return `<div class="sc" style="--model:var(--${p})"><div class="sc-h"><b>${NAME[p]}</b>${mdl?`<span class="sub">${esc(mdl)}</span>`:''}</div><div class="sc-g">${tiles.join('')}</div></div>`}
+document.getElementById('railSummary').addEventListener('click',e=>{const b=e.target.closest('[data-vref]');if(b)openRef(+b.dataset.vref)});
+// Guardrails panel (Security tab): every rule, its limit, what this run did.
+function renderGuardrails(t){
+  const host=document.getElementById('guardPanel');if(!host)return;
+  const rows=t?P.map(p=>({p,G:lastOf(S.A.rails,t,p)})).filter(x=>x.G):[];
+  const blocks=t?S.A.guardBlocked.filter(e=>e.verdict==='guardrail'&&(e.turn_id===t.id||t.runs.some(r=>r.id===e.span_id))):[];
+  const example='{\n  "max_cost_usd": 2.00,\n  "max_steps": 150,\n  "max_minutes": 30,\n  "forbid_write": ["vendor/**", ".github/**"],\n  "forbid_read": [".env", "**/.aws/**"],\n  "forbid_commands": ["git push --force"],\n  "require_check_before_ship": true\n}';
+  if(!rows.length){host.innerHTML=`<div class="gr-empty"><b>No guardrails are set.</b> Put limits in <code>~/.agentlens/guardrails.json</code> (or <code>.agentlens/guardrails.json</code> in a project). AgentLens then refuses forbidden calls while the agent runs, stops a run that has used its budget, and reports every rule here.<pre>${esc(example)}</pre></div>`;return}
+  const val=(r)=>r.value==null?'–':r.rule==='max_cost_usd'?usd(r.value):r.rule==='max_minutes'?r.value+' min':r.rule==='max_context_tokens'?Math.round(r.value/1000)+'k':r.rule.startsWith('forbid')?(r.value?r.value+' call'+(r.value===1?'':'s'):'none'):r.rule==='require_check_before_ship'?(r.value?'shipped unchecked':'kept'):r.value;
+  const lim=(r)=>r.limit==null?'':Array.isArray(r.limit)?r.limit.map(x=>`<code>${esc(x)}</code>`).join(' '):r.rule==='max_cost_usd'?usd(r.limit):r.limit===true?'required':typeof r.limit==='number'?r.limit.toLocaleString():esc(String(r.limit));
+  const ST={ok:['kept','ok'],violated:['broken','bad'],unset:['not set','muted'],unknown:['not recorded','muted']};
+  host.innerHTML=(blocks.length?`<p class="gr-blk"><b>${blocks.length} call${blocks.length===1?' was':'s were'} refused while the agent ran:</b> ${blocks.slice(0,3).map(e=>esc(e.data?.why||e.detail||'')).join(' · ')}</p>`:'')+rows.map(({p,G})=>`<div class="gr"><div class="gr-h"><b style="color:var(--${p})">${NAME[p]}</b><span class="${G.violations?'bad':'ok'}">${G.violations?G.violations+' of '+G.set+' guardrails broken':'within all '+G.set+' guardrails'}</span></div>
+    <div class="rm-scroll"><table class="gr-t"><thead><tr><th>Guardrail</th><th>Limit</th><th>This run</th><th>Status</th><th></th></tr></thead><tbody>${G.rules.filter(r=>r.status!=='unset').map(r=>`<tr class="${r.status==='violated'?'gr-bad':''}"><td>${esc(r.label)}</td><td>${lim(r)}</td><td class="num">${val(r)}</td><td><span class="gr-s ${ST[r.status][1]}">${ST[r.status][0]}</span></td><td>${r.why?esc(r.why):''} ${r.ref!=null?`<button class="vchip" data-vref="${r.ref}">open step</button>`:''}</td></tr>`).join('')}</tbody></table></div>
+    ${G.rules.some(r=>r.status==='unset')?`<p class="sub" style="margin:6px 0 0">Not set: ${G.rules.filter(r=>r.status==='unset').map(r=>esc(r.label.toLowerCase())).join(', ')}.</p>`:''}</div>`).join('');
+}
+document.getElementById('guardPanel').addEventListener('click',e=>{const b=e.target.closest('[data-vref]');if(b){setTab('run');openRef(+b.dataset.vref)}});
 // Tabs: the session's panels in five groups, one visible at a time.
 const TAB_OF={toolbar:'run',evalTree:'run',runBelow:'run',progressLane:'run',stepDiff:'run',envView:'run',timeWent:'run',longRun:'run',
-  reasonMem:'think',attrib:'think',convMem:'think',secPanel:'security',fleet:'fleet',failModes:'fleet',patterns:'fleet',procGraph:'fleet',longTerm:'trends'};
+  reasonMem:'think',attrib:'think',convMem:'think',secPanel:'security',guardPanel:'security',fleet:'fleet',failModes:'fleet',patterns:'fleet',procGraph:'fleet',longTerm:'trends'};
 function setTab(name){const sec=document.getElementById('evalTreeSec');sec.dataset.tabon=name;document.querySelectorAll('#tabs button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.tab===name)));
   try{localStorage.setItem('agentlens-tab',name)}catch(e){}}
 (function(){const sec=document.getElementById('evalTreeSec');sec.querySelector('.tree-toolbar').dataset.tab='run';
@@ -2201,7 +2251,8 @@ document.getElementById('secPanel').addEventListener('click',e=>{const b=e.targe
 function turnAlarms(t){
   const A=[],ids=new Set([t.id,...t.runs.map(r=>r.id)]);
   const inTurn=e=>ids.has(e.span_id)||e.turn_id===t.id||(e.timestamp>=t.start-1&&e.timestamp<=t.end+1);
-  S.A.guardBlocked.filter(inTurn).forEach(e=>A.push({c:'#c0392b',icon:'⛔',t:`Guard blocked ${e.verdict} action`,d:e.detail,live:t.running}));
+  S.A.guardBlocked.filter(inTurn).forEach(e=>A.push({c:'#c0392b',icon:'⛔',t:e.verdict==='guardrail'?'Guardrail refused a call':`Guard blocked ${e.verdict} action`,d:e.verdict==='guardrail'?(e.data?.why||e.detail):e.detail,live:t.running}));
+  for(const p of P){const G=lastOf(S.A.rails,t,p);if(G&&G.violations){const b=G.rules.find(r=>r.status==='violated');A.push({c:'#c0392b',icon:'▣',t:`${NAME[p]} broke ${G.violations} guardrail${G.violations===1?'':'s'}`,d:b.label.toLowerCase()+': '+(b.why||''),ref:b.ref})}}
   S.A.guard.filter(inTurn).filter(e=>e.verdict==='warn').forEach(e=>A.push({c:'#e67e22',icon:'⚠',t:`Guard warned (${e.data?.severity||'risk'})`,d:e.detail,live:t.running}));
   for(const r of t.runs.filter(r=>r.role!=='synthesis')){const T=r.tools;if(!T.length)continue;
     const tail=T.slice(-6),key=l=>l.tool+'|'+l.detail,ct=d3.rollup(tail,v=>v.length,key),top=[...ct].sort((a,b)=>b[1]-a[1])[0];
@@ -2216,6 +2267,7 @@ function turnAlarms(t){
 function renderAlarms(t){const host=document.getElementById('alarms');if(!t){host.innerHTML='';return}
   host.innerHTML=turnAlarms(t).map(a=>`<button class="alarm" style="--c:${a.c}" ${a.ref?`data-vref="${a.ref}"`:''} title="${esc(a.d||'')}">${a.live?'<span class="pulse"></span>':''}<b>${a.icon}</b>${esc(a.t)}<span class="muted">${esc((a.d||'').slice(0,70))}</span></button>`).join('')}
 document.getElementById('alarms').addEventListener('click',e=>{const b=e.target.closest('[data-vref]');if(b)openRef(+b.dataset.vref)});
+function costLine(t){const out=P.map(p=>{const C=lastOf(S.A.cost,t,p);return C&&C.usd!=null?`${NAME[p]}: ${usd(C.usd)}${C.after_decisive_usd>=.005?`, ${usd(C.after_decisive_usd)} of it after the decisive step`:''}${C.in_loops_usd>=.005?`, ${usd(C.in_loops_usd)} inside loops`:''} (${C.source})`:null}).filter(Boolean);return out.length?[{k:'COST',text:out.join(' · ')}]:[]}
 function spendLine(t){
   const out=[];for(const r of t.runs.filter(r=>r.role!=='synthesis')){const ev=S.A.ctxtok.filter(e=>e.span_id===r.id);if(ev.length<2)continue;
     const tot=d3.sum(ev,e=>e.count),lr=S.A.longrun.filter(e=>e.turn_id===t.id&&e.provider===r.provider).at(-1)?.data,loops=(lr?.bursts||[]).filter(b=>b.status==='loop');
@@ -2329,8 +2381,8 @@ function renderTurnReading(D){renderTitle(D);
   if(PENDING_TURN&&D.allTurns.some(u=>u.id===PENDING_TURN)){TREE.follow=false;TREE.turn=PENDING_TURN;PENDING_TURN=null;document.getElementById('treeFollow').setAttribute('aria-pressed','false');setTimeout(schedule,0)}
   renderFailModes(D);if(!FC||Date.now()-FC_AT>60000){FC_AT=Date.now();fetchFacets()}else renderPatterns();if(!FL||Date.now()-FL_AT>60000){FL_AT=Date.now();fetchFleet()}else renderFleet();
   const t=D.turns.find(t=>t.id===TREE.turn),card=document.getElementById('verdictCard'),host=document.getElementById('timeWent');
-  if(!t){card.innerHTML='';renderAlarms(null);renderProgressLane(null);renderSecurity(null);renderProcGraph(null,D);renderEnv(null,D);renderLongRun(null);renderReasonMem(null);renderAttribution(null);renderConvMem(D);if(!LT)fetchLongterm();else renderLongTerm();host.innerHTML='<div class="empty">Time budgets appear once a turn finishes.</div>';return}
-  renderAlarms(t);card.innerHTML=cardHtml([...verdictCard(t),...suspectLines(t),...spendLine(t)])+readerCard(t);renderProgressLane(t);renderSecurity(t);renderProcGraph(t,D);renderEnv(t,D);renderLongRun(t);renderReasonMem(t);renderAttribution(t);renderConvMem(D);if(!LT||Date.now()-LT_AT>30000){LT_AT=Date.now();fetchLongterm()}else renderLongTerm();
+  if(!t){card.innerHTML='';renderAlarms(null);renderGuardrails(null);renderProgressLane(null);renderSecurity(null);renderProcGraph(null,D);renderEnv(null,D);renderLongRun(null);renderReasonMem(null);renderAttribution(null);renderConvMem(D);if(!LT)fetchLongterm();else renderLongTerm();host.innerHTML='<div class="empty">Time budgets appear once a turn finishes.</div>';return}
+  renderAlarms(t);renderGuardrails(t);card.innerHTML=cardHtml([...verdictCard(t),...suspectLines(t),...(costLine(t).length?costLine(t):spendLine(t))])+readerCard(t);renderProgressLane(t);renderSecurity(t);renderProcGraph(t,D);renderEnv(t,D);renderLongRun(t);renderReasonMem(t);renderAttribution(t);renderConvMem(D);if(!LT||Date.now()-LT_AT>30000){LT_AT=Date.now();fetchLongterm()}else renderLongTerm();
   const B=P.map(p=>({p,b:timeBudget(t.by[p].filter(r=>r.role!=='synthesis'&&!r.running))})).filter(x=>x.b.total>0);
   if(!B.length){host.innerHTML='<div class="empty">No finished runs in this turn yet.</div>';return}
   const max=d3.max(B,x=>x.b.total),w=v=>(100*v/max).toFixed(2)+'%',sec=v=>dur(v*1000);
@@ -2353,13 +2405,8 @@ function renderEvalTree(D){
   if(!t){document.getElementById('railSummary').innerHTML='';host.innerHTML='<div class="empty" style="padding:100px 20px">Execution tracks start with your first task.<br>Agent bars and tool branches appear here as AgentLens works.</div>';document.getElementById('treePosition').textContent='Waiting for a task';return}
   TREE.turn=t.id;sel.value=t.id;
   const present=P.filter(p=>t.by[p].some(r=>r.role!=='synthesis')),solo=present.length===1;
-  document.getElementById('evalTreeSec').classList.toggle('solo',solo);document.getElementById('evalTreeSec').classList.toggle('railview',TREE.view!=='tree');document.getElementById('treeTitle').textContent=solo?`What ${NAME[present[0]]||present[0]} did`:present.length?'Codex and Claude, side by side':'This run';{const kinds=new Set(D.allTurns.map(u=>u.kind)),fr=document.querySelector('.filters');if(fr)fr.style.display=(kinds.size>1||S.J.results.length)?'':'none';const nsec=d3.sum(S.A.security.filter(e=>e.turn_id===t.id),e=>(e.data?.findings||[]).filter(f=>SEVR[f.severity]>=3).length),tb=document.getElementById('tabSec');tb.hidden=!nsec;tb.textContent=nsec}document.getElementById('railSummary').classList.toggle('one',solo);
-  document.getElementById('railSummary').innerHTML=(solo?present:P).map(p=>{const rs=t.by[p],tools=rs.flatMap(r=>r.tools),fail=tools.filter(l=>l.passed===false).length,j=t.judge[p];
-    const runMs=d3.sum(rs,r=>r.dur),toolMs=Math.min(runMs,d3.sum(tools,l=>l.dur||0)),slow=tools.filter(l=>l.dur!=null).sort((a,b)=>b.dur-a.dur)[0];
-    // Where the time went: tool time vs the rest of the run (model thinking + orchestration). Tool time is summed, so overlapping calls can overstate it.
-    const compo=runMs?`<div class="rail-compo" data-tip="Where the time went: <b>${dur(toolMs)}</b> in tools · <b>${dur(runMs-toolMs)}</b> model thinking"><i style="width:${Math.round(100*toolMs/runMs)}%;background:var(--model)"></i></div><div class="rail-compo-key">${pct(toolMs/runMs)} in tools · ${pct(1-toolMs/runMs)} thinking${slow&&slow.dur>0?` · slowest: ${esc(short(slow.tool))} ${dur(slow.dur)}`:''}</div>`:'';
-    const mdl=[...new Set(rs.map(r=>r.model).filter(Boolean))].join(', ');
-    return `<div style="--model:var(--${p})"><b>${NAME[p]}</b>${mdl?` <span class="sub" data-tip="The model this provider ran on this turn — comparisons are between these models, not just the two providers">${esc(mdl)}</span>`:''}<div class="rail-values"><span><strong>${rs.length?dur(runMs):'–'}</strong> run time</span><span><strong>${tools.length}</strong> tool calls</span><span class="${fail?'bad':''}"><strong>${fail}</strong> failures</span><span><strong>${j?f1(j.overall)+'/5':'Pending'}</strong> judge score</span></div>${compo}</div>`}).join('');
+  document.getElementById('evalTreeSec').classList.toggle('solo',solo);document.getElementById('evalTreeSec').classList.toggle('railview',TREE.view!=='tree');document.getElementById('treeTitle').textContent=solo?`What ${NAME[present[0]]||present[0]} did`:present.length?'Codex and Claude, side by side':'This run';{const kinds=new Set(D.allTurns.map(u=>u.kind)),fr=document.querySelector('.filters');if(fr)fr.style.display=(kinds.size>1||S.J.results.length)?'':'none';const nsec=d3.sum(S.A.security.filter(e=>e.turn_id===t.id),e=>(e.data?.findings||[]).filter(f=>SEVR[f.severity]>=3).length),nrail=d3.sum(P,p=>lastOf(S.A.rails,t,p)?.violations||0),tb=document.getElementById('tabSec');tb.hidden=!(nsec+nrail);tb.textContent=nsec+nrail}document.getElementById('railSummary').classList.toggle('one',solo);
+  document.getElementById('railSummary').innerHTML=(solo?present:P).map(p=>scorecard(t,p)).join('');
   const runs=[...t.runs,...t.judges.map(j=>({id:j.id,s:j,provider:j.provider,role:'judge',start:j.start,end:j.end,running:j.status==='running',tools:j.tools,reasoning:j.reasoning,evals:j.evals}))];
   const runIds=new Set(runs.map(r=>r.id));
   const findings=S.events.filter(e=>(e.turn_id===t.id||runIds.has(e.span_id))&&/^(evaluation$|judge\.|analysis\.|policy\.reward|evolve\.result)/.test(e.type)&&(F.judge==='all'||!e.judge||String(e.judge).startsWith(F.judge)));

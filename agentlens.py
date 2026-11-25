@@ -32,6 +32,8 @@ import analysis
 import longrun
 import horizon
 import fleet
+import cost as costmod
+import guardrails
 import rundiff
 import longterm
 import facets
@@ -67,6 +69,22 @@ def turn_texts(turn_id,provider):
             elif e.get('type')=='answer' and e.get('provider')==provider and e.get('span_id') in spans:ans=(HUB.payloads.get(e['id']) or (None,None))[1]
     return req,ans
 
+def live_cost(turn_id,provider,lr,hz,tools=()):
+    """Cost of this provider's runs in the turn, from the usage events the agents emitted (cost.py)."""
+    with HUB.condition:ev=list(HUB.events)[-8000:]
+    spans={e['span_id']:e for e in ev if e.get('type')=='span.start' and e.get('parent_id')==turn_id and e.get('provider')==provider}
+    us=[e for e in ev if e.get('type')=='usage' and e.get('span_id') in spans and isinstance(e.get('data'),dict)]
+    if not us:return None
+    calls=[{'ts':e['timestamp'],'input':d.get('input_tokens',0),'cache_write':d.get('cache_creation_input_tokens',0),
+            'cache_read':d.get('cache_read_input_tokens',0) or d.get('cached_input_tokens',0),'output':d.get('output_tokens',0)} for e in us for d in [e['data']]]
+    rep=[e['data']['cost_usd'] for e in us if e['data'].get('cost_usd') is not None]
+    model=next((s.get('model') for s in spans.values() if s.get('model')),None)
+    ctx=[e.get('count') or 0 for e in ev if e.get('type')=='context.tokens' and e.get('span_id') in spans]
+    first=(hz or {}).get('look_first') or {};at=next((s.get('at') for s in tools if s.get('ref')==first.get('ref')),None)
+    c=costmod.run_cost(calls,model,sum(rep) if rep else None,[(L['start'],L['end']) for L in (lr or {}).get('loops',[])],at)
+    c['ctx_max']=max(ctx) if ctx else None
+    return c
+
 def analyse_turn(turn_id):
     """Deterministic trace analysis (ms, no model calls). Emits analysis.* events; returns findings for the judge."""
     t0=time.monotonic()
@@ -82,6 +100,10 @@ def analyse_turn(turn_id):
         try:
             req,ans=turn_texts(turn_id,p);hz=horizon.read(f.get('tools') or [],req,ans)
             if hz:emit('analysis.horizon',p,turn_id=turn_id,data=hz,count=len(hz['modes']),rationale=horizon.summary(hz))
+            c=live_cost(turn_id,p,f.get('longrun'),hz,f.get('tools') or [])
+            if c:emit('analysis.cost',p,turn_id=turn_id,data=c,score=c.get('usd'),rationale=costmod.summary(c))
+            g=guardrails.evaluate(f.get('tools') or [],c,ctx_max=c.get('ctx_max') if c else None)
+            if g['set']:emit('analysis.guardrails',p,turn_id=turn_id,data=g,count=g['violations'],rationale=guardrails.summary(g))
         except Exception as exc:emit('analysis.error',p,turn_id=turn_id,reason_code='horizon:'+type(exc).__name__)
         if f.get('security'):sec=f['security'];emit('analysis.security',p,turn_id=turn_id,data=sec,count=len(sec['findings']),verdict=max((x['severity'] for x in sec['findings']),key=lambda v:{'critical':4,'high':3,'medium':2,'low':1}[v],default='none'))
     al=findings.get('align')
@@ -446,6 +468,8 @@ def _replay(cases,no_lessons,timeout,models,holdout=False):
 
 def duo_approval(provider, action, details):
     if action!='question':
+        why=guard.guardrail_block(HUB,provider.lower(),action,details,emit)
+        if why:duo_activity(provider,why);return False
         g=guard.check(action,details,guard.recent_outputs(HUB,provider.lower()))
         if g['findings']:
             emit('guard.check',provider.lower(),name=action,verdict=g['verdict'],detail=g['target'],data={'severity':g['severity'],'findings':g['findings'][:6]})

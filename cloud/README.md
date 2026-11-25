@@ -17,11 +17,19 @@ Secrets are removed on your machine before anything is sent: API keys and tokens
 
 `python3 ~/.agentlens/agentlens-send.py status | stop | uninstall`.
 
+### Guardrails
+
+Put your limits in `~/.agentlens/guardrails.json` (format in the main README), then run `python3 ~/.agentlens/agentlens-send.py guard on`.
+- Inside Claude Code, a `PreToolUse` hook refuses forbidden reads, writes and commands. Once a task has used its budget of tool calls, failed calls or minutes, it refuses further calls.
+- The dashboard reports every run against the same rules, including cost.
+- `guard off` removes the hook.
+- Cost is checked after the run, not during it. Codex sessions are reported but not blocked.
+
 ## Plans
 
 | | Free | Pro |
 |---|---|---|
-| Live tree, alarms, security review, long-run panel | ✓ | ✓ |
+| Live tree, scorecard with cost, guardrails, alarms, security review, long-run panel | ✓ | ✓ |
 | Sessions | 3 most recent, 7 days | all |
 | Fleet + catch matrix, run diff, long-horizon reading, patterns, long-term trends | locked | ✓ |
 

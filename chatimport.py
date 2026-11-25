@@ -149,7 +149,7 @@ def claude_code_turns(lines):
             if isinstance(content,str) or (isinstance(content,list) and not any(isinstance(c,dict) and c.get('type')=='tool_result' for c in content)):
                 text=_text(content).strip()
                 if not text or text.startswith('<'):continue  # command wrappers, hook output
-                cur={'prompt':text,'ts':ts,'steps':[],'answer':'','ctx':[],'usage':None,'compacted':False};turns.append(cur);continue
+                cur={'prompt':text,'ts':ts,'steps':[],'answer':'','ctx':[],'usage':None,'compacted':False,'calls':[],'_seen':set()};turns.append(cur);continue
             for c in content if isinstance(content,list) else []:
                 if isinstance(c,dict) and c.get('type')=='tool_result' and c.get('tool_use_id') in pending:
                     st=pending.pop(c['tool_use_id']);st['end']=ts;st['ok']=not c.get('is_error');st['output']=_text(c.get('content'))[:20000]
@@ -158,6 +158,11 @@ def claude_code_turns(lines):
             if u:
                 tok=(u.get('input_tokens') or 0)+(u.get('cache_read_input_tokens') or 0)+(u.get('cache_creation_input_tokens') or 0)
                 if tok:cur['ctx'].append((ts,tok))
+                mid=m.get('id') or d.get('requestId') or (ts,tok)  # one API message is logged once per content block: count it once
+                if mid not in cur['_seen']:
+                    cur['_seen'].add(mid);cc=u.get('cache_creation') or {};h1=cc.get('ephemeral_1h_input_tokens') or 0
+                    cur['calls'].append({'ts':ts,'input':u.get('input_tokens') or 0,'cache_write':(u.get('cache_creation_input_tokens') or 0)-h1,'cache_write_1h':h1,
+                                         'cache_read':u.get('cache_read_input_tokens') or 0,'output':u.get('output_tokens') or 0})
                 cur['usage']={'input_tokens':u.get('input_tokens') or 0,'cache_read_input_tokens':u.get('cache_read_input_tokens') or 0,
                               'cache_creation_input_tokens':u.get('cache_creation_input_tokens') or 0,'output_tokens':u.get('output_tokens') or 0}
             for c in content if isinstance(content,list) else []:
@@ -178,7 +183,7 @@ def codex_turns(lines):
             text=_text(p.get('content'))
             if p.get('role')=='user':
                 if not text.strip() or text.lstrip().startswith('<'):continue  # environment/instructions wrappers
-                cur={'prompt':text.strip(),'ts':ts,'steps':[],'answer':'','ctx':[],'usage':None,'compacted':False};turns.append(cur)
+                cur={'prompt':text.strip(),'ts':ts,'steps':[],'answer':'','ctx':[],'usage':None,'compacted':False,'calls':[]};turns.append(cur)
             elif p.get('role')=='assistant' and cur is not None and text:cur['answer']=text
         elif cur is None:continue
         elif kind=='response_item' and pt=='reasoning':
@@ -202,7 +207,9 @@ def codex_turns(lines):
                 st['ok']=(code==0) if code is not None else not str(st['output']).lower().startswith(('error','failed'))
         elif kind=='event_msg' and pt=='token_count':
             info=p.get('info') or {};last=info.get('last_token_usage') or {};total=info.get('total_token_usage') or {}
-            if last.get('input_tokens'):cur['ctx'].append((ts,last['input_tokens']))
+            if last.get('input_tokens'):
+                cur['ctx'].append((ts,last['input_tokens']));cached=last.get('cached_input_tokens') or 0
+                cur['calls'].append({'ts':ts,'input':max(0,last['input_tokens']-cached),'cache_read':cached,'output':last.get('output_tokens') or 0})
             if total:cur['usage']={'input_tokens':last.get('input_tokens') or 0,'output_tokens':last.get('output_tokens') or 0,'cached_input_tokens':last.get('cached_input_tokens') or 0}
         elif kind=='compacted' or pt=='compacted':cur['compacted']=True
     return turns
@@ -243,10 +250,22 @@ def write_agent_session(store,title,provider,turns,model=None):
         _flag_hacks(ev,steps,provider,tid);_review_security(ev,steps,provider,tid)
         r=longrun.read(steps)
         if r:ev(t1,'analysis.longrun',provider,turn_id=tid,data=r,rationale=longrun.summary(r))
+        hz=None
         try:
             import horizon
             hz=horizon.read(steps,T['prompt'],T['answer'])
             if hz:ev(t1,'analysis.horizon',provider,turn_id=tid,data=hz,count=len(hz['modes']),rationale=horizon.summary(hz))
+        except Exception:pass
+        try:
+            import cost as costmod,guardrails
+            c=None
+            if T.get('calls'):
+                first=(hz or {}).get('look_first') or {};at=next((x['at'] for x in steps if x['ref']==first.get('ref')),None)
+                c=costmod.run_cost(T['calls'],model,None,[(L['start'],L['end']) for L in (r or {}).get('loops',[])],at)
+                c['ctx_max']=max((k for _,k in T['ctx']),default=None)
+                ev(t1,'analysis.cost',provider,turn_id=tid,data=c,score=c.get('usd'),rationale=costmod.summary(c))
+            g=guardrails.evaluate(steps,c,ctx_max=c.get('ctx_max') if c else max((k for _,k in T['ctx']),default=None))
+            if g['set']:ev(t1,'analysis.guardrails',provider,turn_id=tid,data=g,count=g['violations'],rationale=guardrails.summary(g))
         except Exception:pass
         ev(t1,'span.end','duo',tid,span_id=tid,span_kind='turn',status='ok',duration_ms=int((t1-t0)*1000))
         carried=0 if T.get('compacted') else carried+1;hist=0 if T.get('compacted') else hist+len(T['prompt'])+len(T['answer'])

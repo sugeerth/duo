@@ -141,6 +141,27 @@ It is validated against the vocabularies and the run's real step numbers.
 
 The long-run panel draws all three under the bursts: an icicle of the subdivisions, ▲ at each mode, and the plan's units, reached or not. Bench task T14 measures it.
 
+**Cost** (`cost.py`, `prices.json`): every model call is priced from its four token counts (fresh input, cache write, cache read, output) and the model that made it.
+- Claude prices are Anthropic's list prices, read from their pricing page on 2026-11-25. OpenAI prices are not filled in: add them to `prices.json`, or override anything in `~/.agentlens/prices.json`.
+- A model with no price shows tokens and says so; nothing is estimated from another model.
+- When the agent's CLI reports its own cost, that figure is used.
+- Waste is attributed by time: dollars spent inside loops, and dollars spent after the decisive step. Both are upper bounds on what a fix would save.
+
+**Guardrails** (`guardrails.py`): limits you set in `~/.agentlens/guardrails.json` (or `.agentlens/guardrails.json` in a project).
+
+```json
+{"max_cost_usd": 2.00, "max_steps": 150, "max_minutes": 30, "max_failed_calls": 10, "max_context_tokens": 150000,
+ "forbid_write": ["vendor/**", ".github/**"], "forbid_read": [".env", "**/.aws/**"],
+ "forbid_commands": ["git push --force"], "require_check_before_ship": true}
+```
+
+- While a run is going: a forbidden call is refused, and once a budget is used up further tool calls are refused with the reason, so the agent stops and reports.
+- After a run: every rule is reported as kept, broken (with the step), not set or not recorded.
+- Enforcement points: AgentLens's own terminal (the Claude hook and every Codex approval), and Claude Code itself through a `PreToolUse` hook that the cloud watcher installs (`agentlens-send.py guard on`).
+- Limits: the cost budget is enforced live only where token counts arrive during the run (Claude in the AgentLens terminal); elsewhere it is checked after the run. Codex CLI sessions outside AgentLens are reported, not blocked.
+
+**Scorecard**: under the tree, each agent's run on seven factors side by side: cost, time, tool calls, failed calls, security, guardrails, quality. A factor with a guardrail shows a meter against its limit.
+
 **The viewer** opens on the tree of the selected run with its verdict underneath. Everything else sits behind five tabs: This run, Reasoning & memory, Security (with a count of high and critical findings), All runs, Over time. In the tree, each line is an agent's run on a shared clock and each dot is a tool call: looking above the line, changing and checking below it. A number in a dot is that many calls in a row, and the steps that matter are named.
 
 **Fleet: every run, and what caught it** (`fleet.py`, `/fleet`): every stored run in every session as one strip, with its phases in order (look, write, check, ship, delegate) and ▲ where a long-horizon mode shows. Strip length is the run's step count (log scale), and a click opens the run.

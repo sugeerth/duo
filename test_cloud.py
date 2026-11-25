@@ -85,6 +85,25 @@ class Cloud(unittest.TestCase):
         with urllib.request.urlopen(self.base+'/') as resp:self.assertIn('Start streaming',resp.read().decode())
         with urllib.request.urlopen(self.base+'/install.sh') as resp:self.assertIn(self.base,resp.read().decode())
 
+    def test_account_guardrails_and_claude_code_hook(self):
+        key=self.signup('rails@b.co');c,j=self.req('/api/guardrails',{'max_steps':2,'forbid_write':['vendor/**'],'junk':1},key=key);self.assertEqual((c,j['rules']),(200,['forbid_write','max_steps']))
+        self.assertEqual(self.req('/api/guardrails',key=key)[1],{'max_steps':2,'forbid_write':['vendor/**']})
+        lines=(ROOT/'bench'/'data'/'imports'/'claude_code_session.jsonl').read_text().splitlines()
+        sid=self.req('/v1/transcripts',{'file_id':'gr1','provider':'claude','lines':lines},key=key)[1]['session']
+        ev=[e for e in self.req('/snapshot?session='+sid,key=key)[1]['events'] if e['type']=='analysis.guardrails'];self.assertTrue(ev);self.assertTrue(any(e['count'] for e in ev))
+        with tempfile.TemporaryDirectory() as home,patch.dict(os.environ,{'HOME':home}):
+            snd=load('agentlens_send2',ROOT/'cloud'/'agentlens_send.py');pol={'forbid_write':['vendor/**'],'forbid_read':['.env'],'forbid_commands':['git push --force'],'max_steps':2}
+            self.assertIn('vendor/x.py',snd.rail_check(pol,'Edit',{'file_path':'vendor/x.py'}));self.assertIsNone(snd.rail_check(pol,'Edit',{'file_path':'src/x.py'}))
+            self.assertIn('vendor',snd.rail_check(pol,'Write',{'file_path':'/home/u/proj/vendor/lib/x.py'}));self.assertIsNone(snd.rail_check(pol,'Write',{'file_path':'/home/u/proj/src/vendors.py'}))
+            self.assertIn('.env',snd.rail_check(pol,'Read',{'file_path':'/home/u/proj/.env'}))
+            self.assertIn('.env',snd.rail_check(pol,'Bash',{'command':'cat .env'}));self.assertIn('not allowed',snd.rail_check(pol,'Bash',{'command':'git push --force origin main'}))
+            self.assertIsNone(snd.rail_check(pol,'Bash',{'command':'pytest -q'}))
+            tr=Path(home)/'t.jsonl';tr.write_text('\n'.join(json.dumps(x) for x in [{'type':'user','message':{'content':'old task'}},{'type':'assistant','message':{'content':[{'type':'tool_use'}]}},
+                {'type':'user','message':{'content':'new task'},'timestamp':'2026-11-25T10:00:00Z'},{'type':'assistant','message':{'content':[{'type':'tool_use'}]}},{'type':'assistant','message':{'content':[{'type':'tool_use'}]}}]))
+            self.assertIn('used its budget',snd.rail_check(pol,'Read',{'file_path':'a.py'},str(tr)));self.assertIsNone(snd.rail_check({**pol,'max_steps':3},'Read',{'file_path':'a.py'},str(tr)))
+            (Path(home)/'.claude').mkdir();sf=Path(home)/'.claude'/'settings.json';sf.write_text('{}');snd.guard_hook(True);snd.guard_hook(True)
+            self.assertEqual(len(json.loads(sf.read_text())['hooks']['PreToolUse']),1);snd.guard_hook(False);self.assertEqual(json.loads(sf.read_text()),{})
+
 class Sender(unittest.TestCase):
     def test_redaction_and_hook_merge(self):
         with tempfile.TemporaryDirectory() as home:
